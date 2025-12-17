@@ -12,16 +12,19 @@ import (
 	materiHandler "cbt-test-mini-project/internal/handler/materi"
 	soalHandler "cbt-test-mini-project/internal/handler/soal"
 	testSessionHandler "cbt-test-mini-project/internal/handler/test_session"
+	tingkatHandler "cbt-test-mini-project/internal/handler/tingkat"
 	historyRepo "cbt-test-mini-project/internal/repository/history"
 	mataPelajaranRepo "cbt-test-mini-project/internal/repository/mata_pelajaran"
 	materiRepo "cbt-test-mini-project/internal/repository/materi"
 	testSessionRepo "cbt-test-mini-project/internal/repository/test_session"
 	soalRepo "cbt-test-mini-project/internal/repository/test_soal"
+	tingkatRepo "cbt-test-mini-project/internal/repository/tingkat"
 	historyUsecase "cbt-test-mini-project/internal/usecase/history"
 	mataPelajaranUsecase "cbt-test-mini-project/internal/usecase/mata_pelajaran"
 	materiUsecase "cbt-test-mini-project/internal/usecase/materi"
 	soalUsecase "cbt-test-mini-project/internal/usecase/soal"
 	testSessionUsecase "cbt-test-mini-project/internal/usecase/test_session"
+	tingkatUsecase "cbt-test-mini-project/internal/usecase/tingkat"
 )
 
 func InitGrpcDependency(server *grpc.Server, repo infra.Repository) {
@@ -31,6 +34,7 @@ func InitGrpcDependency(server *grpc.Server, repo infra.Repository) {
 	soalRepo := soalRepo.NewSoalRepository(repo.GormDB)
 	testSessionRepo := testSessionRepo.NewTestSessionRepository(repo.GormDB)
 	historyRepo := historyRepo.NewHistoryRepository(repo.GormDB)
+	tingkatRepo := tingkatRepo.NewTingkatRepository(repo.GormDB)
 
 	// Initialize usecases
 	mataPelajaranUsecase := mataPelajaranUsecase.NewMataPelajaranUsecase(mataPelajaranRepo)
@@ -38,6 +42,7 @@ func InitGrpcDependency(server *grpc.Server, repo infra.Repository) {
 	soalUsecase := soalUsecase.NewSoalUsecase(soalRepo)
 	testSessionUsecase := testSessionUsecase.NewTestSessionUsecase(testSessionRepo)
 	historyUsecase := historyUsecase.NewHistoryUsecase(historyRepo)
+	tingkatUsecase := tingkatUsecase.NewTingkatUsecase(tingkatRepo)
 
 	// Initialize handlers
 	baseServer := baseGrpcServer.NewBaseHandler()
@@ -46,6 +51,7 @@ func InitGrpcDependency(server *grpc.Server, repo infra.Repository) {
 	soalServer := soalHandler.NewSoalHandler(soalUsecase)
 	testSessionServer := testSessionHandler.NewTestSessionHandler(testSessionUsecase)
 	historyServer := historyHandler.NewHistoryHandler(historyUsecase)
+	tingkatServer := tingkatHandler.NewTingkatHandler(tingkatUsecase)
 
 	// Register servers
 	base.RegisterBaseServer(server, baseServer)
@@ -54,4 +60,5 @@ func InitGrpcDependency(server *grpc.Server, repo infra.Repository) {
 	base.RegisterSoalServiceServer(server, soalServer)
 	base.RegisterTestSessionServiceServer(server, testSessionServer)
 	base.RegisterHistoryServiceServer(server, historyServer)
+	base.RegisterTingkatServiceServer(server, tingkatServer)
 }

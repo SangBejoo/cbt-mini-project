@@ -17,7 +17,7 @@ func NewSoalUsecase(repo test_soal.SoalRepository) SoalUsecase {
 }
 
 // CreateSoal creates a new soal
-func (u *soalUsecaseImpl) CreateSoal(idMateri int, pertanyaan, opsiA, opsiB, opsiC, opsiD string, jawabanBenar entity.JawabanOption) (*entity.Soal, error) {
+func (u *soalUsecaseImpl) CreateSoal(idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD string, jawabanBenar entity.JawabanOption) (*entity.Soal, error) {
 	if pertanyaan == "" || opsiA == "" || opsiB == "" || opsiC == "" || opsiD == "" {
 		return nil, errors.New("all fields must be filled")
 	}
@@ -27,6 +27,7 @@ func (u *soalUsecaseImpl) CreateSoal(idMateri int, pertanyaan, opsiA, opsiB, ops
 
 	s := &entity.Soal{
 		IDMateri:   idMateri,
+		IDTingkat:  idTingkat,
 		Pertanyaan: pertanyaan,
 		OpsiA:      opsiA,
 		OpsiB:      opsiB,
@@ -47,7 +48,7 @@ func (u *soalUsecaseImpl) GetSoal(id int) (*entity.Soal, error) {
 }
 
 // UpdateSoal updates existing
-func (u *soalUsecaseImpl) UpdateSoal(id, idMateri int, pertanyaan, opsiA, opsiB, opsiC, opsiD string, jawabanBenar entity.JawabanOption) (*entity.Soal, error) {
+func (u *soalUsecaseImpl) UpdateSoal(id, idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD string, jawabanBenar entity.JawabanOption) (*entity.Soal, error) {
 	if pertanyaan == "" || opsiA == "" || opsiB == "" || opsiC == "" || opsiD == "" {
 		return nil, errors.New("all fields must be filled")
 	}
@@ -61,6 +62,7 @@ func (u *soalUsecaseImpl) UpdateSoal(id, idMateri int, pertanyaan, opsiA, opsiB,
 	}
 
 	s.IDMateri = idMateri
+	s.IDTingkat = idTingkat
 	s.Pertanyaan = pertanyaan
 	s.OpsiA = opsiA
 	s.OpsiB = opsiB

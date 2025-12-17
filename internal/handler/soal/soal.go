@@ -21,7 +21,7 @@ func NewSoalHandler(usecase soal.SoalUsecase) base.SoalServiceServer {
 // CreateSoal creates a new soal
 func (h *soalHandler) CreateSoal(ctx context.Context, req *base.CreateSoalRequest) (*base.SoalResponse, error) {
 	jawabanBenar := entity.JawabanOption(req.JawabanBenar.String()[0])
-	s, err := h.usecase.CreateSoal(int(req.IdMateri), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, jawabanBenar)
+	s, err := h.usecase.CreateSoal(int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, jawabanBenar)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (h *soalHandler) GetSoal(ctx context.Context, req *base.GetSoalRequest) (*b
 // UpdateSoal updates soal
 func (h *soalHandler) UpdateSoal(ctx context.Context, req *base.UpdateSoalRequest) (*base.SoalResponse, error) {
 	jawabanBenar := entity.JawabanOption(req.JawabanBenar.String()[0])
-	s, err := h.usecase.UpdateSoal(int(req.Id), int(req.IdMateri), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, jawabanBenar)
+	s, err := h.usecase.UpdateSoal(int(req.Id), int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, jawabanBenar)
 	if err != nil {
 		return nil, err
 	}

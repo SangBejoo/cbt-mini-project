@@ -212,6 +212,155 @@
         ]
       }
     },
+    "/v1/levels": {
+      "get": {
+        "operationId": "TingkatService_ListTingkat",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseListTingkatResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "TingkatService"
+        ]
+      },
+      "post": {
+        "operationId": "TingkatService_CreateTingkat",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseTingkatResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/baseCreateTingkatRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TingkatService"
+        ]
+      }
+    },
+    "/v1/levels/{id}": {
+      "get": {
+        "operationId": "TingkatService_GetTingkat",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseTingkatResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "TingkatService"
+        ]
+      },
+      "delete": {
+        "operationId": "TingkatService_DeleteTingkat",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseMessageStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "TingkatService"
+        ]
+      },
+      "put": {
+        "operationId": "TingkatService_UpdateTingkat",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseTingkatResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TingkatServiceUpdateTingkatBody"
+            }
+          }
+        ],
+        "tags": [
+          "TingkatService"
+        ]
+      }
+    },
     "/v1/questions": {
       "get": {
         "operationId": "SoalService_ListSoal",
@@ -1007,6 +1156,14 @@
         }
       }
     },
+    "TingkatServiceUpdateTingkatBody": {
+      "type": "object",
+      "properties": {
+        "nama": {
+          "type": "string"
+        }
+      }
+    },
     "baseCreateMataPelajaranRequest": {
       "type": "object",
       "properties": {
@@ -1084,6 +1241,14 @@
           "type": "integer",
           "format": "int32",
           "title": "ADDED - critical!"
+        }
+      }
+    },
+    "baseCreateTingkatRequest": {
+      "type": "object",
+      "properties": {
+        "nama": {
+          "type": "string"
         }
       }
     },

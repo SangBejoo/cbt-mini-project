@@ -50,6 +50,26 @@ http:
       delete: /v1/topics/{id}
 
     # ==================================================
+    # TINGKAT SERVICE
+    # ==================================================
+    - selector: base.TingkatService.ListTingkat
+      get: /v1/levels
+
+    - selector: base.TingkatService.GetTingkat
+      get: /v1/levels/{id}
+
+    - selector: base.TingkatService.CreateTingkat
+      post: /v1/levels
+      body: "*"
+
+    - selector: base.TingkatService.UpdateTingkat
+      put: /v1/levels/{id}
+      body: "*"
+
+    - selector: base.TingkatService.DeleteTingkat
+      delete: /v1/levels/{id}
+
+    # ==================================================
     # SOAL SERVICE (Bank Soal)
     # ==================================================
     - selector: base.SoalService.ListSoal
