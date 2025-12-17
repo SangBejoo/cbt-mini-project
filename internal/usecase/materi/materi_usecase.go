@@ -17,18 +17,18 @@ func NewMateriUsecase(repo materi.MateriRepository) MateriUsecase {
 }
 
 // CreateMateri creates a new materi
-func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, tingkatan int) (*entity.Materi, error) {
+func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, idTingkat int) (*entity.Materi, error) {
 	if nama == "" {
 		return nil, errors.New("nama cannot be empty")
 	}
-	if tingkatan < 1 {
-		return nil, errors.New("tingkatan must be positive")
+	if idTingkat < 1 {
+		return nil, errors.New("idTingkat must be positive")
 	}
 
 	m := &entity.Materi{
 		IDMataPelajaran: idMataPelajaran,
+		IDTingkat:       idTingkat,
 		Nama:            nama,
-		Tingkatan:       tingkatan,
 	}
 	err := u.repo.Create(m)
 	if err != nil {
@@ -43,12 +43,12 @@ func (u *materiUsecaseImpl) GetMateri(id int) (*entity.Materi, error) {
 }
 
 // UpdateMateri updates existing
-func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, tingkatan int) (*entity.Materi, error) {
+func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, idTingkat int) (*entity.Materi, error) {
 	if nama == "" {
 		return nil, errors.New("nama cannot be empty")
 	}
-	if tingkatan < 1 {
-		return nil, errors.New("tingkatan must be positive")
+	if idTingkat < 1 {
+		return nil, errors.New("idTingkat must be positive")
 	}
 
 	m, err := u.repo.GetByID(id)
@@ -57,8 +57,8 @@ func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, t
 	}
 
 	m.IDMataPelajaran = idMataPelajaran
+	m.IDTingkat = idTingkat
 	m.Nama = nama
-	m.Tingkatan = tingkatan
 	err = u.repo.Update(m)
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func (u *materiUsecaseImpl) DeleteMateri(id int) error {
 }
 
 // ListMateri lists with filters and pagination
-func (u *materiUsecaseImpl) ListMateri(idMataPelajaran, tingkatan int, page, pageSize int) ([]entity.Materi, *entity.PaginationResponse, error) {
+func (u *materiUsecaseImpl) ListMateri(idMataPelajaran, idTingkat int, page, pageSize int) ([]entity.Materi, *entity.PaginationResponse, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -89,8 +89,8 @@ func (u *materiUsecaseImpl) ListMateri(idMataPelajaran, tingkatan int, page, pag
 	if idMataPelajaran > 0 {
 		idPtr = &idMataPelajaran
 	}
-	if tingkatan > 0 {
-		tingPtr = &tingkatan
+	if idTingkat > 0 {
+		tingPtr = &idTingkat
 	}
 	materis, total, err := u.repo.List(idPtr, tingPtr, pageSize, offset)
 	if err != nil {

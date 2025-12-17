@@ -34,7 +34,7 @@ func (u *testSessionUsecaseImpl) CreateTestSession(namaPeserta string, tingkatan
 	session := &entity.TestSession{
 		SessionToken:    token,
 		NamaPeserta:     namaPeserta,
-		Tingkatan:       tingkatan,
+		IDTingkat:       tingkatan,
 		IDMataPelajaran: idMataPelajaran,
 		DurasiMenit:     durasiMenit,
 		Status:          entity.TestStatusOngoing,

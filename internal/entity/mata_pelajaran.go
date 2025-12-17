@@ -14,8 +14,9 @@ type Materi struct {
 	ID              int           `json:"id" gorm:"primaryKey;autoIncrement"`
 	IDMataPelajaran int           `json:"id_mata_pelajaran" gorm:"not null"`
 	MataPelajaran   MataPelajaran `json:"mata_pelajaran" gorm:"foreignKey:IDMataPelajaran"`
+	IDTingkat       int           `json:"id_tingkat" gorm:"not null"`
+	Tingkat         Tingkat       `json:"tingkat" gorm:"foreignKey:IDTingkat"`
 	Nama            string        `json:"nama" gorm:"not null;type:varchar(100)"`
-	Tingkatan       int           `json:"tingkatan" gorm:"not null"`
 }
 
 func (Materi) TableName() string { return "materi" }

@@ -19,7 +19,7 @@ type MateriRepository interface {
 	Delete(id int) error
 
 	// List with filters
-	List(idMataPelajaran, tingkatan *int, limit, offset int) ([]entity.Materi, int, error)
+	List(idMataPelajaran, idTingkat *int, limit, offset int) ([]entity.Materi, int, error)
 
 	// Get by mata pelajaran ID
 	GetByMataPelajaranID(idMataPelajaran int) ([]entity.Materi, error)

@@ -58,6 +58,18 @@ service MateriService {
 }
 
 // ========================================
+// TINGKAT SERVICE
+// ========================================
+
+service TingkatService {
+    rpc CreateTingkat(CreateTingkatRequest) returns (TingkatResponse) {};
+    rpc GetTingkat(GetTingkatRequest) returns (TingkatResponse) {};
+    rpc UpdateTingkat(UpdateTingkatRequest) returns (TingkatResponse) {};
+    rpc DeleteTingkat(DeleteTingkatRequest) returns (MessageStatusResponse) {};
+    rpc ListTingkat(google.protobuf.Empty) returns (ListTingkatResponse) {};
+}
+
+// ========================================
 // SOAL SERVICE (ADMIN)
 // ========================================
 
@@ -161,14 +173,14 @@ message ListMataPelajaranResponse {
 message Materi {
     int32 id = 1;
     MataPelajaran mata_pelajaran = 2;  // Nested, bukan hanya ID
-    string nama = 3;
-    int32 tingkatan = 4;
+    Tingkat tingkat = 3;
+    string nama = 4;
 }
 
 message CreateMateriRequest {
     int32 id_mata_pelajaran = 1;
-    string nama = 2;
-    int32 tingkatan = 3;
+    int32 id_tingkat = 2;
+    string nama = 3;
 }
 
 message GetMateriRequest {
@@ -178,8 +190,8 @@ message GetMateriRequest {
 message UpdateMateriRequest {
     int32 id = 1;
     int32 id_mata_pelajaran = 2;
-    string nama = 3;
-    int32 tingkatan = 4;
+    int32 id_tingkat = 3;
+    string nama = 4;
 }
 
 message DeleteMateriRequest {
@@ -192,13 +204,47 @@ message MateriResponse {
 
 message ListMateriRequest {
     int32 id_mata_pelajaran = 1;
-    int32 tingkatan = 2;
+    int32 id_tingkat = 2;
     PaginationRequest pagination = 3;
 }
 
 message ListMateriResponse {
     repeated Materi materi = 1;
     PaginationResponse pagination = 2;
+}
+
+// ========================================
+// TINGKAT MESSAGES
+// ========================================
+
+message Tingkat {
+    int32 id = 1;
+    string nama = 2;
+}
+
+message CreateTingkatRequest {
+    string nama = 1;
+}
+
+message GetTingkatRequest {
+    int32 id = 1;
+}
+
+message UpdateTingkatRequest {
+    int32 id = 1;
+    string nama = 2;
+}
+
+message DeleteTingkatRequest {
+    int32 id = 1;
+}
+
+message TingkatResponse {
+    Tingkat tingkat = 1;
+}
+
+message ListTingkatResponse {
+    repeated Tingkat tingkat = 1;
 }
 
 // ========================================
@@ -232,12 +278,13 @@ message SoalForStudent {
 
 message CreateSoalRequest {
     int32 id_materi = 1;
-    string pertanyaan = 2;
-    string opsi_a = 3;
-    string opsi_b = 4;
-    string opsi_c = 5;
-    string opsi_d = 6;
-    JawabanOption jawaban_benar = 7;
+    int32 id_tingkat = 2;
+    string pertanyaan = 3;
+    string opsi_a = 4;
+    string opsi_b = 5;
+    string opsi_c = 6;
+    string opsi_d = 7;
+    JawabanOption jawaban_benar = 8;
 }
 
 message GetSoalRequest {
@@ -247,12 +294,13 @@ message GetSoalRequest {
 message UpdateSoalRequest {
     int32 id = 1;
     int32 id_materi = 2;
-    string pertanyaan = 3;
-    string opsi_a = 4;
-    string opsi_b = 5;
-    string opsi_c = 6;
-    string opsi_d = 7;
-    JawabanOption jawaban_benar = 8;
+    int32 id_tingkat = 3;
+    string pertanyaan = 4;
+    string opsi_a = 5;
+    string opsi_b = 6;
+    string opsi_c = 7;
+    string opsi_d = 8;
+    JawabanOption jawaban_benar = 9;
 }
 
 message DeleteSoalRequest {
@@ -265,7 +313,7 @@ message SoalResponse {
 
 message ListSoalRequest {
     int32 id_materi = 1;
-    int32 tingkatan = 2;
+    int32 id_tingkat = 2;
     int32 id_mata_pelajaran = 3;
     PaginationRequest pagination = 4;
 }

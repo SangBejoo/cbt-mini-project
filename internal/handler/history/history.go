@@ -156,7 +156,7 @@ func (h *historyHandler) convertToProtoTestSession(session *entity.TestSession) 
 		Id:              int32(session.ID),
 		SessionToken:    session.SessionToken,
 		NamaPeserta:     session.NamaPeserta,
-		Tingkatan:       int32(session.Tingkatan),
+		Tingkatan:       int32(session.Tingkat.ID),
 		MataPelajaran:   &base.MataPelajaran{Id: int32(session.MataPelajaran.ID), Nama: session.MataPelajaran.Nama},
 		WaktuMulai:      timestamppb.New(session.WaktuMulai),
 		WaktuSelesai:    waktuSelesai,

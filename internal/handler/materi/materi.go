@@ -19,7 +19,7 @@ func NewMateriHandler(usecase materi.MateriUsecase) base.MateriServiceServer {
 
 // CreateMateri creates a new materi
 func (h *materiHandler) CreateMateri(ctx context.Context, req *base.CreateMateriRequest) (*base.MateriResponse, error) {
-	m, err := h.usecase.CreateMateri(int(req.IdMataPelajaran), req.Nama, int(req.Tingkatan))
+	m, err := h.usecase.CreateMateri(int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat))
 	if err != nil {
 		return nil, err
 	}
@@ -28,8 +28,8 @@ func (h *materiHandler) CreateMateri(ctx context.Context, req *base.CreateMateri
 		Materi: &base.Materi{
 			Id:            int32(m.ID),
 			MataPelajaran: &base.MataPelajaran{Id: int32(m.MataPelajaran.ID), Nama: m.MataPelajaran.Nama},
+			Tingkat:       &base.Tingkat{Id: int32(m.Tingkat.ID), Nama: m.Tingkat.Nama},
 			Nama:          m.Nama,
-			Tingkatan:     int32(m.Tingkatan),
 		},
 	}, nil
 }
@@ -45,15 +45,15 @@ func (h *materiHandler) GetMateri(ctx context.Context, req *base.GetMateriReques
 		Materi: &base.Materi{
 			Id:            int32(m.ID),
 			MataPelajaran: &base.MataPelajaran{Id: int32(m.MataPelajaran.ID), Nama: m.MataPelajaran.Nama},
+			Tingkat:       &base.Tingkat{Id: int32(m.Tingkat.ID), Nama: m.Tingkat.Nama},
 			Nama:          m.Nama,
-			Tingkatan:     int32(m.Tingkatan),
 		},
 	}, nil
 }
 
 // UpdateMateri updates materi
 func (h *materiHandler) UpdateMateri(ctx context.Context, req *base.UpdateMateriRequest) (*base.MateriResponse, error) {
-	m, err := h.usecase.UpdateMateri(int(req.Id), int(req.IdMataPelajaran), req.Nama, int(req.Tingkatan))
+	m, err := h.usecase.UpdateMateri(int(req.Id), int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat))
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +62,8 @@ func (h *materiHandler) UpdateMateri(ctx context.Context, req *base.UpdateMateri
 		Materi: &base.Materi{
 			Id:            int32(m.ID),
 			MataPelajaran: &base.MataPelajaran{Id: int32(m.MataPelajaran.ID), Nama: m.MataPelajaran.Nama},
+			Tingkat:       &base.Tingkat{Id: int32(m.Tingkat.ID), Nama: m.Tingkat.Nama},
 			Nama:          m.Nama,
-			Tingkatan:     int32(m.Tingkatan),
 		},
 	}, nil
 }
@@ -96,7 +96,7 @@ func (h *materiHandler) ListMateri(ctx context.Context, req *base.ListMateriRequ
 			pageSize = int(req.Pagination.PageSize)
 		}
 	}
-	materis, pagination, err := h.usecase.ListMateri(int(req.IdMataPelajaran), int(req.Tingkatan), page, pageSize)
+	materis, pagination, err := h.usecase.ListMateri(int(req.IdMataPelajaran), int(req.IdTingkat), page, pageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -106,8 +106,8 @@ func (h *materiHandler) ListMateri(ctx context.Context, req *base.ListMateriRequ
 		materiList = append(materiList, &base.Materi{
 			Id:            int32(m.ID),
 			MataPelajaran: &base.MataPelajaran{Id: int32(m.MataPelajaran.ID), Nama: m.MataPelajaran.Nama},
+			Tingkat:       &base.Tingkat{Id: int32(m.Tingkat.ID), Nama: m.Tingkat.Nama},
 			Nama:          m.Nama,
-			Tingkatan:     int32(m.Tingkatan),
 		})
 	}
 

@@ -15,6 +15,9 @@
       "name": "MateriService"
     },
     {
+      "name": "TingkatService"
+    },
+    {
       "name": "SoalService"
     },
     {
@@ -235,7 +238,7 @@
             "format": "int32"
           },
           {
-            "name": "tingkatan",
+            "name": "idTingkat",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -779,7 +782,7 @@
             "format": "int32"
           },
           {
-            "name": "tingkatan",
+            "name": "idTingkat",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -949,12 +952,12 @@
           "type": "integer",
           "format": "int32"
         },
-        "nama": {
-          "type": "string"
-        },
-        "tingkatan": {
+        "idTingkat": {
           "type": "integer",
           "format": "int32"
+        },
+        "nama": {
+          "type": "string"
         }
       }
     },
@@ -962,6 +965,10 @@
       "type": "object",
       "properties": {
         "idMateri": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "idTingkat": {
           "type": "integer",
           "format": "int32"
         },
@@ -1015,12 +1022,12 @@
           "type": "integer",
           "format": "int32"
         },
-        "nama": {
-          "type": "string"
-        },
-        "tingkatan": {
+        "idTingkat": {
           "type": "integer",
           "format": "int32"
+        },
+        "nama": {
+          "type": "string"
         }
       }
     },
@@ -1028,6 +1035,10 @@
       "type": "object",
       "properties": {
         "idMateri": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "idTingkat": {
           "type": "integer",
           "format": "int32"
         },
@@ -1243,6 +1254,18 @@
         }
       }
     },
+    "baseListTingkatResponse": {
+      "type": "object",
+      "properties": {
+        "tingkat": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseTingkat"
+          }
+        }
+      }
+    },
     "baseMataPelajaran": {
       "type": "object",
       "properties": {
@@ -1274,12 +1297,11 @@
           "$ref": "#/definitions/baseMataPelajaran",
           "title": "Nested, bukan hanya ID"
         },
+        "tingkat": {
+          "$ref": "#/definitions/baseTingkat"
+        },
         "nama": {
           "type": "string"
-        },
-        "tingkatan": {
-          "type": "integer",
-          "format": "int32"
         }
       }
     },
@@ -1608,6 +1630,26 @@
         "TIMEOUT"
       ],
       "default": "STATUS_INVALID"
+    },
+    "baseTingkat": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "nama": {
+          "type": "string"
+        }
+      }
+    },
+    "baseTingkatResponse": {
+      "type": "object",
+      "properties": {
+        "tingkat": {
+          "$ref": "#/definitions/baseTingkat"
+        }
+      }
     },
     "protobufAny": {
       "type": "object",

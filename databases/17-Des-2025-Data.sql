@@ -3,16 +3,22 @@ CREATE TABLE `mata_pelajaran` (
                                   `nama` varchar(50) UNIQUE NOT NULL
 );
 
+CREATE TABLE `tingkat` (
+                           `id` int PRIMARY KEY AUTO_INCREMENT,
+                           `nama` varchar(50) UNIQUE NOT NULL
+);
+
 CREATE TABLE `materi` (
                           `id` int PRIMARY KEY AUTO_INCREMENT,
                           `id_mata_pelajaran` int NOT NULL,
-                          `nama` varchar(100) NOT NULL,
-                          `tingkatan` int NOT NULL
+                          `id_tingkat` int NOT NULL,
+                          `nama` varchar(100) NOT NULL
 );
 
 CREATE TABLE `soal` (
                         `id` int PRIMARY KEY AUTO_INCREMENT,
                         `id_materi` int NOT NULL,
+                        `id_tingkat` int NOT NULL,
                         `pertanyaan` text NOT NULL,
                         `opsi_a` varchar(255) NOT NULL,
                         `opsi_b` varchar(255) NOT NULL,
@@ -25,7 +31,7 @@ CREATE TABLE `test_session` (
                                 `id` int PRIMARY KEY AUTO_INCREMENT,
                                 `session_token` varchar(64) UNIQUE NOT NULL,
                                 `nama_peserta` varchar(100) NOT NULL,
-                                `tingkatan` int NOT NULL,
+                                `id_tingkat` int NOT NULL,
                                 `id_mata_pelajaran` int NOT NULL,
                                 `waktu_mulai` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                 `waktu_selesai` timestamp NULL,
@@ -51,13 +57,15 @@ CREATE TABLE `jawaban_siswa` (
                                  `dijawab_pada` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE UNIQUE INDEX `materi_index_0` ON `materi` (`id_mata_pelajaran`, `tingkatan`, `nama`);
+CREATE UNIQUE INDEX `materi_index_0` ON `materi` (`id_mata_pelajaran`, `id_tingkat`, `nama`);
 
 CREATE INDEX `soal_index_1` ON `soal` (`id_materi`);
 
+CREATE INDEX `soal_index_2` ON `soal` (`id_tingkat`);
+
 CREATE UNIQUE INDEX `test_session_index_2` ON `test_session` (`session_token`);
 
-CREATE INDEX `test_session_index_3` ON `test_session` (`tingkatan`);
+CREATE INDEX `test_session_index_3` ON `test_session` (`id_tingkat`);
 
 CREATE INDEX `test_session_index_4` ON `test_session` (`id_mata_pelajaran`);
 
@@ -71,7 +79,13 @@ CREATE UNIQUE INDEX `jawaban_siswa_index_8` ON `jawaban_siswa` (`id_test_session
 
 ALTER TABLE `materi` ADD FOREIGN KEY (`id_mata_pelajaran`) REFERENCES `mata_pelajaran` (`id`);
 
+ALTER TABLE `materi` ADD FOREIGN KEY (`id_tingkat`) REFERENCES `tingkat` (`id`);
+
 ALTER TABLE `soal` ADD FOREIGN KEY (`id_materi`) REFERENCES `materi` (`id`);
+
+ALTER TABLE `soal` ADD FOREIGN KEY (`id_tingkat`) REFERENCES `tingkat` (`id`);
+
+ALTER TABLE `test_session` ADD FOREIGN KEY (`id_tingkat`) REFERENCES `tingkat` (`id`);
 
 ALTER TABLE `test_session` ADD FOREIGN KEY (`id_mata_pelajaran`) REFERENCES `mata_pelajaran` (`id`);
 

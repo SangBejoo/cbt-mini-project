@@ -32,8 +32,8 @@ func (h *soalHandler) CreateSoal(ctx context.Context, req *base.CreateSoalReques
 			Materi:        &base.Materi{
 				Id: int32(s.Materi.ID),
 				MataPelajaran: &base.MataPelajaran{Id: int32(s.Materi.MataPelajaran.ID), Nama: s.Materi.MataPelajaran.Nama},
+				Tingkat: &base.Tingkat{Id: int32(s.Materi.Tingkat.ID), Nama: s.Materi.Tingkat.Nama},
 				Nama: s.Materi.Nama,
-				Tingkatan: int32(s.Materi.Tingkatan),
 			},
 			Pertanyaan:    s.Pertanyaan,
 			OpsiA:         s.OpsiA,
@@ -58,8 +58,8 @@ func (h *soalHandler) GetSoal(ctx context.Context, req *base.GetSoalRequest) (*b
 			Materi:        &base.Materi{
 				Id: int32(s.Materi.ID),
 				MataPelajaran: &base.MataPelajaran{Id: int32(s.Materi.MataPelajaran.ID), Nama: s.Materi.MataPelajaran.Nama},
+				Tingkat: &base.Tingkat{Id: int32(s.Materi.Tingkat.ID), Nama: s.Materi.Tingkat.Nama},
 				Nama: s.Materi.Nama,
-				Tingkatan: int32(s.Materi.Tingkatan),
 			},
 			Pertanyaan:    s.Pertanyaan,
 			OpsiA:         s.OpsiA,
@@ -85,8 +85,8 @@ func (h *soalHandler) UpdateSoal(ctx context.Context, req *base.UpdateSoalReques
 			Materi:        &base.Materi{
 				Id: int32(s.Materi.ID),
 				MataPelajaran: &base.MataPelajaran{Id: int32(s.Materi.MataPelajaran.ID), Nama: s.Materi.MataPelajaran.Nama},
+				Tingkat: &base.Tingkat{Id: int32(s.Materi.Tingkat.ID), Nama: s.Materi.Tingkat.Nama},
 				Nama: s.Materi.Nama,
-				Tingkatan: int32(s.Materi.Tingkatan),
 			},
 			Pertanyaan:    s.Pertanyaan,
 			OpsiA:         s.OpsiA,
@@ -126,7 +126,7 @@ func (h *soalHandler) ListSoal(ctx context.Context, req *base.ListSoalRequest) (
 			pageSize = int(req.Pagination.PageSize)
 		}
 	}
-	soals, pagination, err := h.usecase.ListSoal(int(req.IdMateri), int(req.Tingkatan), int(req.IdMataPelajaran), page, pageSize)
+	soals, pagination, err := h.usecase.ListSoal(int(req.IdMateri), int(req.IdTingkat), int(req.IdMataPelajaran), page, pageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -138,8 +138,8 @@ func (h *soalHandler) ListSoal(ctx context.Context, req *base.ListSoalRequest) (
 			Materi:        &base.Materi{
 				Id: int32(s.Materi.ID),
 				MataPelajaran: &base.MataPelajaran{Id: int32(s.Materi.MataPelajaran.ID), Nama: s.Materi.MataPelajaran.Nama},
+				Tingkat: &base.Tingkat{Id: int32(s.Materi.Tingkat.ID), Nama: s.Materi.Tingkat.Nama},
 				Nama: s.Materi.Nama,
-				Tingkatan: int32(s.Materi.Tingkatan),
 			},
 			Pertanyaan:    s.Pertanyaan,
 			OpsiA:         s.OpsiA,

@@ -14,6 +14,8 @@ type Soal struct {
 	ID         int    `json:"id" gorm:"primaryKey;autoIncrement"`
 	IDMateri   int    `json:"id_materi" gorm:"not null"`
 	Materi     Materi `json:"materi" gorm:"foreignKey:IDMateri"`
+	IDTingkat  int    `json:"id_tingkat" gorm:"not null"`
+	Tingkat    Tingkat `json:"tingkat" gorm:"foreignKey:IDTingkat"`
 	Pertanyaan string `json:"pertanyaan" gorm:"type:text;not null"`
 	OpsiA      string `json:"opsi_a" gorm:"not null"`
 	OpsiB      string `json:"opsi_b" gorm:"not null"`

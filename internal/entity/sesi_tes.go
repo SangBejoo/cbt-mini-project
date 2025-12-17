@@ -16,7 +16,8 @@ type TestSession struct {
 	ID              int           `json:"id" gorm:"primaryKey;autoIncrement"`
 	SessionToken    string        `json:"session_token" gorm:"unique;not null;size:64"`
 	NamaPeserta     string        `json:"nama_peserta" gorm:"not null;size:100"`
-	Tingkatan       int           `json:"tingkatan" gorm:"not null"`
+	IDTingkat       int           `json:"id_tingkat" gorm:"not null"`
+	Tingkat         Tingkat       `json:"tingkat" gorm:"foreignKey:IDTingkat"`
 	IDMataPelajaran int           `json:"id_mata_pelajaran" gorm:"not null"`
 	MataPelajaran   MataPelajaran `json:"mata_pelajaran" gorm:"foreignKey:IDMataPelajaran"`
 

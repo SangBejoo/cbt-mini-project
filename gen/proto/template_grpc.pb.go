@@ -630,6 +630,260 @@ var MateriService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
+	TingkatService_CreateTingkat_FullMethodName = "/base.TingkatService/CreateTingkat"
+	TingkatService_GetTingkat_FullMethodName    = "/base.TingkatService/GetTingkat"
+	TingkatService_UpdateTingkat_FullMethodName = "/base.TingkatService/UpdateTingkat"
+	TingkatService_DeleteTingkat_FullMethodName = "/base.TingkatService/DeleteTingkat"
+	TingkatService_ListTingkat_FullMethodName   = "/base.TingkatService/ListTingkat"
+)
+
+// TingkatServiceClient is the client API for TingkatService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type TingkatServiceClient interface {
+	CreateTingkat(ctx context.Context, in *CreateTingkatRequest, opts ...grpc.CallOption) (*TingkatResponse, error)
+	GetTingkat(ctx context.Context, in *GetTingkatRequest, opts ...grpc.CallOption) (*TingkatResponse, error)
+	UpdateTingkat(ctx context.Context, in *UpdateTingkatRequest, opts ...grpc.CallOption) (*TingkatResponse, error)
+	DeleteTingkat(ctx context.Context, in *DeleteTingkatRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error)
+	ListTingkat(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListTingkatResponse, error)
+}
+
+type tingkatServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewTingkatServiceClient(cc grpc.ClientConnInterface) TingkatServiceClient {
+	return &tingkatServiceClient{cc}
+}
+
+func (c *tingkatServiceClient) CreateTingkat(ctx context.Context, in *CreateTingkatRequest, opts ...grpc.CallOption) (*TingkatResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TingkatResponse)
+	err := c.cc.Invoke(ctx, TingkatService_CreateTingkat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tingkatServiceClient) GetTingkat(ctx context.Context, in *GetTingkatRequest, opts ...grpc.CallOption) (*TingkatResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TingkatResponse)
+	err := c.cc.Invoke(ctx, TingkatService_GetTingkat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tingkatServiceClient) UpdateTingkat(ctx context.Context, in *UpdateTingkatRequest, opts ...grpc.CallOption) (*TingkatResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TingkatResponse)
+	err := c.cc.Invoke(ctx, TingkatService_UpdateTingkat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tingkatServiceClient) DeleteTingkat(ctx context.Context, in *DeleteTingkatRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MessageStatusResponse)
+	err := c.cc.Invoke(ctx, TingkatService_DeleteTingkat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tingkatServiceClient) ListTingkat(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListTingkatResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTingkatResponse)
+	err := c.cc.Invoke(ctx, TingkatService_ListTingkat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// TingkatServiceServer is the server API for TingkatService service.
+// All implementations must embed UnimplementedTingkatServiceServer
+// for forward compatibility.
+type TingkatServiceServer interface {
+	CreateTingkat(context.Context, *CreateTingkatRequest) (*TingkatResponse, error)
+	GetTingkat(context.Context, *GetTingkatRequest) (*TingkatResponse, error)
+	UpdateTingkat(context.Context, *UpdateTingkatRequest) (*TingkatResponse, error)
+	DeleteTingkat(context.Context, *DeleteTingkatRequest) (*MessageStatusResponse, error)
+	ListTingkat(context.Context, *emptypb.Empty) (*ListTingkatResponse, error)
+	mustEmbedUnimplementedTingkatServiceServer()
+}
+
+// UnimplementedTingkatServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedTingkatServiceServer struct{}
+
+func (UnimplementedTingkatServiceServer) CreateTingkat(context.Context, *CreateTingkatRequest) (*TingkatResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateTingkat not implemented")
+}
+func (UnimplementedTingkatServiceServer) GetTingkat(context.Context, *GetTingkatRequest) (*TingkatResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTingkat not implemented")
+}
+func (UnimplementedTingkatServiceServer) UpdateTingkat(context.Context, *UpdateTingkatRequest) (*TingkatResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateTingkat not implemented")
+}
+func (UnimplementedTingkatServiceServer) DeleteTingkat(context.Context, *DeleteTingkatRequest) (*MessageStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteTingkat not implemented")
+}
+func (UnimplementedTingkatServiceServer) ListTingkat(context.Context, *emptypb.Empty) (*ListTingkatResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListTingkat not implemented")
+}
+func (UnimplementedTingkatServiceServer) mustEmbedUnimplementedTingkatServiceServer() {}
+func (UnimplementedTingkatServiceServer) testEmbeddedByValue()                        {}
+
+// UnsafeTingkatServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to TingkatServiceServer will
+// result in compilation errors.
+type UnsafeTingkatServiceServer interface {
+	mustEmbedUnimplementedTingkatServiceServer()
+}
+
+func RegisterTingkatServiceServer(s grpc.ServiceRegistrar, srv TingkatServiceServer) {
+	// If the following call pancis, it indicates UnimplementedTingkatServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&TingkatService_ServiceDesc, srv)
+}
+
+func _TingkatService_CreateTingkat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateTingkatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TingkatServiceServer).CreateTingkat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TingkatService_CreateTingkat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TingkatServiceServer).CreateTingkat(ctx, req.(*CreateTingkatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TingkatService_GetTingkat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTingkatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TingkatServiceServer).GetTingkat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TingkatService_GetTingkat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TingkatServiceServer).GetTingkat(ctx, req.(*GetTingkatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TingkatService_UpdateTingkat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateTingkatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TingkatServiceServer).UpdateTingkat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TingkatService_UpdateTingkat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TingkatServiceServer).UpdateTingkat(ctx, req.(*UpdateTingkatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TingkatService_DeleteTingkat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteTingkatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TingkatServiceServer).DeleteTingkat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TingkatService_DeleteTingkat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TingkatServiceServer).DeleteTingkat(ctx, req.(*DeleteTingkatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TingkatService_ListTingkat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TingkatServiceServer).ListTingkat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TingkatService_ListTingkat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TingkatServiceServer).ListTingkat(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// TingkatService_ServiceDesc is the grpc.ServiceDesc for TingkatService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var TingkatService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "base.TingkatService",
+	HandlerType: (*TingkatServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateTingkat",
+			Handler:    _TingkatService_CreateTingkat_Handler,
+		},
+		{
+			MethodName: "GetTingkat",
+			Handler:    _TingkatService_GetTingkat_Handler,
+		},
+		{
+			MethodName: "UpdateTingkat",
+			Handler:    _TingkatService_UpdateTingkat_Handler,
+		},
+		{
+			MethodName: "DeleteTingkat",
+			Handler:    _TingkatService_DeleteTingkat_Handler,
+		},
+		{
+			MethodName: "ListTingkat",
+			Handler:    _TingkatService_ListTingkat_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "template.proto",
+}
+
+const (
 	SoalService_CreateSoal_FullMethodName = "/base.SoalService/CreateSoal"
 	SoalService_GetSoal_FullMethodName    = "/base.SoalService/GetSoal"
 	SoalService_UpdateSoal_FullMethodName = "/base.SoalService/UpdateSoal"
