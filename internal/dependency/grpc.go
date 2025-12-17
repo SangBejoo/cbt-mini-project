@@ -49,7 +49,7 @@ func InitGrpcDependency(server *grpc.Server, repo infra.Repository) {
 	mataPelajaranServer := mataPelajaranHandler.NewMataPelajaranHandler(mataPelajaranUsecase)
 	materiServer := materiHandler.NewMateriHandler(materiUsecase)
 	soalServer := soalHandler.NewSoalHandler(soalUsecase)
-	testSessionServer := testSessionHandler.NewTestSessionHandler(testSessionUsecase)
+	testSessionServer := testSessionHandler.NewTestSessionHandler(testSessionUsecase, tingkatUsecase)
 	historyServer := historyHandler.NewHistoryHandler(historyUsecase)
 	tingkatServer := tingkatHandler.NewTingkatHandler(tingkatUsecase)
 

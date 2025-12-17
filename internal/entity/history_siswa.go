@@ -15,6 +15,7 @@ type HistorySummary struct {
 	ID                    int           `json:"id"`
 	SessionToken          string        `json:"session_token"`
 	MataPelajaran         MataPelajaran `json:"mata_pelajaran"`
+	Tingkat               Tingkat       `json:"tingkat"`
 	WaktuMulai            time.Time     `json:"waktu_mulai"`
 	WaktuSelesai          *time.Time    `json:"waktu_selesai"`
 	DurasiPengerjaanDetik int           `json:"durasi_pengerjaan_detik"`

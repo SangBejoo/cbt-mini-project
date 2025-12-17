@@ -27,7 +27,7 @@ func (r *testSessionRepositoryImpl) Create(session *entity.TestSession) error {
 // Get session by token
 func (r *testSessionRepositoryImpl) GetByToken(token string) (*entity.TestSession, error) {
 	var session entity.TestSession
-	err := r.db.Preload("MataPelajaran").Where("session_token = ?", token).First(&session).Error
+	err := r.db.Preload("MataPelajaran").Preload("Tingkat").Where("session_token = ?", token).First(&session).Error
 	if err != nil {
 		return nil, err
 	}
@@ -60,10 +60,10 @@ func (r *testSessionRepositoryImpl) List(tingkatan, idMataPelajaran *int, status
 	var sessions []entity.TestSession
 	var total int64
 
-	query := r.db.Model(&entity.TestSession{}).Preload("MataPelajaran")
+	query := r.db.Model(&entity.TestSession{}).Preload("MataPelajaran").Preload("Tingkat")
 
 	if tingkatan != nil {
-		query = query.Where("tingkatan = ?", *tingkatan)
+		query = query.Where("id_tingkat = ?", *tingkatan)
 	}
 	if idMataPelajaran != nil {
 		query = query.Where("id_mata_pelajaran = ?", *idMataPelajaran)
@@ -154,7 +154,7 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 	var soalIDs []int
 	err := r.db.Model(&entity.Soal{}).
 		Joins("JOIN materi ON soal.id_materi = materi.id").
-		Where("materi.id_mata_pelajaran = ? AND materi.tingkatan = ?", idMataPelajaran, tingkatan).
+		Where("materi.id_mata_pelajaran = ? AND materi.id_tingkat = ?", idMataPelajaran, tingkatan).
 		Pluck("soal.id", &soalIDs).Error
 	if err != nil {
 		return err

@@ -4,6 +4,7 @@ import (
 	base "cbt-test-mini-project/gen/proto"
 	"cbt-test-mini-project/internal/entity"
 	"cbt-test-mini-project/internal/usecase/test_session"
+	tingkatUsecase "cbt-test-mini-project/internal/usecase/tingkat"
 	"context"
 	"strings"
 
@@ -13,17 +14,18 @@ import (
 // testSessionHandler implements base.TestSessionServiceServer
 type testSessionHandler struct {
 	base.UnimplementedTestSessionServiceServer
-	usecase test_session.TestSessionUsecase
+	usecase        test_session.TestSessionUsecase
+	tingkatUsecase tingkatUsecase.TingkatUsecase
 }
 
 // NewTestSessionHandler creates a new TestSessionHandler
-func NewTestSessionHandler(usecase test_session.TestSessionUsecase) base.TestSessionServiceServer {
-	return &testSessionHandler{usecase: usecase}
+func NewTestSessionHandler(usecase test_session.TestSessionUsecase, tingkatUsecase tingkatUsecase.TingkatUsecase) base.TestSessionServiceServer {
+	return &testSessionHandler{usecase: usecase, tingkatUsecase: tingkatUsecase}
 }
 
 // CreateTestSession creates a new test session
 func (h *testSessionHandler) CreateTestSession(ctx context.Context, req *base.CreateTestSessionRequest) (*base.TestSessionResponse, error) {
-	session, err := h.usecase.CreateTestSession(req.NamaPeserta, int(req.Tingkatan), int(req.IdMataPelajaran), int(req.DurasiMenit), int(req.JumlahSoal))
+	session, err := h.usecase.CreateTestSession(req.NamaPeserta, int(req.IdTingkat), int(req.IdMataPelajaran), int(req.DurasiMenit), int(req.JumlahSoal))
 	if err != nil {
 		return nil, err
 	}
@@ -114,6 +116,12 @@ func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTes
 		return nil, err
 	}
 
+	// Get all tingkat
+	tingkatList, _, err := h.tingkatUsecase.ListTingkat(1, 100) // Assuming max 100 tingkat
+	if err != nil {
+		return nil, err
+	}
+
 	var jawabanDetails []*base.JawabanDetail
 	for _, d := range details {
 		var jawabanDipilih base.JawabanOption
@@ -134,9 +142,18 @@ func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTes
 		})
 	}
 
+	var protoTingkat []*base.Tingkat
+	for _, t := range tingkatList {
+		protoTingkat = append(protoTingkat, &base.Tingkat{
+			Id:   int32(t.ID),
+			Nama: t.Nama,
+		})
+	}
+
 	return &base.TestResultResponse{
 		SessionInfo:   h.convertToProtoTestSession(session),
 		DetailJawaban: jawabanDetails,
+		Tingkat:       protoTingkat,
 	}, nil
 }
 
@@ -145,8 +162,8 @@ func (h *testSessionHandler) ListTestSessions(ctx context.Context, req *base.Lis
 	var tingkatan, idMataPelajaran *int
 	var status *entity.TestStatus
 
-	if req.Tingkatan != 0 {
-		t := int(req.Tingkatan)
+	if req.IdTingkat != 0 {
+		t := int(req.IdTingkat)
 		tingkatan = &t
 	}
 	if req.IdMataPelajaran != 0 {
@@ -217,7 +234,7 @@ func (h *testSessionHandler) convertToProtoTestSession(session *entity.TestSessi
 		Id:              int32(session.ID),
 		SessionToken:    session.SessionToken,
 		NamaPeserta:     session.NamaPeserta,
-		Tingkatan:       int32(session.Tingkat.ID),
+		Tingkat:         &base.Tingkat{Id: int32(session.Tingkat.ID), Nama: session.Tingkat.Nama},
 		MataPelajaran:   &base.MataPelajaran{Id: int32(session.MataPelajaran.ID), Nama: session.MataPelajaran.Nama},
 		WaktuMulai:      timestamppb.New(session.WaktuMulai),
 		WaktuSelesai:    waktuSelesai,

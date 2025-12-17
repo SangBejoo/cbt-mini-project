@@ -18,13 +18,17 @@ func NewHistoryRepository(db *gorm.DB) HistoryRepository {
 
 // Get student history
 func (r *historyRepositoryImpl) GetStudentHistory(namaPeserta string, tingkatan, idMataPelajaran *int, limit, offset int) ([]entity.HistorySummary, int, error) {
-	var histories []entity.HistorySummary
+	var sessions []entity.TestSession
 	var total int64
 
-	query := r.db.Model(&entity.TestSession{}).Preload("MataPelajaran").Where("nama_peserta = ? AND status = ?", namaPeserta, entity.TestStatusCompleted)
+	query := r.db.Model(&entity.TestSession{}).Preload("MataPelajaran").Preload("Tingkat").Where("status = ?", entity.TestStatusCompleted)
+
+	if namaPeserta != "" {
+		query = query.Where("nama_peserta = ?", namaPeserta)
+	}
 
 	if tingkatan != nil {
-		query = query.Where("tingkatan = ?", *tingkatan)
+		query = query.Where("id_tingkat = ?", *tingkatan)
 	}
 	if idMataPelajaran != nil {
 		query = query.Where("id_mata_pelajaran = ?", *idMataPelajaran)
@@ -36,8 +40,42 @@ func (r *historyRepositoryImpl) GetStudentHistory(namaPeserta string, tingkatan,
 	}
 
 	// Get paginated results
-	if err := query.Limit(limit).Offset(offset).Find(&histories).Error; err != nil {
+	if err := query.Limit(limit).Offset(offset).Find(&sessions).Error; err != nil {
 		return nil, 0, err
+	}
+
+	// Map to HistorySummary
+	histories := make([]entity.HistorySummary, len(sessions))
+	for i, s := range sessions {
+		durasi := 0
+		if s.WaktuSelesai != nil {
+			durasi = int(s.WaktuSelesai.Sub(s.WaktuMulai).Seconds())
+		}
+		nilaiAkhir := 0.0
+		if s.NilaiAkhir != nil {
+			nilaiAkhir = *s.NilaiAkhir
+		}
+		jumlahBenar := 0
+		if s.JumlahBenar != nil {
+			jumlahBenar = *s.JumlahBenar
+		}
+		totalSoal := 0
+		if s.TotalSoal != nil {
+			totalSoal = *s.TotalSoal
+		}
+		histories[i] = entity.HistorySummary{
+			ID:                    s.ID,
+			SessionToken:          s.SessionToken,
+			MataPelajaran:         s.MataPelajaran,
+			Tingkat:               s.Tingkat,
+			WaktuMulai:            s.WaktuMulai,
+			WaktuSelesai:          s.WaktuSelesai,
+			DurasiPengerjaanDetik: durasi,
+			NilaiAkhir:            nilaiAkhir,
+			JumlahBenar:           jumlahBenar,
+			TotalSoal:             totalSoal,
+			Status:                s.Status,
+		}
 	}
 
 	return histories, int(total), nil
@@ -68,7 +106,7 @@ func (r *historyRepositoryImpl) GetHistoryDetail(sessionToken string) (*entity.T
 
 func (r *historyRepositoryImpl) getSessionByToken(token string) (*entity.TestSession, error) {
 	var session entity.TestSession
-	err := r.db.Preload("MataPelajaran").Where("session_token = ?", token).First(&session).Error
+	err := r.db.Preload("MataPelajaran").Preload("Tingkat").Where("session_token = ?", token).First(&session).Error
 	if err != nil {
 		return nil, err
 	}

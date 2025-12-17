@@ -18,10 +18,6 @@ func NewHistoryUsecase(repo history.HistoryRepository) HistoryUsecase {
 
 // GetStudentHistory gets student history with aggregates
 func (u *historyUsecaseImpl) GetStudentHistory(namaPeserta string, tingkatan, idMataPelajaran *int, page, pageSize int) (*entity.StudentHistoryResponse, error) {
-	if namaPeserta == "" {
-		return nil, errors.New("nama peserta cannot be empty")
-	}
-
 	if page < 1 {
 		page = 1
 	}

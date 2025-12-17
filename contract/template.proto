@@ -331,7 +331,7 @@ message TestSession {
     int32 id = 1;
     string session_token = 2;
     string nama_peserta = 3;
-    int32 tingkatan = 4;
+    Tingkat tingkat = 4;
     MataPelajaran mata_pelajaran = 5;  // Nested object
     google.protobuf.Timestamp waktu_mulai = 6;
     google.protobuf.Timestamp waktu_selesai = 7;
@@ -345,7 +345,7 @@ message TestSession {
 
 message CreateTestSessionRequest {
     string nama_peserta = 1;
-    int32 tingkatan = 2;
+    int32 id_tingkat = 2;
     int32 id_mata_pelajaran = 3;
     int32 durasi_menit = 4;
     int32 jumlah_soal = 5;  // ADDED - critical!
@@ -360,7 +360,7 @@ message TestSessionResponse {
 }
 
 message ListTestSessionsRequest {
-    int32 tingkatan = 1;
+    int32 id_tingkat = 1;
     int32 id_mata_pelajaran = 2;
     TestStatus status = 3;
     PaginationRequest pagination = 4;
@@ -431,6 +431,7 @@ message JawabanDetail {
 message TestResultResponse {
     TestSession session_info = 1;
     repeated JawabanDetail detail_jawaban = 2;
+    repeated Tingkat tingkat = 3;
 }
 
 // ========================================
@@ -448,13 +449,14 @@ message HistorySummary {
     int32 id = 1;
     string session_token = 2;
     MataPelajaran mata_pelajaran = 3;
-    google.protobuf.Timestamp waktu_mulai = 4;
-    google.protobuf.Timestamp waktu_selesai = 5;
-    int32 durasi_pengerjaan_detik = 6;  // Actual time spent
-    double nilai_akhir = 7;
-    int32 jumlah_benar = 8;
-    int32 total_soal = 9;
-    TestStatus status = 10;
+    Tingkat tingkat = 4;
+    google.protobuf.Timestamp waktu_mulai = 5;
+    google.protobuf.Timestamp waktu_selesai = 6;
+    int32 durasi_pengerjaan_detik = 7;  // Actual time spent
+    double nilai_akhir = 8;
+    int32 jumlah_benar = 9;
+    int32 total_soal = 10;
+    TestStatus status = 11;
 }
 
 message StudentHistoryResponse {

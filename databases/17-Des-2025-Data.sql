@@ -94,3 +94,4 @@ ALTER TABLE `test_session_soal` ADD FOREIGN KEY (`id_test_session`) REFERENCES `
 ALTER TABLE `test_session_soal` ADD FOREIGN KEY (`id_soal`) REFERENCES `soal` (`id`);
 
 ALTER TABLE `jawaban_siswa` ADD FOREIGN KEY (`id_test_session_soal`) REFERENCES `test_session_soal` (`id`) ON DELETE CASCADE;
+

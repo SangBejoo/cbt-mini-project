@@ -54,7 +54,7 @@
         },
         "parameters": [
           {
-            "name": "tingkatan",
+            "name": "idTingkat",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -1225,7 +1225,7 @@
         "namaPeserta": {
           "type": "string"
         },
-        "tingkatan": {
+        "idTingkat": {
           "type": "integer",
           "format": "int32"
         },
@@ -1287,6 +1287,9 @@
         },
         "mataPelajaran": {
           "$ref": "#/definitions/baseMataPelajaran"
+        },
+        "tingkat": {
+          "$ref": "#/definitions/baseTingkat"
         },
         "waktuMulai": {
           "type": "string",
@@ -1720,6 +1723,13 @@
             "type": "object",
             "$ref": "#/definitions/baseJawabanDetail"
           }
+        },
+        "tingkat": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseTingkat"
+          }
         }
       }
     },
@@ -1736,9 +1746,8 @@
         "namaPeserta": {
           "type": "string"
         },
-        "tingkatan": {
-          "type": "integer",
-          "format": "int32"
+        "tingkat": {
+          "$ref": "#/definitions/baseTingkat"
         },
         "mataPelajaran": {
           "$ref": "#/definitions/baseMataPelajaran",
