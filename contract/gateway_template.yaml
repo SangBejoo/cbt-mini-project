@@ -82,8 +82,8 @@ http:
     - selector: base.TestSessionService.GetTestSession
       get: /v1/sessions/{session_token}
 
-    # 3. Get Questions (Fetch Soal) -> Critical
-    # Note: Kita gunakan sub-resource pattern supaya rapi
+    # 3. Get Questions (Fetch Soal) -> Critical - Single Question at a Time
+    # nomor_urut is a query param: /v1/sessions/{token}/questions?nomor_urut=1
     - selector: base.TestSessionService.GetTestQuestions
       get: /v1/sessions/{session_token}/questions
 

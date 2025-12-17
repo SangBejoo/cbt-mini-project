@@ -329,14 +329,17 @@ message ListTestSessionsResponse {
 
 message GetTestQuestionsRequest {
     string session_token = 1;
+    int32 nomor_urut = 2;  // Question number to fetch (1-20, etc.)
 }
 
 message TestQuestionsResponse {
     string session_token = 1;
-    repeated SoalForStudent soal = 2;
+    SoalForStudent soal = 2;  // SINGLE question, not repeated
     int32 total_soal = 3;
-    int32 dijawab_count = 4;
-    google.protobuf.Timestamp batas_waktu = 5;
+    int32 current_nomor_urut = 4;
+    int32 dijawab_count = 5;
+    repeated bool is_answered_status = 6;  // Bool array for all questions (sidebar status)
+    google.protobuf.Timestamp batas_waktu = 7;
 }
 
 message SubmitAnswerRequest {

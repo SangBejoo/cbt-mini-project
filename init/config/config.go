@@ -35,15 +35,15 @@ func Load() *Main {
 	godotenv.Load()
 	return &Main{
 		Database: database{
-			DriverName: util.GetEnv("DB_DRIVER", "postgres"),
-			DSN:        util.GetEnv("DB_DSN", "postgres://user:password@localhost:5432/testdb?sslmode=disable"),
+			DriverName: util.GetEnv("DB_DRIVER", "mysql"),
+			DSN:        util.GetEnv("DB_DSN", "root:root@tcp(localhost:3306)/cbt_test?charset=utf8mb4&parseTime=True&loc=Local"),
 		},
 		Log: log{
 			Level:     util.GetEnv("LOG_LEVEL", -1),
 			Directory: util.GetEnv("LOG_DIRECTORY", ""),
 		},
 		RestServer: restServer{
-			Port: util.GetEnv("REST_PORT", 8000),
+			Port: util.GetEnv("REST_PORT", 8080),
 		},
 		GrpcServer: grpcServer{
 			Port: util.GetEnv("GRPC_PORT", 6000),

@@ -33,7 +33,7 @@ CREATE TABLE `test_session` (
                                 `nilai_akhir` decimal(5,2) NULL,
                                 `jumlah_benar` int NULL,
                                 `total_soal` int NULL,
-                                `status` enum('ongoing','completed') DEFAULT 'ongoing'
+                                `status` enum('ongoing','completed','timeout') DEFAULT 'ongoing'
 );
 
 CREATE TABLE `test_session_soal` (

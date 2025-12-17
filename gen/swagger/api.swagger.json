@@ -558,6 +558,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "nomorUrut",
+            "description": "Question number to fetch (1-20, etc.)",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
           }
         ],
         "tags": [
@@ -1485,19 +1493,27 @@
           "type": "string"
         },
         "soal": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/baseSoalForStudent"
-          }
+          "$ref": "#/definitions/baseSoalForStudent",
+          "title": "SINGLE question, not repeated"
         },
         "totalSoal": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "currentNomorUrut": {
           "type": "integer",
           "format": "int32"
         },
         "dijawabCount": {
           "type": "integer",
           "format": "int32"
+        },
+        "isAnsweredStatus": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          },
+          "title": "Bool array for all questions (sidebar status)"
         },
         "batasWaktu": {
           "type": "string",

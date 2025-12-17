@@ -1,0 +1,597 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "template.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "Base"
+    },
+    {
+      "name": "MataPelajaranService"
+    },
+    {
+      "name": "MateriService"
+    },
+    {
+      "name": "SoalService"
+    },
+    {
+      "name": "TestSessionService"
+    },
+    {
+      "name": "HistoryService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {},
+  "definitions": {
+    "baseHistoryDetailResponse": {
+      "type": "object",
+      "properties": {
+        "sessionInfo": {
+          "$ref": "#/definitions/baseTestSession"
+        },
+        "detailJawaban": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseJawabanDetail"
+          }
+        },
+        "breakdownMateri": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseMateriBreakdown"
+          },
+          "title": "Breakdown per materi"
+        }
+      }
+    },
+    "baseHistorySummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "sessionToken": {
+          "type": "string"
+        },
+        "mataPelajaran": {
+          "$ref": "#/definitions/baseMataPelajaran"
+        },
+        "waktuMulai": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "waktuSelesai": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "durasiPengerjaanDetik": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Actual time spent"
+        },
+        "nilaiAkhir": {
+          "type": "number",
+          "format": "double"
+        },
+        "jumlahBenar": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalSoal": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "status": {
+          "$ref": "#/definitions/baseTestStatus"
+        }
+      }
+    },
+    "baseJawabanDetail": {
+      "type": "object",
+      "properties": {
+        "nomorUrut": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pertanyaan": {
+          "type": "string"
+        },
+        "opsiA": {
+          "type": "string"
+        },
+        "opsiB": {
+          "type": "string"
+        },
+        "opsiC": {
+          "type": "string"
+        },
+        "opsiD": {
+          "type": "string"
+        },
+        "jawabanDipilih": {
+          "$ref": "#/definitions/baseJawabanOption"
+        },
+        "jawabanBenar": {
+          "$ref": "#/definitions/baseJawabanOption"
+        },
+        "isCorrect": {
+          "type": "boolean"
+        }
+      }
+    },
+    "baseJawabanOption": {
+      "type": "string",
+      "enum": [
+        "JAWABAN_INVALID",
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "default": "JAWABAN_INVALID"
+    },
+    "baseListMataPelajaranResponse": {
+      "type": "object",
+      "properties": {
+        "mataPelajaran": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseMataPelajaran"
+          }
+        }
+      }
+    },
+    "baseListMateriResponse": {
+      "type": "object",
+      "properties": {
+        "materi": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseMateri"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/basePaginationResponse"
+        }
+      }
+    },
+    "baseListSoalResponse": {
+      "type": "object",
+      "properties": {
+        "soal": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseSoalFull"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/basePaginationResponse"
+        }
+      }
+    },
+    "baseListTestSessionsResponse": {
+      "type": "object",
+      "properties": {
+        "testSessions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseTestSession"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/basePaginationResponse"
+        }
+      }
+    },
+    "baseMataPelajaran": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "nama": {
+          "type": "string"
+        }
+      }
+    },
+    "baseMataPelajaranResponse": {
+      "type": "object",
+      "properties": {
+        "mataPelajaran": {
+          "$ref": "#/definitions/baseMataPelajaran"
+        }
+      }
+    },
+    "baseMateri": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "mataPelajaran": {
+          "$ref": "#/definitions/baseMataPelajaran",
+          "title": "Nested, bukan hanya ID"
+        },
+        "nama": {
+          "type": "string"
+        },
+        "tingkatan": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "baseMateriBreakdown": {
+      "type": "object",
+      "properties": {
+        "namaMateri": {
+          "type": "string"
+        },
+        "jumlahSoal": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "jumlahBenar": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "persentaseBenar": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "baseMateriResponse": {
+      "type": "object",
+      "properties": {
+        "materi": {
+          "$ref": "#/definitions/baseMateri"
+        }
+      }
+    },
+    "baseMessageStatusResponse": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "basePaginationRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "basePaginationResponse": {
+      "type": "object",
+      "properties": {
+        "totalCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "currentPage": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "baseSoalForStudent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "nomorUrut": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Question number in test"
+        },
+        "pertanyaan": {
+          "type": "string"
+        },
+        "opsiA": {
+          "type": "string"
+        },
+        "opsiB": {
+          "type": "string"
+        },
+        "opsiC": {
+          "type": "string"
+        },
+        "opsiD": {
+          "type": "string"
+        },
+        "jawabanDipilih": {
+          "$ref": "#/definitions/baseJawabanOption",
+          "title": "If already answered"
+        },
+        "isAnswered": {
+          "type": "boolean"
+        }
+      },
+      "title": "Soal for student (no answer exposed)"
+    },
+    "baseSoalFull": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "materi": {
+          "$ref": "#/definitions/baseMateri"
+        },
+        "pertanyaan": {
+          "type": "string"
+        },
+        "opsiA": {
+          "type": "string"
+        },
+        "opsiB": {
+          "type": "string"
+        },
+        "opsiC": {
+          "type": "string"
+        },
+        "opsiD": {
+          "type": "string"
+        },
+        "jawabanBenar": {
+          "$ref": "#/definitions/baseJawabanOption"
+        }
+      },
+      "title": "Full soal with answer (for admin/teacher only)"
+    },
+    "baseSoalResponse": {
+      "type": "object",
+      "properties": {
+        "soal": {
+          "$ref": "#/definitions/baseSoalFull"
+        }
+      }
+    },
+    "baseStudentHistoryResponse": {
+      "type": "object",
+      "properties": {
+        "namaPeserta": {
+          "type": "string"
+        },
+        "tingkatan": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseHistorySummary"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/basePaginationResponse"
+        },
+        "rataRataNilai": {
+          "type": "number",
+          "format": "double",
+          "title": "Aggregate stats"
+        },
+        "totalTestCompleted": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "baseSubmitAnswerResponse": {
+      "type": "object",
+      "properties": {
+        "sessionToken": {
+          "type": "string"
+        },
+        "nomorUrut": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "jawabanDipilih": {
+          "$ref": "#/definitions/baseJawabanOption"
+        },
+        "isCorrect": {
+          "type": "boolean",
+          "title": "Immediate feedback"
+        },
+        "dijawabPada": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "baseTestQuestionsResponse": {
+      "type": "object",
+      "properties": {
+        "sessionToken": {
+          "type": "string"
+        },
+        "soal": {
+          "$ref": "#/definitions/baseSoalForStudent",
+          "title": "SINGLE question, not repeated"
+        },
+        "totalSoal": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "currentNomorUrut": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "dijawabCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isAnsweredStatus": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          },
+          "title": "Bool array for all questions (sidebar status)"
+        },
+        "batasWaktu": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "baseTestResultResponse": {
+      "type": "object",
+      "properties": {
+        "sessionInfo": {
+          "$ref": "#/definitions/baseTestSession"
+        },
+        "detailJawaban": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseJawabanDetail"
+          }
+        }
+      }
+    },
+    "baseTestSession": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "sessionToken": {
+          "type": "string"
+        },
+        "namaPeserta": {
+          "type": "string"
+        },
+        "tingkatan": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "mataPelajaran": {
+          "$ref": "#/definitions/baseMataPelajaran",
+          "title": "Nested object"
+        },
+        "waktuMulai": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "waktuSelesai": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "batasWaktu": {
+          "type": "string",
+          "format": "date-time",
+          "title": "ADDED"
+        },
+        "durasiMenit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "nilaiAkhir": {
+          "type": "number",
+          "format": "double"
+        },
+        "jumlahBenar": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalSoal": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "status": {
+          "$ref": "#/definitions/baseTestStatus"
+        }
+      }
+    },
+    "baseTestSessionResponse": {
+      "type": "object",
+      "properties": {
+        "testSession": {
+          "$ref": "#/definitions/baseTestSession"
+        }
+      }
+    },
+    "baseTestStatus": {
+      "type": "string",
+      "enum": [
+        "STATUS_INVALID",
+        "ONGOING",
+        "COMPLETED",
+        "TIMEOUT"
+      ],
+      "default": "STATUS_INVALID"
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,21 +1,23 @@
 package infra
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 
 	"cbt-test-mini-project/init/config"
 	"cbt-test-mini-project/init/infra/db"
+
+	"gorm.io/gorm"
 )
 
 type Repository struct {
-	DB *sql.DB
+	GormDB *gorm.DB
 }
 
 func (r *Repository) Close() error {
-	if r != nil && r.DB != nil {
-		if err := r.DB.Close(); err != nil {
+	if r != nil && r.GormDB != nil {
+		sqlDB, _ := r.GormDB.DB()
+		if err := sqlDB.Close(); err != nil {
 			return err
 		}
 	}
@@ -30,6 +32,6 @@ func LoadRepository(cfg config.Main) *Repository {
 	}
 
 	return &Repository{
-		DB: dbConn,
+		GormDB: dbConn,
 	}
 }

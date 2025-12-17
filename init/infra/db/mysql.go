@@ -1,16 +1,15 @@
 package db
 
 import (
-	"database/sql"
-
 	"cbt-test-mini-project/init/config"
 
-	_ "github.com/lib/pq" // or any other driver you want to use
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
-func OpenSQL(cfgMain config.Main) (db *sql.DB, err error) {
+func OpenSQL(cfgMain config.Main) (db *gorm.DB, err error) {
 	cfg := cfgMain.Database
-	db, err = sql.Open(cfg.DriverName, cfg.DSN)
+	db, err = gorm.Open(mysql.Open(cfg.DSN), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}

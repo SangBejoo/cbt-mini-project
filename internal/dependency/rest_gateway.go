@@ -14,5 +14,9 @@ import (
 func InitRestGatewayDependency(mux *runtime.ServeMux, opts []grpc.DialOption, ctx context.Context, cfg config.Main) {
 	port := fmt.Sprintf(":%d", cfg.GrpcServer.Port)
 	base.RegisterBaseHandlerFromEndpoint(ctx, mux, port, opts)
-	base.RegisterNotesServiceHandlerFromEndpoint(ctx, mux, port, opts)
+	base.RegisterMataPelajaranServiceHandlerFromEndpoint(ctx, mux, port, opts)
+	base.RegisterMateriServiceHandlerFromEndpoint(ctx, mux, port, opts)
+	base.RegisterSoalServiceHandlerFromEndpoint(ctx, mux, port, opts)
+	base.RegisterTestSessionServiceHandlerFromEndpoint(ctx, mux, port, opts)
+	base.RegisterHistoryServiceHandlerFromEndpoint(ctx, mux, port, opts)
 }

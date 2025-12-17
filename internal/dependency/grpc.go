@@ -7,16 +7,51 @@ import (
 
 	base "cbt-test-mini-project/gen/proto"
 	baseGrpcServer "cbt-test-mini-project/internal/handler/base"
-	notesGrpcHandler "cbt-test-mini-project/internal/handler/notes"
-	NotesRepository "cbt-test-mini-project/internal/repository/notes"
-	NotesUseCase "cbt-test-mini-project/internal/usecase/notes"
+	historyHandler "cbt-test-mini-project/internal/handler/history"
+	mataPelajaranHandler "cbt-test-mini-project/internal/handler/mata_pelajaran"
+	materiHandler "cbt-test-mini-project/internal/handler/materi"
+	soalHandler "cbt-test-mini-project/internal/handler/soal"
+	testSessionHandler "cbt-test-mini-project/internal/handler/test_session"
+	historyRepo "cbt-test-mini-project/internal/repository/history"
+	mataPelajaranRepo "cbt-test-mini-project/internal/repository/mata_pelajaran"
+	materiRepo "cbt-test-mini-project/internal/repository/materi"
+	testSessionRepo "cbt-test-mini-project/internal/repository/test_session"
+	soalRepo "cbt-test-mini-project/internal/repository/test_soal"
+	historyUsecase "cbt-test-mini-project/internal/usecase/history"
+	mataPelajaranUsecase "cbt-test-mini-project/internal/usecase/mata_pelajaran"
+	materiUsecase "cbt-test-mini-project/internal/usecase/materi"
+	soalUsecase "cbt-test-mini-project/internal/usecase/soal"
+	testSessionUsecase "cbt-test-mini-project/internal/usecase/test_session"
 )
 
 func InitGrpcDependency(server *grpc.Server, repo infra.Repository) {
+	// Initialize repositories
+	mataPelajaranRepo := mataPelajaranRepo.NewMataPelajaranRepository(repo.GormDB)
+	materiRepo := materiRepo.NewMateriRepository(repo.GormDB)
+	soalRepo := soalRepo.NewSoalRepository(repo.GormDB)
+	testSessionRepo := testSessionRepo.NewTestSessionRepository(repo.GormDB)
+	historyRepo := historyRepo.NewHistoryRepository(repo.GormDB)
+
+	// Initialize usecases
+	mataPelajaranUsecase := mataPelajaranUsecase.NewMataPelajaranUsecase(mataPelajaranRepo)
+	materiUsecase := materiUsecase.NewMateriUsecase(materiRepo)
+	soalUsecase := soalUsecase.NewSoalUsecase(soalRepo)
+	testSessionUsecase := testSessionUsecase.NewTestSessionUsecase(testSessionRepo)
+	historyUsecase := historyUsecase.NewHistoryUsecase(historyRepo)
+
+	// Initialize handlers
 	baseServer := baseGrpcServer.NewBaseHandler()
+	mataPelajaranServer := mataPelajaranHandler.NewMataPelajaranHandler(mataPelajaranUsecase)
+	materiServer := materiHandler.NewMateriHandler(materiUsecase)
+	soalServer := soalHandler.NewSoalHandler(soalUsecase)
+	testSessionServer := testSessionHandler.NewTestSessionHandler(testSessionUsecase)
+	historyServer := historyHandler.NewHistoryHandler(historyUsecase)
+
+	// Register servers
 	base.RegisterBaseServer(server, baseServer)
-	notesRepository := NotesRepository.NewNotesRepository(repo.DB)
-	notesUseCase := NotesUseCase.NewNotesUseCase(notesRepository)
-	notesServer := notesGrpcHandler.NewNotesHandler(notesUseCase)
-	base.RegisterNotesServiceServer(server, notesServer)
+	base.RegisterMataPelajaranServiceServer(server, mataPelajaranServer)
+	base.RegisterMateriServiceServer(server, materiServer)
+	base.RegisterSoalServiceServer(server, soalServer)
+	base.RegisterTestSessionServiceServer(server, testSessionServer)
+	base.RegisterHistoryServiceServer(server, historyServer)
 }

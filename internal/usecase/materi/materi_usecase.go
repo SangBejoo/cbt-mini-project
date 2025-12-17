@@ -1,0 +1,109 @@
+package materi
+
+import (
+	"cbt-test-mini-project/internal/entity"
+	"cbt-test-mini-project/internal/repository/materi"
+	"errors"
+)
+
+// materiUsecaseImpl implements MateriUsecase
+type materiUsecaseImpl struct {
+	repo materi.MateriRepository
+}
+
+// NewMateriUsecase creates a new MateriUsecase instance
+func NewMateriUsecase(repo materi.MateriRepository) MateriUsecase {
+	return &materiUsecaseImpl{repo: repo}
+}
+
+// CreateMateri creates a new materi
+func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, tingkatan int) (*entity.Materi, error) {
+	if nama == "" {
+		return nil, errors.New("nama cannot be empty")
+	}
+	if tingkatan < 1 {
+		return nil, errors.New("tingkatan must be positive")
+	}
+
+	m := &entity.Materi{
+		IDMataPelajaran: idMataPelajaran,
+		Nama:            nama,
+		Tingkatan:       tingkatan,
+	}
+	err := u.repo.Create(m)
+	if err != nil {
+		return nil, err
+	}
+	return u.repo.GetByID(m.ID) // To preload
+}
+
+// GetMateri gets by ID
+func (u *materiUsecaseImpl) GetMateri(id int) (*entity.Materi, error) {
+	return u.repo.GetByID(id)
+}
+
+// UpdateMateri updates existing
+func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, tingkatan int) (*entity.Materi, error) {
+	if nama == "" {
+		return nil, errors.New("nama cannot be empty")
+	}
+	if tingkatan < 1 {
+		return nil, errors.New("tingkatan must be positive")
+	}
+
+	m, err := u.repo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	m.IDMataPelajaran = idMataPelajaran
+	m.Nama = nama
+	m.Tingkatan = tingkatan
+	err = u.repo.Update(m)
+	if err != nil {
+		return nil, err
+	}
+	return u.repo.GetByID(m.ID)
+}
+
+// DeleteMateri deletes by ID
+func (u *materiUsecaseImpl) DeleteMateri(id int) error {
+	_, err := u.repo.GetByID(id)
+	if err != nil {
+		return err
+	}
+	return u.repo.Delete(id)
+}
+
+// ListMateri lists with filters and pagination
+func (u *materiUsecaseImpl) ListMateri(idMataPelajaran, tingkatan int, page, pageSize int) ([]entity.Materi, *entity.PaginationResponse, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+
+	offset := (page - 1) * pageSize
+	var idPtr, tingPtr *int
+	if idMataPelajaran > 0 {
+		idPtr = &idMataPelajaran
+	}
+	if tingkatan > 0 {
+		tingPtr = &tingkatan
+	}
+	materis, total, err := u.repo.List(idPtr, tingPtr, pageSize, offset)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	totalPages := (total + pageSize - 1) / pageSize
+	pagination := &entity.PaginationResponse{
+		TotalCount:  total,
+		TotalPages:  totalPages,
+		CurrentPage: page,
+		PageSize:    pageSize,
+	}
+
+	return materis, pagination, nil
+}

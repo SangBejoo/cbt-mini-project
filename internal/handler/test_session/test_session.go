@@ -1,0 +1,219 @@
+package test_session
+
+import (
+	base "cbt-test-mini-project/gen/proto"
+	"cbt-test-mini-project/internal/entity"
+	"cbt-test-mini-project/internal/usecase/test_session"
+	"context"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+// testSessionHandler implements base.TestSessionServiceServer
+type testSessionHandler struct {
+	base.UnimplementedTestSessionServiceServer
+	usecase test_session.TestSessionUsecase
+}
+
+// NewTestSessionHandler creates a new TestSessionHandler
+func NewTestSessionHandler(usecase test_session.TestSessionUsecase) base.TestSessionServiceServer {
+	return &testSessionHandler{usecase: usecase}
+}
+
+// CreateTestSession creates a new test session
+func (h *testSessionHandler) CreateTestSession(ctx context.Context, req *base.CreateTestSessionRequest) (*base.TestSessionResponse, error) {
+	session, err := h.usecase.CreateTestSession(req.NamaPeserta, int(req.Tingkatan), int(req.IdMataPelajaran), int(req.DurasiMenit), int(req.JumlahSoal))
+	if err != nil {
+		return nil, err
+	}
+
+	return &base.TestSessionResponse{
+		TestSession: h.convertToProtoTestSession(session),
+	}, nil
+}
+
+// GetTestSession gets session by token
+func (h *testSessionHandler) GetTestSession(ctx context.Context, req *base.GetTestSessionRequest) (*base.TestSessionResponse, error) {
+	session, err := h.usecase.GetTestSession(req.SessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	return &base.TestSessionResponse{
+		TestSession: h.convertToProtoTestSession(session),
+	}, nil
+}
+
+// GetTestQuestions gets a single question
+func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.GetTestQuestionsRequest) (*base.TestQuestionsResponse, error) {
+	soal, err := h.usecase.GetTestQuestions(req.SessionToken, int(req.NomorUrut))
+	if err != nil {
+		return nil, err
+	}
+
+	var jawabanDipilih base.JawabanOption
+	if soal.JawabanDipilih != nil {
+		jawabanDipilih = base.JawabanOption(base.JawabanOption_value[string(*soal.JawabanDipilih)])
+	}
+
+	return &base.TestQuestionsResponse{
+		SessionToken: req.SessionToken,
+		Soal: &base.SoalForStudent{
+			Id:             int32(soal.ID),
+			NomorUrut:      int32(soal.NomorUrut),
+			Pertanyaan:     soal.Pertanyaan,
+			OpsiA:          soal.OpsiA,
+			OpsiB:          soal.OpsiB,
+			OpsiC:          soal.OpsiC,
+			OpsiD:          soal.OpsiD,
+			JawabanDipilih: jawabanDipilih,
+			IsAnswered:     soal.IsAnswered,
+		},
+		TotalSoal:      20, // Assuming fixed, or get from session
+		CurrentNomorUrut: int32(req.NomorUrut),
+		DijawabCount:   0, // TODO: calculate
+		IsAnsweredStatus: []bool{}, // TODO: implement
+		BatasWaktu:     timestamppb.Now(), // TODO: get from session
+	}, nil
+}
+
+// SubmitAnswer submits an answer
+func (h *testSessionHandler) SubmitAnswer(ctx context.Context, req *base.SubmitAnswerRequest) (*base.SubmitAnswerResponse, error) {
+	jawaban := entity.JawabanOption(req.JawabanDipilih.String()[0])
+	err := h.usecase.SubmitAnswer(req.SessionToken, int(req.NomorUrut), jawaban)
+	if err != nil {
+		return nil, err
+	}
+
+	return &base.SubmitAnswerResponse{
+		SessionToken:    req.SessionToken,
+		NomorUrut:       req.NomorUrut,
+		JawabanDipilih:  req.JawabanDipilih,
+		IsCorrect:       true, // TODO: get from usecase
+		DijawabPada:     timestamppb.Now(),
+	}, nil
+}
+
+// CompleteSession completes the session
+func (h *testSessionHandler) CompleteSession(ctx context.Context, req *base.CompleteSessionRequest) (*base.TestSessionResponse, error) {
+	session, err := h.usecase.CompleteSession(req.SessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	return &base.TestSessionResponse{
+		TestSession: h.convertToProtoTestSession(session),
+	}, nil
+}
+
+// GetTestResult gets test result
+func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTestResultRequest) (*base.TestResultResponse, error) {
+	session, details, err := h.usecase.GetTestResult(req.SessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	var jawabanDetails []*base.JawabanDetail
+	for _, d := range details {
+		var jawabanDipilih base.JawabanOption
+		if d.JawabanDipilih != nil {
+			jawabanDipilih = base.JawabanOption(base.JawabanOption_value[string(*d.JawabanDipilih)])
+		}
+
+		jawabanDetails = append(jawabanDetails, &base.JawabanDetail{
+			NomorUrut:      int32(d.NomorUrut),
+			Pertanyaan:     d.Pertanyaan,
+			OpsiA:          d.OpsiA,
+			OpsiB:          d.OpsiB,
+			OpsiC:          d.OpsiC,
+			OpsiD:          d.OpsiD,
+			JawabanDipilih: jawabanDipilih,
+			JawabanBenar:   base.JawabanOption(base.JawabanOption_value[string(d.JawabanBenar)]),
+			IsCorrect:      d.IsCorrect,
+		})
+	}
+
+	return &base.TestResultResponse{
+		SessionInfo:   h.convertToProtoTestSession(session),
+		DetailJawaban: jawabanDetails,
+	}, nil
+}
+
+// ListTestSessions lists sessions
+func (h *testSessionHandler) ListTestSessions(ctx context.Context, req *base.ListTestSessionsRequest) (*base.ListTestSessionsResponse, error) {
+	var tingkatan, idMataPelajaran *int
+	var status *entity.TestStatus
+
+	if req.Tingkatan != 0 {
+		t := int(req.Tingkatan)
+		tingkatan = &t
+	}
+	if req.IdMataPelajaran != 0 {
+		i := int(req.IdMataPelajaran)
+		idMataPelajaran = &i
+	}
+	if req.Status != base.TestStatus_STATUS_INVALID {
+		s := entity.TestStatus(req.Status.String())
+		status = &s
+	}
+
+	sessions, pagination, err := h.usecase.ListTestSessions(tingkatan, idMataPelajaran, status, int(req.Pagination.Page), int(req.Pagination.PageSize))
+	if err != nil {
+		return nil, err
+	}
+
+	var sessionList []*base.TestSession
+	for _, s := range sessions {
+		sessionList = append(sessionList, h.convertToProtoTestSession(&s))
+	}
+
+	return &base.ListTestSessionsResponse{
+		TestSessions: sessionList,
+		Pagination: &base.PaginationResponse{
+			TotalCount:  int32(pagination.TotalCount),
+			TotalPages:  int32(pagination.TotalPages),
+			CurrentPage: int32(pagination.CurrentPage),
+			PageSize:    int32(pagination.PageSize),
+		},
+	}, nil
+}
+
+// Helper function to convert entity to proto
+func (h *testSessionHandler) convertToProtoTestSession(session *entity.TestSession) *base.TestSession {
+	var waktuSelesai, batasWaktu *timestamppb.Timestamp
+	if session.WaktuSelesai != nil {
+		waktuSelesai = timestamppb.New(*session.WaktuSelesai)
+	}
+	batasWaktu = timestamppb.New(session.BatasWaktu())
+
+	var nilaiAkhir float64
+	if session.NilaiAkhir != nil {
+		nilaiAkhir = *session.NilaiAkhir
+	}
+
+	var jumlahBenar, totalSoal int32
+	if session.JumlahBenar != nil {
+		jumlahBenar = int32(*session.JumlahBenar)
+	}
+	if session.TotalSoal != nil {
+		totalSoal = int32(*session.TotalSoal)
+	}
+
+	status := base.TestStatus(base.TestStatus_value[string(session.Status)])
+
+	return &base.TestSession{
+		Id:              int32(session.ID),
+		SessionToken:    session.SessionToken,
+		NamaPeserta:     session.NamaPeserta,
+		Tingkatan:       int32(session.Tingkatan),
+		MataPelajaran:   &base.MataPelajaran{Id: int32(session.MataPelajaran.ID), Nama: session.MataPelajaran.Nama},
+		WaktuMulai:      timestamppb.New(session.WaktuMulai),
+		WaktuSelesai:    waktuSelesai,
+		BatasWaktu:      batasWaktu,
+		DurasiMenit:     int32(session.DurasiMenit),
+		NilaiAkhir:      nilaiAkhir,
+		JumlahBenar:     jumlahBenar,
+		TotalSoal:       totalSoal,
+		Status:          status,
+	}
+}
