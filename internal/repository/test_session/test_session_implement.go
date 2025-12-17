@@ -111,6 +111,7 @@ func (r *testSessionRepositoryImpl) SubmitAnswer(token string, nomorUrut int, ja
 	// Find the TestSessionSoal
 	var tss entity.TestSessionSoal
 	err := r.db.Joins("JOIN test_session ON test_session_soal.id_test_session = test_session.id").
+		Preload("Soal").
 		Where("test_session.session_token = ? AND test_session_soal.nomor_urut = ?", token, nomorUrut).First(&tss).Error
 	if err != nil {
 		return err

@@ -101,7 +101,17 @@ func (h *soalHandler) DeleteSoal(ctx context.Context, req *base.DeleteSoalReques
 
 // ListSoal lists soal
 func (h *soalHandler) ListSoal(ctx context.Context, req *base.ListSoalRequest) (*base.ListSoalResponse, error) {
-	soals, pagination, err := h.usecase.ListSoal(int(req.IdMateri), int(req.Tingkatan), int(req.IdMataPelajaran), int(req.Pagination.Page), int(req.Pagination.PageSize))
+	page := 1
+	pageSize := 10
+	if req.Pagination != nil {
+		if req.Pagination.Page > 0 {
+			page = int(req.Pagination.Page)
+		}
+		if req.Pagination.PageSize > 0 {
+			pageSize = int(req.Pagination.PageSize)
+		}
+	}
+	soals, pagination, err := h.usecase.ListSoal(int(req.IdMateri), int(req.Tingkatan), int(req.IdMataPelajaran), page, pageSize)
 	if err != nil {
 		return nil, err
 	}

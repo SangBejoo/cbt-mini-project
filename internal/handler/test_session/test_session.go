@@ -5,6 +5,7 @@ import (
 	"cbt-test-mini-project/internal/entity"
 	"cbt-test-mini-project/internal/usecase/test_session"
 	"context"
+	"strings"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -157,7 +158,18 @@ func (h *testSessionHandler) ListTestSessions(ctx context.Context, req *base.Lis
 		status = &s
 	}
 
-	sessions, pagination, err := h.usecase.ListTestSessions(tingkatan, idMataPelajaran, status, int(req.Pagination.Page), int(req.Pagination.PageSize))
+	page := 1
+	pageSize := 10
+	if req.Pagination != nil {
+		if req.Pagination.Page > 0 {
+			page = int(req.Pagination.Page)
+		}
+		if req.Pagination.PageSize > 0 {
+			pageSize = int(req.Pagination.PageSize)
+		}
+	}
+
+	sessions, pagination, err := h.usecase.ListTestSessions(tingkatan, idMataPelajaran, status, page, pageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +211,7 @@ func (h *testSessionHandler) convertToProtoTestSession(session *entity.TestSessi
 		totalSoal = int32(*session.TotalSoal)
 	}
 
-	status := base.TestStatus(base.TestStatus_value[string(session.Status)])
+	status := base.TestStatus(base.TestStatus_value[strings.ToUpper(string(session.Status))])
 
 	return &base.TestSession{
 		Id:              int32(session.ID),

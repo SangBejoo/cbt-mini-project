@@ -5,6 +5,7 @@ import (
 	"cbt-test-mini-project/internal/entity"
 	"cbt-test-mini-project/internal/usecase/history"
 	"context"
+	"strings"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -32,7 +33,18 @@ func (h *historyHandler) GetStudentHistory(ctx context.Context, req *base.Studen
 		idMataPelajaran = &i
 	}
 
-	response, err := h.usecase.GetStudentHistory(req.NamaPeserta, tingkatan, idMataPelajaran, int(req.Pagination.Page), int(req.Pagination.PageSize))
+	page := 1
+	pageSize := 10
+	if req.Pagination != nil {
+		if req.Pagination.Page > 0 {
+			page = int(req.Pagination.Page)
+		}
+		if req.Pagination.PageSize > 0 {
+			pageSize = int(req.Pagination.PageSize)
+		}
+	}
+
+	response, err := h.usecase.GetStudentHistory(req.NamaPeserta, tingkatan, idMataPelajaran, page, pageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +66,7 @@ func (h *historyHandler) GetStudentHistory(ctx context.Context, req *base.Studen
 			NilaiAkhir:            h.NilaiAkhir,
 			JumlahBenar:           int32(h.JumlahBenar),
 			TotalSoal:             int32(h.TotalSoal),
-			Status:                base.TestStatus(base.TestStatus_value[string(h.Status)]),
+			Status:                base.TestStatus(base.TestStatus_value[strings.ToUpper(string(h.Status))]),
 		})
 	}
 
@@ -138,7 +150,7 @@ func (h *historyHandler) convertToProtoTestSession(session *entity.TestSession) 
 		totalSoal = int32(*session.TotalSoal)
 	}
 
-	status := base.TestStatus(base.TestStatus_value[string(session.Status)])
+	status := base.TestStatus(base.TestStatus_value[strings.ToUpper(string(session.Status))])
 
 	return &base.TestSession{
 		Id:              int32(session.ID),
