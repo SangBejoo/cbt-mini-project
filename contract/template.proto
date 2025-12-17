@@ -1,0 +1,437 @@
+syntax = "proto3";
+
+option go_package = "cbt-test-mini-project/gen/proto/base";
+package base;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// ========================================
+// ENUMS
+// ========================================
+
+enum JawabanOption {
+    JAWABAN_INVALID = 0;
+    A = 1;
+    B = 2;
+    C = 3;
+    D = 4;
+}
+
+enum TestStatus {
+    STATUS_INVALID = 0;
+    ONGOING = 1;
+    COMPLETED = 2;
+    TIMEOUT = 3;
+}
+
+// ========================================
+// BASE SERVICE
+// ========================================
+
+service Base {
+    rpc HealthCheck(google.protobuf.Empty) returns (MessageStatusResponse) {};
+}
+
+// ========================================
+// MATA PELAJARAN SERVICE
+// ========================================
+
+service MataPelajaranService {
+    rpc CreateMataPelajaran(CreateMataPelajaranRequest) returns (MataPelajaranResponse) {};
+    rpc GetMataPelajaran(GetMataPelajaranRequest) returns (MataPelajaranResponse) {};
+    rpc UpdateMataPelajaran(UpdateMataPelajaranRequest) returns (MataPelajaranResponse) {};
+    rpc DeleteMataPelajaran(DeleteMataPelajaranRequest) returns (MessageStatusResponse) {};
+    rpc ListMataPelajaran(google.protobuf.Empty) returns (ListMataPelajaranResponse) {};
+}
+
+// ========================================
+// MATERI SERVICE
+// ========================================
+
+service MateriService {
+    rpc CreateMateri(CreateMateriRequest) returns (MateriResponse) {};
+    rpc GetMateri(GetMateriRequest) returns (MateriResponse) {};
+    rpc UpdateMateri(UpdateMateriRequest) returns (MateriResponse) {};
+    rpc DeleteMateri(DeleteMateriRequest) returns (MessageStatusResponse) {};
+    rpc ListMateri(ListMateriRequest) returns (ListMateriResponse) {};
+}
+
+// ========================================
+// SOAL SERVICE (ADMIN)
+// ========================================
+
+service SoalService {
+    rpc CreateSoal(CreateSoalRequest) returns (SoalResponse) {};
+    rpc GetSoal(GetSoalRequest) returns (SoalResponse) {};
+    rpc UpdateSoal(UpdateSoalRequest) returns (SoalResponse) {};
+    rpc DeleteSoal(DeleteSoalRequest) returns (MessageStatusResponse) {};
+    rpc ListSoal(ListSoalRequest) returns (ListSoalResponse) {};
+}
+
+// ========================================
+// TEST SESSION SERVICE (STUDENT)
+// ========================================
+
+service TestSessionService {
+    // Session management
+    rpc CreateTestSession(CreateTestSessionRequest) returns (TestSessionResponse) {};
+    rpc GetTestSession(GetTestSessionRequest) returns (TestSessionResponse) {};
+
+    // Test execution (NEW - critical!)
+    rpc GetTestQuestions(GetTestQuestionsRequest) returns (TestQuestionsResponse) {};
+    rpc SubmitAnswer(SubmitAnswerRequest) returns (SubmitAnswerResponse) {};
+    rpc CompleteSession(CompleteSessionRequest) returns (TestSessionResponse) {};
+
+    // Results & review
+    rpc GetTestResult(GetTestResultRequest) returns (TestResultResponse) {};
+
+    // Admin queries
+    rpc ListTestSessions(ListTestSessionsRequest) returns (ListTestSessionsResponse) {};
+}
+
+// ========================================
+// HISTORY SERVICE (NEW - Replaced Analytics)
+// ========================================
+
+service HistoryService {
+    rpc GetStudentHistory(StudentHistoryRequest) returns (StudentHistoryResponse) {};
+    rpc GetHistoryDetail(GetHistoryDetailRequest) returns (HistoryDetailResponse) {};
+}
+
+// ========================================
+// COMMON MESSAGES
+// ========================================
+
+message MessageStatusResponse {
+    string message = 1;
+    string status = 2;
+}
+
+message PaginationRequest {
+    int32 page = 1;
+    int32 page_size = 2;
+}
+
+message PaginationResponse {
+    int32 total_count = 1;
+    int32 total_pages = 2;
+    int32 current_page = 3;
+    int32 page_size = 4;
+}
+
+// ========================================
+// MATA PELAJARAN MESSAGES
+// ========================================
+
+message MataPelajaran {
+    int32 id = 1;
+    string nama = 2;
+}
+
+message CreateMataPelajaranRequest {
+    string nama = 1;
+}
+
+message GetMataPelajaranRequest {
+    int32 id = 1;
+}
+
+message UpdateMataPelajaranRequest {
+    int32 id = 1;
+    string nama = 2;
+}
+
+message DeleteMataPelajaranRequest {
+    int32 id = 1;
+}
+
+message MataPelajaranResponse {
+    MataPelajaran mata_pelajaran = 1;
+}
+
+message ListMataPelajaranResponse {
+    repeated MataPelajaran mata_pelajaran = 1;
+}
+
+// ========================================
+// MATERI MESSAGES
+// ========================================
+
+message Materi {
+    int32 id = 1;
+    MataPelajaran mata_pelajaran = 2;  // Nested, bukan hanya ID
+    string nama = 3;
+    int32 tingkatan = 4;
+}
+
+message CreateMateriRequest {
+    int32 id_mata_pelajaran = 1;
+    string nama = 2;
+    int32 tingkatan = 3;
+}
+
+message GetMateriRequest {
+    int32 id = 1;
+}
+
+message UpdateMateriRequest {
+    int32 id = 1;
+    int32 id_mata_pelajaran = 2;
+    string nama = 3;
+    int32 tingkatan = 4;
+}
+
+message DeleteMateriRequest {
+    int32 id = 1;
+}
+
+message MateriResponse {
+    Materi materi = 1;
+}
+
+message ListMateriRequest {
+    int32 id_mata_pelajaran = 1;
+    int32 tingkatan = 2;
+    PaginationRequest pagination = 3;
+}
+
+message ListMateriResponse {
+    repeated Materi materi = 1;
+    PaginationResponse pagination = 2;
+}
+
+// ========================================
+// SOAL MESSAGES
+// ========================================
+
+// Full soal with answer (for admin/teacher only)
+message SoalFull {
+    int32 id = 1;
+    Materi materi = 2;
+    string pertanyaan = 3;
+    string opsi_a = 4;
+    string opsi_b = 5;
+    string opsi_c = 6;
+    string opsi_d = 7;
+    JawabanOption jawaban_benar = 8;
+}
+
+// Soal for student (no answer exposed)
+message SoalForStudent {
+    int32 id = 1;
+    int32 nomor_urut = 2;  // Question number in test
+    string pertanyaan = 3;
+    string opsi_a = 4;
+    string opsi_b = 5;
+    string opsi_c = 6;
+    string opsi_d = 7;
+    JawabanOption jawaban_dipilih = 8;  // If already answered
+    bool is_answered = 9;
+}
+
+message CreateSoalRequest {
+    int32 id_materi = 1;
+    string pertanyaan = 2;
+    string opsi_a = 3;
+    string opsi_b = 4;
+    string opsi_c = 5;
+    string opsi_d = 6;
+    JawabanOption jawaban_benar = 7;
+}
+
+message GetSoalRequest {
+    int32 id = 1;
+}
+
+message UpdateSoalRequest {
+    int32 id = 1;
+    int32 id_materi = 2;
+    string pertanyaan = 3;
+    string opsi_a = 4;
+    string opsi_b = 5;
+    string opsi_c = 6;
+    string opsi_d = 7;
+    JawabanOption jawaban_benar = 8;
+}
+
+message DeleteSoalRequest {
+    int32 id = 1;
+}
+
+message SoalResponse {
+    SoalFull soal = 1;
+}
+
+message ListSoalRequest {
+    int32 id_materi = 1;
+    int32 tingkatan = 2;
+    int32 id_mata_pelajaran = 3;
+    PaginationRequest pagination = 4;
+}
+
+message ListSoalResponse {
+    repeated SoalFull soal = 1;
+    PaginationResponse pagination = 2;
+}
+
+// ========================================
+// TEST SESSION MESSAGES
+// ========================================
+
+message TestSession {
+    int32 id = 1;
+    string session_token = 2;
+    string nama_peserta = 3;
+    int32 tingkatan = 4;
+    MataPelajaran mata_pelajaran = 5;  // Nested object
+    google.protobuf.Timestamp waktu_mulai = 6;
+    google.protobuf.Timestamp waktu_selesai = 7;
+    google.protobuf.Timestamp batas_waktu = 8;  // ADDED
+    int32 durasi_menit = 9;
+    double nilai_akhir = 10;
+    int32 jumlah_benar = 11;
+    int32 total_soal = 12;
+    TestStatus status = 13;
+}
+
+message CreateTestSessionRequest {
+    string nama_peserta = 1;
+    int32 tingkatan = 2;
+    int32 id_mata_pelajaran = 3;
+    int32 durasi_menit = 4;
+    int32 jumlah_soal = 5;  // ADDED - critical!
+}
+
+message GetTestSessionRequest {
+    string session_token = 1;
+}
+
+message TestSessionResponse {
+    TestSession test_session = 1;
+}
+
+message ListTestSessionsRequest {
+    int32 tingkatan = 1;
+    int32 id_mata_pelajaran = 2;
+    TestStatus status = 3;
+    PaginationRequest pagination = 4;
+}
+
+message ListTestSessionsResponse {
+    repeated TestSession test_sessions = 1;
+    PaginationResponse pagination = 2;
+}
+
+// ========================================
+// TEST EXECUTION MESSAGES (NEW)
+// ========================================
+
+message GetTestQuestionsRequest {
+    string session_token = 1;
+}
+
+message TestQuestionsResponse {
+    string session_token = 1;
+    repeated SoalForStudent soal = 2;
+    int32 total_soal = 3;
+    int32 dijawab_count = 4;
+    google.protobuf.Timestamp batas_waktu = 5;
+}
+
+message SubmitAnswerRequest {
+    string session_token = 1;
+    int32 nomor_urut = 2;
+    JawabanOption jawaban_dipilih = 3;
+}
+
+message SubmitAnswerResponse {
+    string session_token = 1;
+    int32 nomor_urut = 2;
+    JawabanOption jawaban_dipilih = 3;
+    bool is_correct = 4;  // Immediate feedback
+    google.protobuf.Timestamp dijawab_pada = 5;
+}
+
+message CompleteSessionRequest {
+    string session_token = 1;
+}
+
+// ========================================
+// TEST RESULT MESSAGES (NEW)
+// ========================================
+
+message GetTestResultRequest {
+    string session_token = 1;
+}
+
+message JawabanDetail {
+    int32 nomor_urut = 1;
+    string pertanyaan = 2;
+    string opsi_a = 3;
+    string opsi_b = 4;
+    string opsi_c = 5;
+    string opsi_d = 6;
+    JawabanOption jawaban_dipilih = 7;
+    JawabanOption jawaban_benar = 8;
+    bool is_correct = 9;
+}
+
+message TestResultResponse {
+    TestSession session_info = 1;
+    repeated JawabanDetail detail_jawaban = 2;
+}
+
+// ========================================
+// HISTORY MESSAGES (NEW - Replaced Analytics)
+// ========================================
+
+message StudentHistoryRequest {
+    string nama_peserta = 1;
+    int32 tingkatan = 2;  // Optional filter
+    int32 id_mata_pelajaran = 3;  // Optional filter
+    PaginationRequest pagination = 4;
+}
+
+message HistorySummary {
+    int32 id = 1;
+    string session_token = 2;
+    MataPelajaran mata_pelajaran = 3;
+    google.protobuf.Timestamp waktu_mulai = 4;
+    google.protobuf.Timestamp waktu_selesai = 5;
+    int32 durasi_pengerjaan_detik = 6;  // Actual time spent
+    double nilai_akhir = 7;
+    int32 jumlah_benar = 8;
+    int32 total_soal = 9;
+    TestStatus status = 10;
+}
+
+message StudentHistoryResponse {
+    string nama_peserta = 1;
+    int32 tingkatan = 2;
+    repeated HistorySummary history = 3;
+    PaginationResponse pagination = 4;
+
+    // Aggregate stats
+    double rata_rata_nilai = 5;
+    int32 total_test_completed = 6;
+}
+
+message GetHistoryDetailRequest {
+    string session_token = 1;
+}
+
+message HistoryDetailResponse {
+    TestSession session_info = 1;
+    repeated JawabanDetail detail_jawaban = 2;
+
+    // Breakdown per materi
+    repeated MateriBreakdown breakdown_materi = 3;
+}
+
+message MateriBreakdown {
+    string nama_materi = 1;
+    int32 jumlah_soal = 2;
+    int32 jumlah_benar = 3;
+    double persentase_benar = 4;
+}

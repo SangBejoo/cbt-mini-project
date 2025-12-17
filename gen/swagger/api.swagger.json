@@ -1,0 +1,1625 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "template.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "Base"
+    },
+    {
+      "name": "MataPelajaranService"
+    },
+    {
+      "name": "MateriService"
+    },
+    {
+      "name": "SoalService"
+    },
+    {
+      "name": "TestSessionService"
+    },
+    {
+      "name": "HistoryService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/admin/sessions": {
+      "get": {
+        "summary": "Admin queries",
+        "operationId": "TestSessionService_ListTestSessions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseListTestSessionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tingkatan",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "idMataPelajaran",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "STATUS_INVALID",
+              "ONGOING",
+              "COMPLETED",
+              "TIMEOUT"
+            ],
+            "default": "STATUS_INVALID"
+          },
+          {
+            "name": "pagination.page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "TestSessionService"
+        ]
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "operationId": "Base_HealthCheck",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseMessageStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Base"
+        ]
+      }
+    },
+    "/v1/history/student": {
+      "get": {
+        "operationId": "HistoryService_GetStudentHistory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseStudentHistoryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namaPeserta",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "tingkatan",
+            "description": "Optional filter",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "idMataPelajaran",
+            "description": "Optional filter",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "HistoryService"
+        ]
+      }
+    },
+    "/v1/history/{sessionToken}/detail": {
+      "get": {
+        "operationId": "HistoryService_GetHistoryDetail",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseHistoryDetailResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionToken",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "HistoryService"
+        ]
+      }
+    },
+    "/v1/questions": {
+      "get": {
+        "operationId": "SoalService_ListSoal",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseListSoalResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "idMateri",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "tingkatan",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "idMataPelajaran",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "SoalService"
+        ]
+      },
+      "post": {
+        "operationId": "SoalService_CreateSoal",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseSoalResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/baseCreateSoalRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SoalService"
+        ]
+      }
+    },
+    "/v1/questions/{id}": {
+      "get": {
+        "operationId": "SoalService_GetSoal",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseSoalResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "SoalService"
+        ]
+      },
+      "delete": {
+        "operationId": "SoalService_DeleteSoal",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseMessageStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "SoalService"
+        ]
+      },
+      "put": {
+        "operationId": "SoalService_UpdateSoal",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseSoalResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SoalServiceUpdateSoalBody"
+            }
+          }
+        ],
+        "tags": [
+          "SoalService"
+        ]
+      }
+    },
+    "/v1/sessions": {
+      "post": {
+        "summary": "Session management",
+        "operationId": "TestSessionService_CreateTestSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseTestSessionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/baseCreateTestSessionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TestSessionService"
+        ]
+      }
+    },
+    "/v1/sessions/{sessionToken}": {
+      "get": {
+        "operationId": "TestSessionService_GetTestSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseTestSessionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionToken",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "TestSessionService"
+        ]
+      }
+    },
+    "/v1/sessions/{sessionToken}/answers": {
+      "post": {
+        "operationId": "TestSessionService_SubmitAnswer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseSubmitAnswerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionToken",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TestSessionServiceSubmitAnswerBody"
+            }
+          }
+        ],
+        "tags": [
+          "TestSessionService"
+        ]
+      }
+    },
+    "/v1/sessions/{sessionToken}/complete": {
+      "post": {
+        "operationId": "TestSessionService_CompleteSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseTestSessionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionToken",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TestSessionServiceCompleteSessionBody"
+            }
+          }
+        ],
+        "tags": [
+          "TestSessionService"
+        ]
+      }
+    },
+    "/v1/sessions/{sessionToken}/questions": {
+      "get": {
+        "summary": "Test execution (NEW - critical!)",
+        "operationId": "TestSessionService_GetTestQuestions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseTestQuestionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionToken",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "TestSessionService"
+        ]
+      }
+    },
+    "/v1/sessions/{sessionToken}/result": {
+      "get": {
+        "summary": "Results \u0026 review",
+        "operationId": "TestSessionService_GetTestResult",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseTestResultResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionToken",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "TestSessionService"
+        ]
+      }
+    },
+    "/v1/subjects": {
+      "get": {
+        "operationId": "MataPelajaranService_ListMataPelajaran",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseListMataPelajaranResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "MataPelajaranService"
+        ]
+      },
+      "post": {
+        "operationId": "MataPelajaranService_CreateMataPelajaran",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseMataPelajaranResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/baseCreateMataPelajaranRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MataPelajaranService"
+        ]
+      }
+    },
+    "/v1/subjects/{id}": {
+      "get": {
+        "operationId": "MataPelajaranService_GetMataPelajaran",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseMataPelajaranResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "MataPelajaranService"
+        ]
+      },
+      "delete": {
+        "operationId": "MataPelajaranService_DeleteMataPelajaran",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseMessageStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "MataPelajaranService"
+        ]
+      },
+      "put": {
+        "operationId": "MataPelajaranService_UpdateMataPelajaran",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseMataPelajaranResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MataPelajaranServiceUpdateMataPelajaranBody"
+            }
+          }
+        ],
+        "tags": [
+          "MataPelajaranService"
+        ]
+      }
+    },
+    "/v1/topics": {
+      "get": {
+        "operationId": "MateriService_ListMateri",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseListMateriResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "idMataPelajaran",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "tingkatan",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "MateriService"
+        ]
+      },
+      "post": {
+        "operationId": "MateriService_CreateMateri",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseMateriResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/baseCreateMateriRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MateriService"
+        ]
+      }
+    },
+    "/v1/topics/{id}": {
+      "get": {
+        "operationId": "MateriService_GetMateri",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseMateriResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "MateriService"
+        ]
+      },
+      "delete": {
+        "operationId": "MateriService_DeleteMateri",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseMessageStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "MateriService"
+        ]
+      },
+      "put": {
+        "operationId": "MateriService_UpdateMateri",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseMateriResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MateriServiceUpdateMateriBody"
+            }
+          }
+        ],
+        "tags": [
+          "MateriService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "MataPelajaranServiceUpdateMataPelajaranBody": {
+      "type": "object",
+      "properties": {
+        "nama": {
+          "type": "string"
+        }
+      }
+    },
+    "MateriServiceUpdateMateriBody": {
+      "type": "object",
+      "properties": {
+        "idMataPelajaran": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "nama": {
+          "type": "string"
+        },
+        "tingkatan": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "SoalServiceUpdateSoalBody": {
+      "type": "object",
+      "properties": {
+        "idMateri": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pertanyaan": {
+          "type": "string"
+        },
+        "opsiA": {
+          "type": "string"
+        },
+        "opsiB": {
+          "type": "string"
+        },
+        "opsiC": {
+          "type": "string"
+        },
+        "opsiD": {
+          "type": "string"
+        },
+        "jawabanBenar": {
+          "$ref": "#/definitions/baseJawabanOption"
+        }
+      }
+    },
+    "TestSessionServiceCompleteSessionBody": {
+      "type": "object"
+    },
+    "TestSessionServiceSubmitAnswerBody": {
+      "type": "object",
+      "properties": {
+        "nomorUrut": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "jawabanDipilih": {
+          "$ref": "#/definitions/baseJawabanOption"
+        }
+      }
+    },
+    "baseCreateMataPelajaranRequest": {
+      "type": "object",
+      "properties": {
+        "nama": {
+          "type": "string"
+        }
+      }
+    },
+    "baseCreateMateriRequest": {
+      "type": "object",
+      "properties": {
+        "idMataPelajaran": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "nama": {
+          "type": "string"
+        },
+        "tingkatan": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "baseCreateSoalRequest": {
+      "type": "object",
+      "properties": {
+        "idMateri": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pertanyaan": {
+          "type": "string"
+        },
+        "opsiA": {
+          "type": "string"
+        },
+        "opsiB": {
+          "type": "string"
+        },
+        "opsiC": {
+          "type": "string"
+        },
+        "opsiD": {
+          "type": "string"
+        },
+        "jawabanBenar": {
+          "$ref": "#/definitions/baseJawabanOption"
+        }
+      }
+    },
+    "baseCreateTestSessionRequest": {
+      "type": "object",
+      "properties": {
+        "namaPeserta": {
+          "type": "string"
+        },
+        "tingkatan": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "idMataPelajaran": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "durasiMenit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "jumlahSoal": {
+          "type": "integer",
+          "format": "int32",
+          "title": "ADDED - critical!"
+        }
+      }
+    },
+    "baseHistoryDetailResponse": {
+      "type": "object",
+      "properties": {
+        "sessionInfo": {
+          "$ref": "#/definitions/baseTestSession"
+        },
+        "detailJawaban": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseJawabanDetail"
+          }
+        },
+        "breakdownMateri": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseMateriBreakdown"
+          },
+          "title": "Breakdown per materi"
+        }
+      }
+    },
+    "baseHistorySummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "sessionToken": {
+          "type": "string"
+        },
+        "mataPelajaran": {
+          "$ref": "#/definitions/baseMataPelajaran"
+        },
+        "waktuMulai": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "waktuSelesai": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "durasiPengerjaanDetik": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Actual time spent"
+        },
+        "nilaiAkhir": {
+          "type": "number",
+          "format": "double"
+        },
+        "jumlahBenar": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalSoal": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "status": {
+          "$ref": "#/definitions/baseTestStatus"
+        }
+      }
+    },
+    "baseJawabanDetail": {
+      "type": "object",
+      "properties": {
+        "nomorUrut": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pertanyaan": {
+          "type": "string"
+        },
+        "opsiA": {
+          "type": "string"
+        },
+        "opsiB": {
+          "type": "string"
+        },
+        "opsiC": {
+          "type": "string"
+        },
+        "opsiD": {
+          "type": "string"
+        },
+        "jawabanDipilih": {
+          "$ref": "#/definitions/baseJawabanOption"
+        },
+        "jawabanBenar": {
+          "$ref": "#/definitions/baseJawabanOption"
+        },
+        "isCorrect": {
+          "type": "boolean"
+        }
+      }
+    },
+    "baseJawabanOption": {
+      "type": "string",
+      "enum": [
+        "JAWABAN_INVALID",
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "default": "JAWABAN_INVALID"
+    },
+    "baseListMataPelajaranResponse": {
+      "type": "object",
+      "properties": {
+        "mataPelajaran": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseMataPelajaran"
+          }
+        }
+      }
+    },
+    "baseListMateriResponse": {
+      "type": "object",
+      "properties": {
+        "materi": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseMateri"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/basePaginationResponse"
+        }
+      }
+    },
+    "baseListSoalResponse": {
+      "type": "object",
+      "properties": {
+        "soal": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseSoalFull"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/basePaginationResponse"
+        }
+      }
+    },
+    "baseListTestSessionsResponse": {
+      "type": "object",
+      "properties": {
+        "testSessions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseTestSession"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/basePaginationResponse"
+        }
+      }
+    },
+    "baseMataPelajaran": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "nama": {
+          "type": "string"
+        }
+      }
+    },
+    "baseMataPelajaranResponse": {
+      "type": "object",
+      "properties": {
+        "mataPelajaran": {
+          "$ref": "#/definitions/baseMataPelajaran"
+        }
+      }
+    },
+    "baseMateri": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "mataPelajaran": {
+          "$ref": "#/definitions/baseMataPelajaran",
+          "title": "Nested, bukan hanya ID"
+        },
+        "nama": {
+          "type": "string"
+        },
+        "tingkatan": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "baseMateriBreakdown": {
+      "type": "object",
+      "properties": {
+        "namaMateri": {
+          "type": "string"
+        },
+        "jumlahSoal": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "jumlahBenar": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "persentaseBenar": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "baseMateriResponse": {
+      "type": "object",
+      "properties": {
+        "materi": {
+          "$ref": "#/definitions/baseMateri"
+        }
+      }
+    },
+    "baseMessageStatusResponse": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "basePaginationRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "basePaginationResponse": {
+      "type": "object",
+      "properties": {
+        "totalCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "currentPage": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "baseSoalForStudent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "nomorUrut": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Question number in test"
+        },
+        "pertanyaan": {
+          "type": "string"
+        },
+        "opsiA": {
+          "type": "string"
+        },
+        "opsiB": {
+          "type": "string"
+        },
+        "opsiC": {
+          "type": "string"
+        },
+        "opsiD": {
+          "type": "string"
+        },
+        "jawabanDipilih": {
+          "$ref": "#/definitions/baseJawabanOption",
+          "title": "If already answered"
+        },
+        "isAnswered": {
+          "type": "boolean"
+        }
+      },
+      "title": "Soal for student (no answer exposed)"
+    },
+    "baseSoalFull": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "materi": {
+          "$ref": "#/definitions/baseMateri"
+        },
+        "pertanyaan": {
+          "type": "string"
+        },
+        "opsiA": {
+          "type": "string"
+        },
+        "opsiB": {
+          "type": "string"
+        },
+        "opsiC": {
+          "type": "string"
+        },
+        "opsiD": {
+          "type": "string"
+        },
+        "jawabanBenar": {
+          "$ref": "#/definitions/baseJawabanOption"
+        }
+      },
+      "title": "Full soal with answer (for admin/teacher only)"
+    },
+    "baseSoalResponse": {
+      "type": "object",
+      "properties": {
+        "soal": {
+          "$ref": "#/definitions/baseSoalFull"
+        }
+      }
+    },
+    "baseStudentHistoryResponse": {
+      "type": "object",
+      "properties": {
+        "namaPeserta": {
+          "type": "string"
+        },
+        "tingkatan": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseHistorySummary"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/basePaginationResponse"
+        },
+        "rataRataNilai": {
+          "type": "number",
+          "format": "double",
+          "title": "Aggregate stats"
+        },
+        "totalTestCompleted": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "baseSubmitAnswerResponse": {
+      "type": "object",
+      "properties": {
+        "sessionToken": {
+          "type": "string"
+        },
+        "nomorUrut": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "jawabanDipilih": {
+          "$ref": "#/definitions/baseJawabanOption"
+        },
+        "isCorrect": {
+          "type": "boolean",
+          "title": "Immediate feedback"
+        },
+        "dijawabPada": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "baseTestQuestionsResponse": {
+      "type": "object",
+      "properties": {
+        "sessionToken": {
+          "type": "string"
+        },
+        "soal": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseSoalForStudent"
+          }
+        },
+        "totalSoal": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "dijawabCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "batasWaktu": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "baseTestResultResponse": {
+      "type": "object",
+      "properties": {
+        "sessionInfo": {
+          "$ref": "#/definitions/baseTestSession"
+        },
+        "detailJawaban": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseJawabanDetail"
+          }
+        }
+      }
+    },
+    "baseTestSession": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "sessionToken": {
+          "type": "string"
+        },
+        "namaPeserta": {
+          "type": "string"
+        },
+        "tingkatan": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "mataPelajaran": {
+          "$ref": "#/definitions/baseMataPelajaran",
+          "title": "Nested object"
+        },
+        "waktuMulai": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "waktuSelesai": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "batasWaktu": {
+          "type": "string",
+          "format": "date-time",
+          "title": "ADDED"
+        },
+        "durasiMenit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "nilaiAkhir": {
+          "type": "number",
+          "format": "double"
+        },
+        "jumlahBenar": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalSoal": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "status": {
+          "$ref": "#/definitions/baseTestStatus"
+        }
+      }
+    },
+    "baseTestSessionResponse": {
+      "type": "object",
+      "properties": {
+        "testSession": {
+          "$ref": "#/definitions/baseTestSession"
+        }
+      }
+    },
+    "baseTestStatus": {
+      "type": "string",
+      "enum": [
+        "STATUS_INVALID",
+        "ONGOING",
+        "COMPLETED",
+        "TIMEOUT"
+      ],
+      "default": "STATUS_INVALID"
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}

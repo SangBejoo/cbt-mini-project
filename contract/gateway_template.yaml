@@ -1,0 +1,117 @@
+type: google.api.Service
+config_version: 3
+
+http:
+  rules:
+    # ==================================================
+    # BASE SERVICE
+    # ==================================================
+    - selector: base.Base.HealthCheck
+      get: /v1/health
+
+    # ==================================================
+    # MATA PELAJARAN SERVICE (Master Data)
+    # ==================================================
+    - selector: base.MataPelajaranService.ListMataPelajaran
+      get: /v1/subjects
+
+    - selector: base.MataPelajaranService.GetMataPelajaran
+      get: /v1/subjects/{id}
+
+    - selector: base.MataPelajaranService.CreateMataPelajaran
+      post: /v1/subjects
+      body: "*"
+
+    - selector: base.MataPelajaranService.UpdateMataPelajaran
+      put: /v1/subjects/{id}
+      body: "*"
+
+    - selector: base.MataPelajaranService.DeleteMataPelajaran
+      delete: /v1/subjects/{id}
+
+    # ==================================================
+    # MATERI SERVICE
+    # ==================================================
+    - selector: base.MateriService.ListMateri
+      get: /v1/topics
+
+    - selector: base.MateriService.GetMateri
+      get: /v1/topics/{id}
+
+    - selector: base.MateriService.CreateMateri
+      post: /v1/topics
+      body: "*"
+
+    - selector: base.MateriService.UpdateMateri
+      put: /v1/topics/{id}
+      body: "*"
+
+    - selector: base.MateriService.DeleteMateri
+      delete: /v1/topics/{id}
+
+    # ==================================================
+    # SOAL SERVICE (Bank Soal)
+    # ==================================================
+    - selector: base.SoalService.ListSoal
+      get: /v1/questions
+
+    - selector: base.SoalService.GetSoal
+      get: /v1/questions/{id}
+
+    - selector: base.SoalService.CreateSoal
+      post: /v1/questions
+      body: "*"
+
+    - selector: base.SoalService.UpdateSoal
+      put: /v1/questions/{id}
+      body: "*"
+
+    - selector: base.SoalService.DeleteSoal
+      delete: /v1/questions/{id}
+
+    # ==================================================
+    # TEST SESSION SERVICE (Student Flow - The Core)
+    # ==================================================
+
+    # 1. Start Exam (Create Session)
+    - selector: base.TestSessionService.CreateTestSession
+      post: /v1/sessions
+      body: "*"
+
+    # 2. Get Session Info (Resume)
+    - selector: base.TestSessionService.GetTestSession
+      get: /v1/sessions/{session_token}
+
+    # 3. Get Questions (Fetch Soal) -> Critical
+    # Note: Kita gunakan sub-resource pattern supaya rapi
+    - selector: base.TestSessionService.GetTestQuestions
+      get: /v1/sessions/{session_token}/questions
+
+    # 4. Submit Answer (Realtime)
+    # Payload JSON body hanya perlu: { "nomor_urut": 1, "jawaban_dipilih": 1 }
+    # session_token diambil dari URL
+    - selector: base.TestSessionService.SubmitAnswer
+      post: /v1/sessions/{session_token}/answers
+      body: "*"
+
+    # 5. Finish Exam
+    - selector: base.TestSessionService.CompleteSession
+      post: /v1/sessions/{session_token}/complete
+      body: "*"
+
+    # 6. Review Result
+    - selector: base.TestSessionService.GetTestResult
+      get: /v1/sessions/{session_token}/result
+
+    # 7. Admin List Sessions
+    - selector: base.TestSessionService.ListTestSessions
+      get: /v1/admin/sessions
+
+    # ==================================================
+    # HISTORY SERVICE
+    # ==================================================
+    - selector: base.HistoryService.GetStudentHistory
+      get: /v1/history/student
+
+    - selector: base.HistoryService.GetHistoryDetail
+      get: /v1/history/{session_token}/detail
