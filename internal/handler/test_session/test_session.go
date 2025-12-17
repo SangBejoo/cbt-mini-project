@@ -47,36 +47,64 @@ func (h *testSessionHandler) GetTestSession(ctx context.Context, req *base.GetTe
 	}, nil
 }
 
-// GetTestQuestions gets a single question
+// GetTestQuestions gets all questions for the session
 func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.GetTestQuestionsRequest) (*base.TestQuestionsResponse, error) {
-	soal, err := h.usecase.GetTestQuestions(req.SessionToken, int(req.NomorUrut))
+	session, err := h.usecase.GetTestSession(req.SessionToken)
 	if err != nil {
 		return nil, err
 	}
 
-	var jawabanDipilih base.JawabanOption
-	if soal.JawabanDipilih != nil {
-		jawabanDipilih = base.JawabanOption(base.JawabanOption_value[string(*soal.JawabanDipilih)])
+	soals, err := h.usecase.GetAllTestQuestions(req.SessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get answers status
+	answers, _ := h.usecase.GetSessionAnswers(req.SessionToken)
+	isAnsweredStatus := make([]bool, len(soals))
+	for i := range soals {
+		for _, ans := range answers {
+			if ans.TestSessionSoal.NomorUrut == soals[i].NomorUrut {
+				isAnsweredStatus[i] = true
+				break
+			}
+		}
+	}
+
+	var protoSoals []*base.SoalForStudent
+	for _, s := range soals {
+		var jawabanDipilih base.JawabanOption
+		if s.JawabanDipilih != nil {
+			jawabanDipilih = base.JawabanOption(base.JawabanOption_value[string(*s.JawabanDipilih)])
+		}
+
+		protoSoals = append(protoSoals, &base.SoalForStudent{
+			Id:             int32(s.ID),
+			NomorUrut:      int32(s.NomorUrut),
+			Pertanyaan:     s.Pertanyaan,
+			OpsiA:          s.OpsiA,
+			OpsiB:          s.OpsiB,
+			OpsiC:          s.OpsiC,
+			OpsiD:          s.OpsiD,
+			JawabanDipilih: jawabanDipilih,
+			IsAnswered:     s.IsAnswered,
+			Materi: &base.Materi{
+				Id:             int32(s.Materi.ID),
+				Nama:           s.Materi.Nama,
+				MataPelajaran:  &base.MataPelajaran{Id: int32(s.Materi.MataPelajaran.ID), Nama: s.Materi.MataPelajaran.Nama},
+				Tingkat:        &base.Tingkat{Id: int32(s.Materi.Tingkat.ID), Nama: s.Materi.Tingkat.Nama},
+			},
+		})
 	}
 
 	return &base.TestQuestionsResponse{
-		SessionToken: req.SessionToken,
-		Soal: &base.SoalForStudent{
-			Id:             int32(soal.ID),
-			NomorUrut:      int32(soal.NomorUrut),
-			Pertanyaan:     soal.Pertanyaan,
-			OpsiA:          soal.OpsiA,
-			OpsiB:          soal.OpsiB,
-			OpsiC:          soal.OpsiC,
-			OpsiD:          soal.OpsiD,
-			JawabanDipilih: jawabanDipilih,
-			IsAnswered:     soal.IsAnswered,
-		},
-		TotalSoal:      20, // Assuming fixed, or get from session
-		CurrentNomorUrut: int32(req.NomorUrut),
-		DijawabCount:   0, // TODO: calculate
-		IsAnsweredStatus: []bool{}, // TODO: implement
-		BatasWaktu:     timestamppb.Now(), // TODO: get from session
+		SessionToken:      req.SessionToken,
+		Soal:              protoSoals,
+		TotalSoal:         int32(len(protoSoals)),
+		CurrentNomorUrut:  1, // Not used
+		DijawabCount:      int32(len(answers)),
+		IsAnsweredStatus:  isAnsweredStatus,
+		BatasWaktu:        timestamppb.New(session.BatasWaktu()),
 	}, nil
 }
 

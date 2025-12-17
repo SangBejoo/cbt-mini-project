@@ -38,4 +38,5 @@ type SoalForStudent struct {
 	OpsiD          string         `json:"opsi_d"`
 	JawabanDipilih *JawabanOption `json:"jawaban_dipilih"`
 	IsAnswered     bool           `json:"is_answered"`
+	Materi         Materi         `json:"materi"`
 }

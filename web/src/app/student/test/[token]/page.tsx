@@ -28,11 +28,21 @@ interface Question {
   opsiC: string;
   opsiD: string;
   nomorUrut: number;
+  jawabanDipilih?: string;
+  materi: {
+    nama: string;
+    mataPelajaran: {
+      nama: string;
+    };
+    tingkat: {
+      nama: string;
+    };
+  };
 }
 
 interface TestSessionData {
   session_token: string;
-  soal: Question;
+  soal: Question[];
   total_soal: number;
   current_nomor_urut: number;
   dijawab_count: number;
@@ -50,7 +60,6 @@ export default function TestPage() {
 
   const [sessionData, setSessionData] = useState<TestSessionData | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [currentQuestion, setCurrentQuestion] = useState(1); // Start with question 1
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -60,63 +69,48 @@ export default function TestPage() {
       router.push('/student');
       return;
     }
-    fetchQuestion(currentQuestion);
-  }, [token, currentQuestion]);
+    fetchAllQuestions();
+  }, [token]);
 
-  const fetchQuestion = async (nomorUrut: number) => {
+  const fetchAllQuestions = async () => {
     try {
-      const response = await axios.get(`${API_BASE}/${token}/questions?nomor_urut=${nomorUrut}`);
+      const response = await axios.get(`${API_BASE}/${token}/questions`);
       const data = response.data;
       setSessionData(data);
-      // Set answer if already answered
-      if (data.soal && data.soal.jawabanDipilih) {
-        setAnswers(prev => ({ ...prev, [data.soal.nomorUrut]: data.soal.jawabanDipilih }));
-      }
+      // Set answers for all questions
+      const initialAnswers: Record<number, string> = {};
+      data.soal.forEach((q: Question) => {
+        if (q.jawabanDipilih) {
+          initialAnswers[q.nomorUrut] = q.jawabanDipilih;
+        }
+      });
+      setAnswers(initialAnswers);
     } catch (error) {
-      console.error('Error fetching question:', error);
-      toast({ title: 'Error loading question', status: 'error' });
+      console.error('Error fetching questions:', error);
+      toast({ title: 'Error loading questions', status: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAnswerChange = (questionId: number, answer: string) => {
+  const handleAnswerChange = async (questionId: number, answer: string) => {
     setAnswers({ ...answers, [questionId]: answer });
-  };
-
-  const submitAnswer = async (questionId: number, answer: string) => {
+    // Submit answer immediately
     try {
       await axios.post(`${API_BASE}/${token}/answers`, {
         nomor_urut: questionId,
         jawaban_dipilih: answer,
       });
+      toast({ title: 'Answer saved', status: 'success', duration: 1000 });
+      // Refresh data to update answered count
+      fetchAllQuestions();
     } catch (error) {
       console.error('Error submitting answer:', error);
-    }
-  };
-
-  const handleNext = async () => {
-    if (sessionData?.soal && answers[sessionData.soal.nomorUrut]) {
-      await submitAnswer(sessionData.soal.nomorUrut, answers[sessionData.soal.nomorUrut]);
-    }
-
-    if (currentQuestion < (sessionData?.total_soal || 1)) {
-      setCurrentQuestion(currentQuestion + 1);
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentQuestion > 1) {
-      setCurrentQuestion(currentQuestion - 1);
+      toast({ title: 'Error saving answer', status: 'error' });
     }
   };
 
   const handleFinish = async () => {
-    // Submit current answer if any
-    if (sessionData?.soal && answers[sessionData.soal.nomorUrut]) {
-      await submitAnswer(sessionData.soal.nomorUrut, answers[sessionData.soal.nomorUrut]);
-    }
-
     // Complete session
     setSubmitting(true);
     try {
@@ -139,10 +133,10 @@ export default function TestPage() {
     );
   }
 
-  if (!sessionData?.soal) {
+  if (!sessionData?.soal || sessionData.soal.length === 0) {
     return (
       <Container maxW="container.md" py={10}>
-        <Text>No question available for this test.</Text>
+        <Text>No questions available for this test.</Text>
         <Button onClick={() => router.push('/student')} mt={4}>
           Back to Home
         </Button>
@@ -150,14 +144,13 @@ export default function TestPage() {
     );
   }
 
-  const currentQ = sessionData.soal;
-  const progress = ((currentQuestion) / (sessionData.total_soal || 1)) * 100;
+  const progress = (sessionData.dijawab_count / sessionData.total_soal) * 100;
 
   return (
-    <Container maxW="container.lg" py={10}>
+    <Container maxW="container.xl" py={10}>
       <VStack spacing={6}>
         <HStack width="full" justify="space-between">
-          <Heading size="lg">Question {currentQuestion} of {sessionData.total_soal}</Heading>
+          <Heading size="lg">Test Session</Heading>
           <Badge colorScheme="blue" fontSize="md">
             Answered: {sessionData.dijawab_count}/{sessionData.total_soal}
           </Badge>
@@ -165,51 +158,53 @@ export default function TestPage() {
 
         <Progress value={progress} width="full" colorScheme="blue" />
 
-        <Card width="full">
-          <CardBody>
-            <VStack spacing={6} align="stretch">
-              <Text fontSize="lg" fontWeight="medium">
-                {currentQ.pertanyaan}
-              </Text>
+        <VStack spacing={6} width="full" align="stretch">
+          {sessionData.soal.map((question, index) => (
+            <Card key={question.id} width="full">
+              <CardBody>
+                <VStack spacing={4} align="stretch">
+                  <HStack justify="space-between">
+                    <Heading size="md">Question {question.nomorUrut}</Heading>
+                    <Badge colorScheme={answers[question.nomorUrut] ? 'green' : 'gray'}>
+                      {answers[question.nomorUrut] ? 'Answered' : 'Not Answered'}
+                    </Badge>
+                  </HStack>
 
-              <RadioGroup
-                value={answers[currentQ.nomorUrut] || ''}
-                onChange={(value) => handleAnswerChange(currentQ.nomorUrut, value)}
-              >
-                <VStack spacing={3} align="stretch">
-                  <Radio value="A">{currentQ.opsiA}</Radio>
-                  <Radio value="B">{currentQ.opsiB}</Radio>
-                  <Radio value="C">{currentQ.opsiC}</Radio>
-                  <Radio value="D">{currentQ.opsiD}</Radio>
+                  <Text fontSize="sm" color="gray.600">
+                    {question.materi.mataPelajaran.nama} - {question.materi.nama} ({question.materi.tingkat.nama})
+                  </Text>
+
+                  <Text fontSize="lg" fontWeight="medium">
+                    {question.pertanyaan}
+                  </Text>
+
+                  <RadioGroup
+                    value={answers[question.nomorUrut] || ''}
+                    onChange={(value) => handleAnswerChange(question.nomorUrut, value)}
+                  >
+                    <VStack spacing={3} align="stretch">
+                      <Radio value="A">{question.opsiA}</Radio>
+                      <Radio value="B">{question.opsiB}</Radio>
+                      <Radio value="C">{question.opsiC}</Radio>
+                      <Radio value="D">{question.opsiD}</Radio>
+                    </VStack>
+                  </RadioGroup>
                 </VStack>
-              </RadioGroup>
-            </VStack>
-          </CardBody>
-        </Card>
+              </CardBody>
+            </Card>
+          ))}
+        </VStack>
 
-        <HStack spacing={4} width="full" justify="space-between">
+        <HStack spacing={4} width="full" justify="center">
           <Button
-            onClick={handlePrev}
-            isDisabled={currentQuestion === 1}
-            variant="outline"
+            onClick={handleFinish}
+            colorScheme="green"
+            size="lg"
+            isLoading={submitting}
+            loadingText="Completing test..."
           >
-            Previous
+            Finish Test
           </Button>
-
-          {currentQuestion < (sessionData.total_soal || 1) ? (
-            <Button onClick={handleNext} colorScheme="blue">
-              Next
-            </Button>
-          ) : (
-            <Button
-              onClick={handleFinish}
-              colorScheme="green"
-              isLoading={submitting}
-              loadingText="Completing test..."
-            >
-              Finish Test
-            </Button>
-          )}
         </HStack>
       </VStack>
     </Container>

@@ -93,6 +93,15 @@ func (r *testSessionRepositoryImpl) GetSessionQuestions(token string) ([]entity.
 	return sessionSoals, err
 }
 
+// Get all questions for session with soal data
+func (r *testSessionRepositoryImpl) GetAllQuestionsForSession(token string) ([]entity.TestSessionSoal, error) {
+	var sessionSoals []entity.TestSessionSoal
+	err := r.db.Preload("Soal").Preload("Soal.Materi").Preload("Soal.Materi.MataPelajaran").Preload("Soal.Materi.Tingkat").
+		Joins("JOIN test_session ON test_session_soal.id_test_session = test_session.id").
+		Where("test_session.session_token = ?", token).Order("nomor_urut").Find(&sessionSoals).Error
+	return sessionSoals, err
+}
+
 // Get single question by order
 func (r *testSessionRepositoryImpl) GetQuestionByOrder(token string, nomorUrut int) (*entity.Soal, error) {
 	var soal entity.Soal
@@ -150,11 +159,11 @@ func (r *testSessionRepositoryImpl) GetSessionAnswers(token string) ([]entity.Ja
 
 // Assign random questions to session
 func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelajaran, tingkatan, jumlahSoal int) error {
-	// Get random soal IDs for the criteria
+	// Get random soal IDs for the criteria - get questions for the mata_pelajaran regardless of tingkat
 	var soalIDs []int
 	err := r.db.Model(&entity.Soal{}).
 		Joins("JOIN materi ON soal.id_materi = materi.id").
-		Where("materi.id_mata_pelajaran = ? AND materi.id_tingkat = ?", idMataPelajaran, tingkatan).
+		Where("materi.id_mata_pelajaran = ?", idMataPelajaran).
 		Pluck("soal.id", &soalIDs).Error
 	if err != nil {
 		return err

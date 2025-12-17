@@ -1579,6 +1579,9 @@
         },
         "isAnswered": {
           "type": "boolean"
+        },
+        "materi": {
+          "$ref": "#/definitions/baseMateri"
         }
       },
       "title": "Soal for student (no answer exposed)"
@@ -1683,8 +1686,12 @@
           "type": "string"
         },
         "soal": {
-          "$ref": "#/definitions/baseSoalForStudent",
-          "title": "SINGLE question, not repeated"
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseSoalForStudent"
+          },
+          "title": "ALL questions for the session"
         },
         "totalSoal": {
           "type": "integer",

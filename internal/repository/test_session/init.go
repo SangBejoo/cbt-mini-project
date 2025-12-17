@@ -31,6 +31,9 @@ type TestSessionRepository interface {
 	// Get questions for session
 	GetSessionQuestions(token string) ([]entity.TestSessionSoal, error)
 
+	// Get all questions for session with soal data
+	GetAllQuestionsForSession(token string) ([]entity.TestSessionSoal, error)
+
 	// Get single question by order
 	GetQuestionByOrder(token string, nomorUrut int) (*entity.Soal, error)
 

@@ -116,6 +116,60 @@ func (u *testSessionUsecaseImpl) GetTestQuestions(sessionToken string, nomorUrut
 	return soalForStudent, nil
 }
 
+// GetAllTestQuestions gets all questions for the session
+func (u *testSessionUsecaseImpl) GetAllTestQuestions(sessionToken string) ([]entity.SoalForStudent, error) {
+	_, err := u.GetTestSession(sessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	soals, err := u.repo.GetAllQuestionsForSession(sessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get existing answers
+	answers, _ := u.repo.GetSessionAnswers(sessionToken)
+
+	var soalForStudents []entity.SoalForStudent
+	for _, soal := range soals {
+		var jawabanDipilih *entity.JawabanOption
+		isAnswered := false
+		for _, ans := range answers {
+			if ans.TestSessionSoal.NomorUrut == soal.NomorUrut {
+				jawabanDipilih = ans.JawabanDipilih
+				isAnswered = true
+				break
+			}
+		}
+
+		soalForStudents = append(soalForStudents, entity.SoalForStudent{
+			ID:             soal.Soal.ID,
+			NomorUrut:      soal.NomorUrut,
+			Pertanyaan:     soal.Soal.Pertanyaan,
+			OpsiA:          soal.Soal.OpsiA,
+			OpsiB:          soal.Soal.OpsiB,
+			OpsiC:          soal.Soal.OpsiC,
+			OpsiD:          soal.Soal.OpsiD,
+			JawabanDipilih: jawabanDipilih,
+			IsAnswered:     isAnswered,
+			Materi:         soal.Soal.Materi,
+		})
+	}
+
+	return soalForStudents, nil
+}
+
+// GetSessionAnswers gets all answers for the session
+func (u *testSessionUsecaseImpl) GetSessionAnswers(sessionToken string) ([]entity.JawabanSiswa, error) {
+	_, err := u.GetTestSession(sessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	return u.repo.GetSessionAnswers(sessionToken)
+}
+
 // SubmitAnswer submits or updates an answer
 func (u *testSessionUsecaseImpl) SubmitAnswer(sessionToken string, nomorUrut int, jawaban entity.JawabanOption) error {
 	_, err := u.GetTestSession(sessionToken)

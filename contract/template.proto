@@ -274,6 +274,7 @@ message SoalForStudent {
     string opsi_d = 7;
     JawabanOption jawaban_dipilih = 8;  // If already answered
     bool is_answered = 9;
+    Materi materi = 10;
 }
 
 message CreateSoalRequest {
@@ -382,7 +383,7 @@ message GetTestQuestionsRequest {
 
 message TestQuestionsResponse {
     string session_token = 1;
-    SoalForStudent soal = 2;  // SINGLE question, not repeated
+    repeated SoalForStudent soal = 2;  // ALL questions for the session
     int32 total_soal = 3;
     int32 current_nomor_urut = 4;
     int32 dijawab_count = 5;

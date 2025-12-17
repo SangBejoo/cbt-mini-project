@@ -75,7 +75,7 @@ export default function SessionsPage() {
         id_tingkat: selectedTopic.tingkat.id,
         id_mata_pelajaran: selectedTopic.mataPelajaran.id,
         durasi_menit: parseInt(formData.durasiMenit),
-        jumlah_soal: 20, // Reduced for testing - only 1 question
+        jumlah_soal: 15, // Reduced for testing - only 1 question
       };
 
       const response = await axios.post(CREATE_SESSION_API, payload);
