@@ -26,5 +26,6 @@ func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repos
 	dependency.InitRestGatewayDependency(mux, opts, ctx, cfg)
 
 	// Wrap mux with CORS middleware
+	fmt.Printf("Starting HTTP server on port %d\n", cfg.RestServer.Port)
 	return http.ListenAndServe(fmt.Sprintf(":%d", cfg.RestServer.Port), corsMiddleware(mux))
 }

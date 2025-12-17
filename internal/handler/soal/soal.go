@@ -29,7 +29,12 @@ func (h *soalHandler) CreateSoal(ctx context.Context, req *base.CreateSoalReques
 	return &base.SoalResponse{
 		Soal: &base.SoalFull{
 			Id:            int32(s.ID),
-			Materi:        &base.Materi{Id: int32(s.Materi.ID), Nama: s.Materi.Nama},
+			Materi:        &base.Materi{
+				Id: int32(s.Materi.ID),
+				MataPelajaran: &base.MataPelajaran{Id: int32(s.Materi.MataPelajaran.ID), Nama: s.Materi.MataPelajaran.Nama},
+				Nama: s.Materi.Nama,
+				Tingkatan: int32(s.Materi.Tingkatan),
+			},
 			Pertanyaan:    s.Pertanyaan,
 			OpsiA:         s.OpsiA,
 			OpsiB:         s.OpsiB,
@@ -50,7 +55,12 @@ func (h *soalHandler) GetSoal(ctx context.Context, req *base.GetSoalRequest) (*b
 	return &base.SoalResponse{
 		Soal: &base.SoalFull{
 			Id:            int32(s.ID),
-			Materi:        &base.Materi{Id: int32(s.Materi.ID), Nama: s.Materi.Nama},
+			Materi:        &base.Materi{
+				Id: int32(s.Materi.ID),
+				MataPelajaran: &base.MataPelajaran{Id: int32(s.Materi.MataPelajaran.ID), Nama: s.Materi.MataPelajaran.Nama},
+				Nama: s.Materi.Nama,
+				Tingkatan: int32(s.Materi.Tingkatan),
+			},
 			Pertanyaan:    s.Pertanyaan,
 			OpsiA:         s.OpsiA,
 			OpsiB:         s.OpsiB,
@@ -72,7 +82,12 @@ func (h *soalHandler) UpdateSoal(ctx context.Context, req *base.UpdateSoalReques
 	return &base.SoalResponse{
 		Soal: &base.SoalFull{
 			Id:            int32(s.ID),
-			Materi:        &base.Materi{Id: int32(s.Materi.ID), Nama: s.Materi.Nama},
+			Materi:        &base.Materi{
+				Id: int32(s.Materi.ID),
+				MataPelajaran: &base.MataPelajaran{Id: int32(s.Materi.MataPelajaran.ID), Nama: s.Materi.MataPelajaran.Nama},
+				Nama: s.Materi.Nama,
+				Tingkatan: int32(s.Materi.Tingkatan),
+			},
 			Pertanyaan:    s.Pertanyaan,
 			OpsiA:         s.OpsiA,
 			OpsiB:         s.OpsiB,
@@ -120,7 +135,12 @@ func (h *soalHandler) ListSoal(ctx context.Context, req *base.ListSoalRequest) (
 	for _, s := range soals {
 		soalList = append(soalList, &base.SoalFull{
 			Id:            int32(s.ID),
-			Materi:        &base.Materi{Id: int32(s.Materi.ID), Nama: s.Materi.Nama},
+			Materi:        &base.Materi{
+				Id: int32(s.Materi.ID),
+				MataPelajaran: &base.MataPelajaran{Id: int32(s.Materi.MataPelajaran.ID), Nama: s.Materi.MataPelajaran.Nama},
+				Nama: s.Materi.Nama,
+				Tingkatan: int32(s.Materi.Tingkatan),
+			},
 			Pertanyaan:    s.Pertanyaan,
 			OpsiA:         s.OpsiA,
 			OpsiB:         s.OpsiB,
