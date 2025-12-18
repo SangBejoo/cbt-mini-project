@@ -4,7 +4,7 @@
 INSERT INTO mata_pelajaran (nama) VALUES ('Matematika');
 
 -- Insert Tingkat
-INSERT INTO tingkat (nama) VALUES ('1'), ('2'), ('3');
+INSERT INTO tingkat (nama) VALUES ('Tingkat 1'), ('Tingkat 2'), ('Tingkat 3');
 
 -- Insert Materi
 INSERT INTO materi (id_mata_pelajaran, id_tingkat, nama) VALUES

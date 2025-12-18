@@ -53,7 +53,7 @@ export default function SubjectsTab() {
         Array.isArray(data.mataPelajaran) ? data.mataPelajaran : []
       );
     } catch (error) {
-      toast({ title: 'Error fetching subjects', status: 'error' });
+      toast({ title: 'Error mengambil mata pelajaran', status: 'error' });
       setSubjects([]);
     }
   };
@@ -74,9 +74,9 @@ export default function SubjectsTab() {
     try {
       await axios.delete(`${API_BASE}/${id}`);
       fetchSubjects();
-      toast({ title: 'Subject deleted', status: 'success' });
+      toast({ title: 'Mata pelajaran dihapus', status: 'success' });
     } catch (error) {
-      toast({ title: 'Error deleting subject', status: 'error' });
+      toast({ title: 'Error menghapus mata pelajaran', status: 'error' });
     }
   };
 
@@ -84,29 +84,29 @@ export default function SubjectsTab() {
     try {
       if (editingSubject) {
         await axios.put(`${API_BASE}/${editingSubject.id}`, formData);
-        toast({ title: 'Subject updated', status: 'success' });
+        toast({ title: 'Mata pelajaran diperbarui', status: 'success' });
       } else {
         await axios.post(API_BASE, formData);
-        toast({ title: 'Subject created', status: 'success' });
+        toast({ title: 'Mata pelajaran dibuat', status: 'success' });
       }
       fetchSubjects();
       onClose();
     } catch (error) {
-      toast({ title: 'Error saving subject', status: 'error' });
+      toast({ title: 'Error menyimpan mata pelajaran', status: 'error' });
     }
   };
 
   return (
     <Box>
       <Button colorScheme="green" onClick={handleCreate} mb={4}>
-        Add Subject
+        Tambah Mata Pelajaran
       </Button>
       <Table variant="simple">
         <Thead>
           <Tr>
             <Th>ID</Th>
-            <Th>Name</Th>
-            <Th>Actions</Th>
+            <Th>Nama</Th>
+            <Th>Aksi</Th>
           </Tr>
         </Thead>
         <Tbody>
@@ -119,7 +119,7 @@ export default function SubjectsTab() {
                   Edit
                 </Button>
                 <Button size="sm" colorScheme="red" onClick={() => handleDelete(subject.id)}>
-                  Delete
+                  Hapus
                 </Button>
               </Td>
             </Tr>
@@ -130,11 +130,11 @@ export default function SubjectsTab() {
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>{editingSubject ? 'Edit Subject' : 'Add Subject'}</ModalHeader>
+          <ModalHeader>{editingSubject ? 'Edit Mata Pelajaran' : 'Tambah Mata Pelajaran'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <FormControl>
-              <FormLabel>Name</FormLabel>
+              <FormLabel>Nama</FormLabel>
               <Input
                 value={formData.nama}
                 onChange={(e) => setFormData({ nama: e.target.value })}
@@ -143,10 +143,10 @@ export default function SubjectsTab() {
           </ModalBody>
           <ModalFooter>
             <Button colorScheme="green" mr={3} onClick={handleSubmit}>
-              Save
+              Simpan
             </Button>
             <Button variant="ghost" onClick={onClose}>
-              Cancel
+              Batal
             </Button>
           </ModalFooter>
         </ModalContent>

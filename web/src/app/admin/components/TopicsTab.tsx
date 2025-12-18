@@ -73,7 +73,7 @@ export default function TopicsTab() {
         Array.isArray(data.materi) ? data.materi : []
       );
     } catch (error) {
-      toast({ title: 'Error fetching topics', status: 'error' });
+      toast({ title: 'Error mengambil materi', status: 'error' });
       setTopics([]);
     }
   };
@@ -88,7 +88,7 @@ export default function TopicsTab() {
         Array.isArray(data.tingkat) ? data.tingkat : []
       );
     } catch (error) {
-      toast({ title: 'Error fetching levels', status: 'error' });
+      toast({ title: 'Error mengambil tingkat', status: 'error' });
       setLevels([]);
     }
   };
@@ -103,7 +103,7 @@ export default function TopicsTab() {
         Array.isArray(data.mataPelajaran) ? data.mataPelajaran : []
       );
     } catch (error) {
-      toast({ title: 'Error fetching subjects', status: 'error' });
+      toast({ title: 'Error mengambil mata pelajaran', status: 'error' });
       setSubjects([]);
     }
   };
@@ -128,9 +128,9 @@ export default function TopicsTab() {
     try {
       await axios.delete(`${API_BASE}/${id}`);
       fetchTopics();
-      toast({ title: 'Topic deleted', status: 'success' });
+      toast({ title: 'Materi dihapus', status: 'success' });
     } catch (error) {
-      toast({ title: 'Error deleting topic', status: 'error' });
+      toast({ title: 'Error menghapus materi', status: 'error' });
     }
   };
 
@@ -143,31 +143,31 @@ export default function TopicsTab() {
     try {
       if (editingTopic) {
         await axios.put(`${API_BASE}/${editingTopic.id}`, data);
-        toast({ title: 'Topic updated', status: 'success' });
+        toast({ title: 'Materi diperbarui', status: 'success' });
       } else {
         await axios.post(API_BASE, data);
-        toast({ title: 'Topic created', status: 'success' });
+        toast({ title: 'Materi dibuat', status: 'success' });
       }
       fetchTopics();
       onClose();
     } catch (error) {
-      toast({ title: 'Error saving topic', status: 'error' });
+      toast({ title: 'Error menyimpan materi', status: 'error' });
     }
   };
 
   return (
     <Box>
       <Button colorScheme="purple" onClick={handleCreate} mb={4}>
-        Add Topic
+        Tambah Materi
       </Button>
       <Table variant="simple">
         <Thead>
           <Tr>
             <Th>ID</Th>
-            <Th>Subject</Th>
-            <Th>Level</Th>
-            <Th>Name</Th>
-            <Th>Actions</Th>
+            <Th>Mata Pelajaran</Th>
+            <Th>Tingkat</Th>
+            <Th>Nama</Th>
+            <Th>Aksi</Th>
           </Tr>
         </Thead>
         <Tbody>
@@ -182,7 +182,7 @@ export default function TopicsTab() {
                   Edit
                 </Button>
                 <Button size="sm" colorScheme="red" onClick={() => handleDelete(topic.id)}>
-                  Delete
+                  Hapus
                 </Button>
               </Td>
             </Tr>
@@ -193,17 +193,17 @@ export default function TopicsTab() {
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>{editingTopic ? 'Edit Topic' : 'Add Topic'}</ModalHeader>
+          <ModalHeader>{editingTopic ? 'Edit Materi' : 'Tambah Materi'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4}>
               <FormControl>
-                <FormLabel>Subject</FormLabel>
+                <FormLabel>Mata Pelajaran</FormLabel>
                 <Select
                   value={formData.idMataPelajaran}
                   onChange={(e) => setFormData({ ...formData, idMataPelajaran: e.target.value })}
                 >
-                  <option value="">Select Subject</option>
+                  <option value="">Pilih Mata Pelajaran</option>
                   {subjects.map((subject) => (
                     <option key={subject.id} value={subject.id.toString()}>
                       {subject.nama}
@@ -212,12 +212,12 @@ export default function TopicsTab() {
                 </Select>
               </FormControl>
               <FormControl>
-                <FormLabel>Level</FormLabel>
+                <FormLabel>Tingkat</FormLabel>
                 <Select
                   value={formData.idTingkat}
                   onChange={(e) => setFormData({ ...formData, idTingkat: e.target.value })}
                 >
-                  <option value="">Select Level</option>
+                  <option value="">Pilih Tingkat</option>
                   {levels.map((level) => (
                     <option key={level.id} value={level.id.toString()}>
                       {level.nama}
@@ -226,7 +226,7 @@ export default function TopicsTab() {
                 </Select>
               </FormControl>
               <FormControl>
-                <FormLabel>Name</FormLabel>
+                <FormLabel>Nama</FormLabel>
                 <Input
                   value={formData.nama}
                   onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
@@ -236,10 +236,10 @@ export default function TopicsTab() {
           </ModalBody>
           <ModalFooter>
             <Button colorScheme="purple" mr={3} onClick={handleSubmit}>
-              Save
+              Simpan
             </Button>
             <Button variant="ghost" onClick={onClose}>
-              Cancel
+              Batal
             </Button>
           </ModalFooter>
         </ModalContent>

@@ -82,7 +82,7 @@ func (h *mataPelajaranHandler) DeleteMataPelajaran(ctx context.Context, req *bas
 
 // ListMataPelajaran lists mata pelajaran
 func (h *mataPelajaranHandler) ListMataPelajaran(ctx context.Context, req *emptypb.Empty) (*base.ListMataPelajaranResponse, error) {
-	mps, _, err := h.usecase.ListMataPelajaran(1, 100) // Default page and size
+	mps, _, err := h.usecase.ListMataPelajaran(1, 1000) // Get all by default
 	if err != nil {
 		return nil, err
 	}

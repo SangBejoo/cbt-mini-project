@@ -236,7 +236,7 @@ func (h *soalHandler) DeleteSoal(ctx context.Context, req *base.DeleteSoalReques
 // ListSoal lists soal
 func (h *soalHandler) ListSoal(ctx context.Context, req *base.ListSoalRequest) (*base.ListSoalResponse, error) {
 	page := 1
-	pageSize := 10
+	pageSize := 1000 // Default to large number to get all for admin UI
 	if req.Pagination != nil {
 		if req.Pagination.Page > 0 {
 			page = int(req.Pagination.Page)

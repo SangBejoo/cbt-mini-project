@@ -53,7 +53,7 @@ export default function LevelsTab() {
         Array.isArray(data.tingkat) ? data.tingkat : []
       );
     } catch (error) {
-      toast({ title: 'Error fetching levels', status: 'error' });
+      toast({ title: 'Error mengambil tingkat', status: 'error' });
       setLevels([]);
     }
   };
@@ -74,9 +74,9 @@ export default function LevelsTab() {
     try {
       await axios.delete(`${API_BASE}/${id}`);
       fetchLevels();
-      toast({ title: 'Level deleted', status: 'success' });
+      toast({ title: 'Tingkat dihapus', status: 'success' });
     } catch (error) {
-      toast({ title: 'Error deleting level', status: 'error' });
+      toast({ title: 'Error menghapus tingkat', status: 'error' });
     }
   };
 
@@ -84,29 +84,29 @@ export default function LevelsTab() {
     try {
       if (editingLevel) {
         await axios.put(`${API_BASE}/${editingLevel.id}`, formData);
-        toast({ title: 'Level updated', status: 'success' });
+        toast({ title: 'Tingkat diperbarui', status: 'success' });
       } else {
         await axios.post(API_BASE, formData);
-        toast({ title: 'Level created', status: 'success' });
+        toast({ title: 'Tingkat dibuat', status: 'success' });
       }
       fetchLevels();
       onClose();
     } catch (error) {
-      toast({ title: 'Error saving level', status: 'error' });
+      toast({ title: 'Error menyimpan tingkat', status: 'error' });
     }
   };
 
   return (
     <Box>
       <Button colorScheme="blue" onClick={handleCreate} mb={4}>
-        Add Level
+        Tambah Tingkat
       </Button>
       <Table variant="simple">
         <Thead>
           <Tr>
             <Th>ID</Th>
-            <Th>Name</Th>
-            <Th>Actions</Th>
+            <Th>Nama</Th>
+            <Th>Aksi</Th>
           </Tr>
         </Thead>
         <Tbody>
@@ -119,7 +119,7 @@ export default function LevelsTab() {
                   Edit
                 </Button>
                 <Button size="sm" colorScheme="red" onClick={() => handleDelete(level.id)}>
-                  Delete
+                  Hapus
                 </Button>
               </Td>
             </Tr>
@@ -130,11 +130,11 @@ export default function LevelsTab() {
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>{editingLevel ? 'Edit Level' : 'Add Level'}</ModalHeader>
+          <ModalHeader>{editingLevel ? 'Edit Tingkat' : 'Tambah Tingkat'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <FormControl>
-              <FormLabel>Name</FormLabel>
+              <FormLabel>Nama</FormLabel>
               <Input
                 value={formData.nama}
                 onChange={(e) => setFormData({ nama: e.target.value })}
@@ -143,10 +143,10 @@ export default function LevelsTab() {
           </ModalBody>
           <ModalFooter>
             <Button colorScheme="blue" mr={3} onClick={handleSubmit}>
-              Save
+              Simpan
             </Button>
             <Button variant="ghost" onClick={onClose}>
-              Cancel
+              Batal
             </Button>
           </ModalFooter>
         </ModalContent>

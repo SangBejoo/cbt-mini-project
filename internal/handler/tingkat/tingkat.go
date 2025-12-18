@@ -82,7 +82,7 @@ func (h *tingkatHandler) DeleteTingkat(ctx context.Context, req *base.DeleteTing
 
 // ListTingkat lists tingkat
 func (h *tingkatHandler) ListTingkat(ctx context.Context, req *emptypb.Empty) (*base.ListTingkatResponse, error) {
-	tingkats, _, err := h.usecase.ListTingkat(1, 100) // Default page and size
+	tingkats, _, err := h.usecase.ListTingkat(1, 1000) // Get all by default
 	if err != nil {
 		return nil, err
 	}

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from 'next/link';
 import { Box, Button, VStack, Heading, Container, Tabs, TabList, Tab, TabPanels, TabPanel } from '@chakra-ui/react';
 import LevelsTab from './components/LevelsTab';
@@ -9,14 +11,14 @@ export default function AdminHome() {
   return (
     <Container maxW="container.xl" py={10}>
       <Heading as="h1" size="xl" textAlign="center" mb={8}>
-        CBT Admin Panel
+        Panel Admin CBT
       </Heading>
       <Tabs variant="enclosed" colorScheme="blue" isLazy>
         <TabList>
-          <Tab>Levels</Tab>
-          <Tab>Subjects</Tab>
-          <Tab>Topics</Tab>
-          <Tab>Questions</Tab>
+          <Tab>Tingkat</Tab>
+          <Tab>Mata Pelajaran</Tab>
+          <Tab>Materi</Tab>
+          <Tab>Soal</Tab>
         </TabList>
         <TabPanels>
           <TabPanel>
@@ -36,7 +38,7 @@ export default function AdminHome() {
       <Box mt={8} textAlign="center">
         <Link href="/">
           <Button variant="outline">
-            Back to Home
+            Kembali ke Beranda
           </Button>
         </Link>
       </Box>

@@ -39,6 +39,11 @@ import {
   StepStatus,
   StepTitle,
   StepSeparator,
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel,
+  AccordionIcon,
 } from '@chakra-ui/react';
 import { EditIcon, DeleteIcon, AddIcon } from '@chakra-ui/icons';
 
@@ -87,6 +92,29 @@ interface Question {
   }[];
 }
 
+const mapLetterToEnum = (val: string) => {
+  switch ((val || '').trim().toUpperCase()) {
+    case 'A': return 'A';
+    case 'B': return 'B';
+    case 'C': return 'C';
+    case 'D': return 'D';
+    default: return 'JAWABAN_INVALID';
+  }
+};
+
+const mapEnumToLetter = (val: string | number) => {
+  const raw = `${val || ''}`.trim().toUpperCase();
+  if (raw === 'A' || raw === '1') return 'A';
+  if (raw === 'B' || raw === '2') return 'B';
+  if (raw === 'C' || raw === '3') return 'C';
+  if (raw === 'D' || raw === '4') return 'D';
+  if (raw.endsWith('_A')) return 'A';
+  if (raw.endsWith('_B')) return 'B';
+  if (raw.endsWith('_C')) return 'C';
+  if (raw.endsWith('_D')) return 'D';
+  return 'A';
+};
+
 // --- API Helpers ---
 const API_BASE = 'http://localhost:8080/v1';
 
@@ -104,6 +132,16 @@ export default function QuestionsTab() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Filter state
+  const [selectedLevel, setSelectedLevel] = useState<string>('');
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Pagination for levels (if >5 levels)
+  const levelsPerPage = 5;
+  const [currentLevelPage, setCurrentLevelPage] = useState(1);
 
   // Multi-step modal state
   const { isOpen: isQuestionOpen, onOpen: onQuestionOpen, onClose: onQuestionClose } = useDisclosure();
@@ -123,6 +161,7 @@ export default function QuestionsTab() {
       if (res.ok) {
         const data = await res.json();
         setLevels(data.tingkat || []);
+        setCurrentLevelPage(1);
       }
     } catch (error) {
       console.error('Failed to fetch levels', error);
@@ -158,7 +197,11 @@ export default function QuestionsTab() {
       const res = await fetch(`${API_BASE}/questions`);
       if (res.ok) {
         const data = await res.json();
-        setQuestions(data.soal || []);
+        const normalized = (data.soal || []).map((q: Question) => ({
+          ...q,
+          jawabanBenar: mapEnumToLetter((q as any).jawabanBenar),
+        }));
+        setQuestions(normalized);
       }
     } catch (error) {
       console.error('Failed to fetch questions', error);
@@ -166,10 +209,11 @@ export default function QuestionsTab() {
   };
 
   useEffect(() => {
-    fetchLevels();
-    fetchSubjects();
-    fetchTopics();
-    fetchQuestions();
+    const loadData = async () => {
+      await Promise.all([fetchLevels(), fetchSubjects(), fetchTopics(), fetchQuestions()]);
+      setIsLoading(false);
+    };
+    loadData();
   }, []);
 
   // --- Handlers ---
@@ -238,7 +282,7 @@ export default function QuestionsTab() {
       opsiB: currentQuestion.opsiB,
       opsiC: currentQuestion.opsiC,
       opsiD: currentQuestion.opsiD,
-      jawabanBenar: currentQuestion.jawabanBenar,
+      jawabanBenar: mapLetterToEnum(currentQuestion.jawabanBenar || 'A'),
       pembahasan: currentQuestion.pembahasan || '',
       imageBytes: [],
     };
@@ -320,20 +364,176 @@ export default function QuestionsTab() {
 
   // --- Render Helpers ---
 
-  const groupedQuestions = questions.reduce(
+  const filteredQuestions = questions.filter((q) => {
+    const matchesLevel = selectedLevel === '' || q.materi.tingkat.id.toString() === selectedLevel;
+    const matchesSubject = selectedSubject === '' || q.materi.mataPelajaran.id.toString() === selectedSubject;
+    const matchesSearch = searchQuery === '' ||
+      q.materi.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      q.materi.mataPelajaran.nama.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesLevel && matchesSubject && matchesSearch;
+  });
+
+  const nestedData = filteredQuestions.reduce(
     (acc, q) => {
+      const levelId = q.materi.tingkat.id;
       const subjectId = q.materi.mataPelajaran.id;
-      if (!acc[subjectId]) {
-        acc[subjectId] = {
+      const topicId = q.materi.id;
+
+      if (!acc[levelId]) {
+        acc[levelId] = {
+          level: q.materi.tingkat,
+          subjects: {},
+        };
+      }
+
+      if (!acc[levelId].subjects[subjectId]) {
+        acc[levelId].subjects[subjectId] = {
           subject: q.materi.mataPelajaran,
+          topics: {},
+        };
+      }
+
+      if (!acc[levelId].subjects[subjectId].topics[topicId]) {
+        acc[levelId].subjects[subjectId].topics[topicId] = {
+          topic: q.materi,
           questions: [],
         };
       }
-      acc[subjectId].questions.push(q);
+
+      acc[levelId].subjects[subjectId].topics[topicId].questions.push(q);
       return acc;
     },
-    {} as Record<number, { subject: { id: number; nama: string }; questions: Question[] }>
+    {} as Record<number, {
+      level: { id: number; nama: string };
+      subjects: Record<number, {
+        subject: { id: number; nama: string };
+        topics: Record<number, {
+          topic: { id: number; nama: string; mataPelajaran: { id: number; nama: string }; tingkat: { id: number; nama: string } };
+          questions: Question[];
+        }>;
+      }>;
+    }>
   );
+
+  const renderContent = () => {
+    if (isLoading) return <Text>Loading...</Text>;
+
+    const totalLevelPages = Math.ceil(levels.length / levelsPerPage);
+    const displayedLevels = levels.slice((currentLevelPage - 1) * levelsPerPage, currentLevelPage * levelsPerPage);
+    const filteredNestedData = Object.values(nestedData).filter(levelData =>
+      displayedLevels.some(level => level.id === levelData.level.id)
+    );
+
+    return (
+      <>
+        {levels.length > levelsPerPage && (
+          <HStack justify="center" mb={4}>
+            <Button
+              onClick={() => setCurrentLevelPage(Math.max(1, currentLevelPage - 1))}
+              isDisabled={currentLevelPage === 1}
+            >
+              Previous
+            </Button>
+            <Text>
+              Halaman {currentLevelPage} dari {totalLevelPages}
+            </Text>
+            <Button
+              onClick={() => setCurrentLevelPage(Math.min(totalLevelPages, currentLevelPage + 1))}
+              isDisabled={currentLevelPage === totalLevelPages}
+            >
+              Next
+            </Button>
+          </HStack>
+        )}
+        {filteredNestedData.map((levelData) => (
+          <Accordion allowToggle key={levelData.level.id} mb={8}>
+            <AccordionItem>
+              <AccordionButton>
+                <Box flex="1" textAlign="left">
+                  <Heading size="md">{levelData.level.nama}</Heading>
+                </Box>
+                <AccordionIcon />
+              </AccordionButton>
+              <AccordionPanel pb={4}>
+                <Accordion allowToggle>
+                  {Object.values(levelData.subjects).map((subjectData) => (
+                    <AccordionItem key={subjectData.subject.id}>
+                      <AccordionButton>
+                        <Box flex="1" textAlign="left">
+                          <Text fontWeight="bold">{subjectData.subject.nama}</Text>
+                        </Box>
+                        <AccordionIcon />
+                      </AccordionButton>
+                      <AccordionPanel pb={4}>
+                        <Accordion allowToggle>
+                          {Object.values(subjectData.topics).map((topicData) => (
+                            <AccordionItem key={topicData.topic.id}>
+                              <AccordionButton>
+                                <Box flex="1" textAlign="left">
+                                  <Text fontWeight="semibold">{topicData.topic.nama}</Text>
+                                </Box>
+                                <AccordionIcon />
+                              </AccordionButton>
+                              <AccordionPanel pb={4}>
+                                <Table variant="simple" size="sm">
+                                  <Thead>
+                                    <Tr>
+                                      <Th>Soal</Th>
+                                      <Th>Jawaban Benar</Th>
+                                      <Th>Gambar</Th>
+                                      <Th>Aksi</Th>
+                                    </Tr>
+                                  </Thead>
+                                  <Tbody>
+                                    {topicData.questions.map((q) => (
+                                      <Tr key={q.id}>
+                                        <Td maxW="300px" isTruncated>
+                                          {q.pertanyaan}
+                                        </Td>
+                                        <Td>
+                                          <Badge colorScheme="green">{q.jawabanBenar}</Badge>
+                                        </Td>
+                                        <Td>
+                                          <Badge colorScheme="blue">{q.gambar.length}</Badge>
+                                        </Td>
+                                        <Td>
+                                          <IconButton
+                                            aria-label="Edit"
+                                            icon={<EditIcon />}
+                                            size="sm"
+                                            mr={2}
+                                            onClick={() => handleEditQuestion(q)}
+                                          />
+                                          <IconButton
+                                            aria-label="Delete"
+                                            icon={<DeleteIcon />}
+                                            size="sm"
+                                            colorScheme="red"
+                                            onClick={() => {
+                                              setCurrentDeleteId(q.id);
+                                              onDeleteOpen();
+                                            }}
+                                          />
+                                        </Td>
+                                      </Tr>
+                                    ))}
+                                  </Tbody>
+                                </Table>
+                              </AccordionPanel>
+                            </AccordionItem>
+                          ))}
+                        </Accordion>
+                      </AccordionPanel>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </AccordionPanel>
+            </AccordionItem>
+          </Accordion>
+        ))}
+      </>
+    );
+  };
 
   return (
     <Box>
@@ -341,61 +541,47 @@ export default function QuestionsTab() {
         Tambah Soal
       </Button>
 
-      {Object.values(groupedQuestions).map((group) => (
-        <Box key={group.subject.id} mb={8}>
-          <Heading size="md" mb={4}>
-            {group.subject.nama}
-          </Heading>
-          <Table variant="simple">
-            <Thead>
-              <Tr>
-                <Th>Soal</Th>
-                <Th>Materi</Th>
-                <Th>Tingkat</Th>
-                <Th>Jawaban Benar</Th>
-                <Th>Gambar</Th>
-                <Th>Aksi</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {group.questions.map((q) => (
-                <Tr key={q.id}>
-                  <Td maxW="300px" isTruncated>
-                    {q.pertanyaan}
-                  </Td>
-                  <Td>{q.materi.nama}</Td>
-                  <Td>{q.materi.tingkat.nama}</Td>
-                  <Td>
-                    <Badge colorScheme="green">{q.jawabanBenar}</Badge>
-                  </Td>
-                  <Td>
-                    <Badge colorScheme="blue">{q.gambar.length}</Badge>
-                  </Td>
-                  <Td>
-                    <IconButton
-                      aria-label="Edit"
-                      icon={<EditIcon />}
-                      size="sm"
-                      mr={2}
-                      onClick={() => handleEditQuestion(q)}
-                    />
-                    <IconButton
-                      aria-label="Delete"
-                      icon={<DeleteIcon />}
-                      size="sm"
-                      colorScheme="red"
-                      onClick={() => {
-                        setCurrentDeleteId(q.id);
-                        onDeleteOpen();
-                      }}
-                    />
-                  </Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </Box>
-      ))}
+      {/* Filter Section */}
+      <HStack spacing={4} mb={6}>
+        <FormControl>
+          <FormLabel>Filter Tingkat</FormLabel>
+          <Select
+            placeholder="Semua Tingkat"
+            value={selectedLevel}
+            onChange={(e) => setSelectedLevel(e.target.value)}
+          >
+            {levels.map((level) => (
+              <option key={level.id} value={level.id.toString()}>
+                {level.nama}
+              </option>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl>
+          <FormLabel>Filter Mata Pelajaran</FormLabel>
+          <Select
+            placeholder="Semua Mata Pelajaran"
+            value={selectedSubject}
+            onChange={(e) => setSelectedSubject(e.target.value)}
+          >
+            {subjects.map((subject) => (
+              <option key={subject.id} value={subject.id.toString()}>
+                {subject.nama}
+              </option>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl>
+          <FormLabel>Pencarian</FormLabel>
+          <Input
+            placeholder="Cari berdasarkan materi atau mata pelajaran"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </FormControl>
+      </HStack>
+
+      {renderContent()}
 
       {/* Multi-Step Question Modal */}
       <Modal isOpen={isQuestionOpen} onClose={onQuestionClose} size="2xl" closeOnEsc={false} closeOnOverlayClick={false}>
