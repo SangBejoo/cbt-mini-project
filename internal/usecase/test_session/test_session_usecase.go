@@ -256,6 +256,8 @@ func (u *testSessionUsecaseImpl) GetTestResult(sessionToken string) (*entity.Tes
 			JawabanDipilih: ans.JawabanDipilih,
 			JawabanBenar:   ans.TestSessionSoal.Soal.JawabanBenar,
 			IsCorrect:      ans.IsCorrect,
+			Pembahasan:     ans.TestSessionSoal.Soal.Pembahasan,
+			Gambar:         ans.TestSessionSoal.Soal.Gambar,
 		}
 		details = append(details, detail)
 	}

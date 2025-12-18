@@ -66,6 +66,17 @@ interface TestResultResponse {
     jawabanDipilih: string;
     jawabanBenar: string;
     isCorrect: boolean;
+    pembahasan?: string;
+    gambar?: Array<{
+      id: number;
+      namaFile: string;
+      filePath: string;
+      fileSize: number;
+      mimeType: string;
+      urutan: number;
+      keterangan?: string;
+      createdAt: string;
+    }>;
   }>;
   tingkat: Array<{
     id: number;
@@ -85,6 +96,8 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedQuestion, setSelectedQuestion] = useState<any>(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [showReview, setShowReview] = useState(false);
 
   useEffect(() => {
     fetchResult();
@@ -105,6 +118,22 @@ export default function ResultsPage() {
   const openQuestionDetail = (question: any) => {
     setSelectedQuestion(question);
     onOpen();
+  };
+
+  const goToQuestion = (index: number) => {
+    setCurrentQuestionIndex(index);
+  };
+
+  const goToNextQuestion = () => {
+    if (currentQuestionIndex < result!.detailJawaban.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    }
+  };
+
+  const goToPreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    }
   };
 
   if (loading) {
@@ -129,6 +158,11 @@ export default function ResultsPage() {
   const sessionInfo = result.sessionInfo;
   const scorePercentage = sessionInfo.nilaiAkhir || 0;
   const isPassed = scorePercentage >= 70; // Assuming 70% pass mark
+
+  // Calculate actual duration from start and end time
+  const startTime = new Date(sessionInfo.waktuMulai);
+  const endTime = new Date(sessionInfo.waktuSelesai);
+  const actualDurationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
 
   return (
     <Container maxW="container.md" py={10}>
@@ -171,7 +205,7 @@ export default function ResultsPage() {
                 </Stat>
                 <Stat>
                   <StatLabel>Duration</StatLabel>
-                  <StatNumber>{sessionInfo.durasiMenit} minutes</StatNumber>
+                  <StatNumber>{actualDurationMinutes} minutes</StatNumber>
                 </Stat>
                 <Stat>
                   <StatLabel>Status</StatLabel>
@@ -240,9 +274,209 @@ export default function ResultsPage() {
                   <Text>Tidak Menjawab</Text>
                 </HStack>
               </HStack>
+              <Button
+                colorScheme="blue"
+                width="full"
+                onClick={() => setShowReview(true)}
+                mt={4}
+              >
+                Lihat Pembahasan Lengkap
+              </Button>
             </VStack>
           </CardBody>
         </Card>
+
+        {/* Detailed Question Review */}
+        {showReview && (
+          <Card width="full">
+            <CardBody>
+              <VStack spacing={6} align="stretch">
+                <HStack justify="space-between">
+                  <Heading size="md">Pembahasan Soal</Heading>
+                  <Button size="sm" variant="outline" onClick={() => setShowReview(false)}>
+                    Sembunyikan
+                  </Button>
+                </HStack>
+
+                {/* Question Navigation */}
+                <Box>
+                  <Text fontWeight="medium" mb={2}>Daftar Soal</Text>
+                  <SimpleGrid columns={{ base: 8, md: 10, lg: 12 }} spacing={2}>
+                    {result.detailJawaban.map((jawaban, index) => {
+                      let colorScheme = 'gray';
+                      if (jawaban.jawabanDipilih) {
+                        colorScheme = jawaban.isCorrect ? 'green' : 'red';
+                      }
+                      return (
+                        <Button
+                          key={jawaban.nomorUrut}
+                          onClick={() => goToQuestion(index)}
+                          size="sm"
+                          colorScheme={colorScheme}
+                          variant={currentQuestionIndex === index ? 'solid' : 'outline'}
+                          borderWidth={currentQuestionIndex === index ? '2px' : '1px'}
+                        >
+                          {jawaban.nomorUrut}
+                        </Button>
+                      );
+                    })}
+                  </SimpleGrid>
+                </Box>
+
+                {/* Current Question Detail */}
+                {(() => {
+                  const currentJawaban = result.detailJawaban[currentQuestionIndex];
+                  return (
+                    <Card bg="gray.50">
+                      <CardBody>
+                        <VStack spacing={4} align="stretch">
+                          <HStack justify="space-between">
+                            <Badge colorScheme="blue" fontSize="md" px={3} py={1}>
+                              Soal No. {currentJawaban.nomorUrut}
+                            </Badge>
+                            <Badge
+                              colorScheme={
+                                !currentJawaban.jawabanDipilih
+                                  ? 'gray'
+                                  : currentJawaban.isCorrect
+                                  ? 'green'
+                                  : 'red'
+                              }
+                              fontSize="md"
+                            >
+                              {!currentJawaban.jawabanDipilih
+                                ? 'Tidak Menjawab'
+                                : currentJawaban.isCorrect
+                                ? 'Benar ✓'
+                                : 'Salah ✗'}
+                            </Badge>
+                          </HStack>
+
+                          <Text fontSize="lg" fontWeight="medium">
+                            {currentJawaban.pertanyaan}
+                          </Text>
+
+                          {/* Gambar Soal */}
+                          {currentJawaban.gambar && Array.isArray(currentJawaban.gambar) && currentJawaban.gambar.length > 0 && (
+                            <Box>
+                              <Text fontSize="sm" color="gray.600" mb={2}>
+                                Perhatikan gambar dibawah ini
+                              </Text>
+                              <VStack spacing={3}>
+                                {currentJawaban.gambar
+                                  .sort((a, b) => a.urutan - b.urutan)
+                                  .map((img) => (
+                                    <Box key={img.id} borderWidth="1px" borderRadius="md" p={2} bg="white">
+                                      <Image
+                                        src={img.filePath ? `http://localhost:8080/${img.filePath.replace(/\\/g, '/')}` : ''}
+                                        alt={img.keterangan || 'Gambar soal'}
+                                        maxH="300px"
+                                        objectFit="contain"
+                                        mx="auto"
+                                      />
+                                      {img.keterangan && (
+                                        <Text fontSize="sm" color="gray.600" mt={2} textAlign="center">
+                                          {img.keterangan}
+                                        </Text>
+                                      )}
+                                    </Box>
+                                  ))}
+                              </VStack>
+                            </Box>
+                          )}
+
+                          {/* Options */}
+                          <VStack spacing={3} align="stretch">
+                            {['A', 'B', 'C', 'D'].map((option) => {
+                              const isCorrectAnswer = currentJawaban.jawabanBenar === option;
+                              const isUserAnswer = currentJawaban.jawabanDipilih === option;
+                              const optionText = currentJawaban[`opsi${option}` as keyof typeof currentJawaban];
+
+                              let bgColor = 'white';
+                              let borderColor = 'gray.200';
+                              let borderWidth = '1px';
+
+                              if (isCorrectAnswer) {
+                                bgColor = 'green.50';
+                                borderColor = 'green.400';
+                                borderWidth = '2px';
+                              } else if (isUserAnswer && !isCorrectAnswer) {
+                                bgColor = 'red.50';
+                                borderColor = 'red.400';
+                                borderWidth = '2px';
+                              }
+
+                              return (
+                                <Box
+                                  key={option}
+                                  p={4}
+                                  borderWidth={borderWidth}
+                                  borderColor={borderColor}
+                                  borderRadius="md"
+                                  bg={bgColor}
+                                >
+                                  <HStack justify="space-between">
+                                    <Text fontWeight={isCorrectAnswer || isUserAnswer ? 'bold' : 'normal'}>
+                                      {option}. {optionText}
+                                    </Text>
+                                    <HStack spacing={2}>
+                                      {isCorrectAnswer && (
+                                        <Badge colorScheme="green">Jawaban Benar</Badge>
+                                      )}
+                                      {isUserAnswer && !isCorrectAnswer && (
+                                        <Badge colorScheme="red">Jawaban Anda</Badge>
+                                      )}
+                                    </HStack>
+                                  </HStack>
+                                </Box>
+                              );
+                            })}
+                          </VStack>
+
+                          {/* Pembahasan */}
+                          {currentJawaban.pembahasan && (
+                            <Box mt={6} p={4} bg="blue.50" borderRadius="md" border="1px solid" borderColor="blue.200">
+                              <Text fontWeight="bold" color="blue.800" mb={2}>
+                                Pembahasan:
+                              </Text>
+                              <Text color="blue.700" whiteSpace="pre-wrap">
+                                {currentJawaban.pembahasan}
+                              </Text>
+                            </Box>
+                          )}
+
+                          {/* Navigation Buttons */}
+                          <HStack justify="space-between" pt={4}>
+                            <Button
+                              leftIcon={<Text>◀</Text>}
+                              onClick={goToPreviousQuestion}
+                              isDisabled={currentQuestionIndex === 0}
+                              colorScheme="blue"
+                              variant="outline"
+                            >
+                              Sebelumnya
+                            </Button>
+                            <Text fontSize="sm" color="gray.600">
+                              {currentQuestionIndex + 1} / {result.detailJawaban.length}
+                            </Text>
+                            <Button
+                              rightIcon={<Text>▶</Text>}
+                              onClick={goToNextQuestion}
+                              isDisabled={currentQuestionIndex === result.detailJawaban.length - 1}
+                              colorScheme="blue"
+                            >
+                              Selanjutnya
+                            </Button>
+                          </HStack>
+                        </VStack>
+                      </CardBody>
+                    </Card>
+                  );
+                })()}
+              </VStack>
+            </CardBody>
+          </Card>
+        )}
 
         <VStack spacing={4}>
           <Link href="/student/history">

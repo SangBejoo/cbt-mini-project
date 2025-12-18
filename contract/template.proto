@@ -277,7 +277,8 @@ message SoalFull {
     string opsi_c = 6;
     string opsi_d = 7;
     JawabanOption jawaban_benar = 8;
-    repeated SoalGambar gambar = 9;
+    string pembahasan = 9;
+    repeated SoalGambar gambar = 10;
 }
 
 // Soal for student (no answer exposed)
@@ -304,7 +305,8 @@ message CreateSoalRequest {
     string opsi_c = 6;
     string opsi_d = 7;
     JawabanOption jawaban_benar = 8;
-    repeated bytes image_bytes = 9;
+    string pembahasan = 9;
+    repeated bytes image_bytes = 10;
 }
 
 message GetSoalRequest {
@@ -321,7 +323,8 @@ message UpdateSoalRequest {
     string opsi_c = 7;
     string opsi_d = 8;
     JawabanOption jawaban_benar = 9;
-    repeated bytes image_bytes = 10;
+    string pembahasan = 10;
+    repeated bytes image_bytes = 11;
 }
 
 message DeleteSoalRequest {
@@ -480,6 +483,8 @@ message JawabanDetail {
     JawabanOption jawaban_dipilih = 7;
     JawabanOption jawaban_benar = 8;
     bool is_correct = 9;
+    string pembahasan = 10;
+    repeated SoalGambar gambar = 11;
 }
 
 message TestResultResponse {

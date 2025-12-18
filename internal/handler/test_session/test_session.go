@@ -176,6 +176,11 @@ func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTes
 			jawabanDipilih = base.JawabanOption(base.JawabanOption_value[string(*d.JawabanDipilih)])
 		}
 
+		var pembahasan string
+		if d.Pembahasan != nil {
+			pembahasan = *d.Pembahasan
+		}
+
 		jawabanDetails = append(jawabanDetails, &base.JawabanDetail{
 			NomorUrut:      int32(d.NomorUrut),
 			Pertanyaan:     d.Pertanyaan,
@@ -186,6 +191,8 @@ func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTes
 			JawabanDipilih: jawabanDipilih,
 			JawabanBenar:   base.JawabanOption(base.JawabanOption_value[string(d.JawabanBenar)]),
 			IsCorrect:      d.IsCorrect,
+			Pembahasan:     pembahasan,
+			Gambar:         convertSoalGambarToProto(d.Gambar),
 		})
 	}
 

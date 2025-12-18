@@ -1296,6 +1296,9 @@
         "jawabanBenar": {
           "$ref": "#/definitions/baseJawabanOption"
         },
+        "pembahasan": {
+          "type": "string"
+        },
         "imageBytes": {
           "type": "array",
           "items": {
@@ -1424,6 +1427,9 @@
         },
         "jawabanBenar": {
           "$ref": "#/definitions/baseJawabanOption"
+        },
+        "pembahasan": {
+          "type": "string"
         },
         "imageBytes": {
           "type": "array",
@@ -1566,6 +1572,16 @@
         },
         "isCorrect": {
           "type": "boolean"
+        },
+        "pembahasan": {
+          "type": "string"
+        },
+        "gambar": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseSoalGambar"
+          }
         }
       }
     },
@@ -1835,6 +1851,9 @@
         },
         "jawabanBenar": {
           "$ref": "#/definitions/baseJawabanOption"
+        },
+        "pembahasan": {
+          "type": "string"
         },
         "gambar": {
           "type": "array",

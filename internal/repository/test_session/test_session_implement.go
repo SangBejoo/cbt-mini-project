@@ -164,7 +164,7 @@ func (r *testSessionRepositoryImpl) ClearAnswer(token string, nomorUrut int) err
 // Get answers for session
 func (r *testSessionRepositoryImpl) GetSessionAnswers(token string) ([]entity.JawabanSiswa, error) {
 	var answers []entity.JawabanSiswa
-	err := r.db.Preload("TestSessionSoal").Preload("TestSessionSoal.Soal").
+	err := r.db.Preload("TestSessionSoal").Preload("TestSessionSoal.Soal", func(db *gorm.DB) *gorm.DB { return db.Preload("Gambar", func(db2 *gorm.DB) *gorm.DB { return db2.Order("urutan ASC") }) }).
 		Joins("JOIN test_session_soal ON jawaban_siswa.id_test_session_soal = test_session_soal.id").
 		Joins("JOIN test_session ON test_session_soal.id_test_session = test_session.id").
 		Where("test_session.session_token = ?", token).Find(&answers).Error

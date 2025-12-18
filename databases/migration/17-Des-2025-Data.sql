@@ -33,6 +33,7 @@ CREATE TABLE `soal` (
     `opsi_c` varchar(255) NOT NULL,
     `opsi_d` varchar(255) NOT NULL,
     `jawaban_benar` char(1) NOT NULL,
+    `pembahasan` text NULL COMMENT 'Pembahasan atau penjelasan jawaban',
     `image_path` varchar(255) NULL COMMENT 'Path gambar opsional (filesystem)'
 );
 
