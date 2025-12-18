@@ -8,11 +8,11 @@ export default function StudentHome() {
     <Container maxW="container.lg" py={16}>
       <VStack spacing={12}>
         <Box textAlign="center">
-          <Heading as="h1" size="3xl" color="blue.600" mb={4}>
-            🎓 CBT Student Portal
+          <Heading as="h1" size="3xl" color="orange.600" mb={4}>
+            Portal Siswa CBT
           </Heading>
           <Text fontSize="xl" color="gray.600" maxW="2xl" mx="auto">
-            Welcome to the Computer-Based Test system. Choose an option below to get started with your learning journey.
+            Selamat datang di sistem Computer-Based Test. Pilih menu di bawah untuk memulai pembelajaran Anda.
           </Text>
         </Box>
 
@@ -29,35 +29,34 @@ export default function StudentHome() {
           <VStack spacing={6}>
             <Link href="/student/sessions" style={{ width: '100%' }}>
               <Button
-                colorScheme="blue"
+                colorScheme="orange"
                 size="lg"
                 width="full"
                 height="16"
                 fontSize="lg"
-                leftIcon={<Text fontSize="2xl">📝</Text>}
                 borderRadius="xl"
                 shadow="md"
                 _hover={{ shadow: 'lg', transform: 'translateY(-2px)' }}
                 transition="all 0.2s"
               >
-                Take a Test
+                Ikuti Tes
               </Button>
             </Link>
 
             <Link href="/student/history" style={{ width: '100%' }}>
               <Button
-                colorScheme="green"
+                colorScheme="orange"
+                variant="outline"
                 size="lg"
                 width="full"
                 height="16"
                 fontSize="lg"
-                leftIcon={<Text fontSize="2xl">📊</Text>}
                 borderRadius="xl"
                 shadow="md"
                 _hover={{ shadow: 'lg', transform: 'translateY(-2px)' }}
                 transition="all 0.2s"
               >
-                View My History
+                Lihat Riwayat Siswa/i
               </Button>
             </Link>
 
@@ -68,13 +67,12 @@ export default function StudentHome() {
                 width="full"
                 height="14"
                 fontSize="lg"
-                leftIcon={<Text fontSize="xl">🏠</Text>}
                 borderRadius="xl"
                 borderWidth="2px"
                 _hover={{ bg: 'gray.50', borderColor: 'gray.300' }}
                 transition="all 0.2s"
               >
-                Back to Home
+                Kembali ke Beranda
               </Button>
             </Link>
           </VStack>

@@ -239,11 +239,11 @@ export default function TestPage() {
       <Flex gap={6} direction={{ base: 'column', lg: 'row' }}>
         {/* Main Question Area */}
         <Box flex="1">
-          <Card bg="blue.50" borderWidth="2px" borderColor="blue.200" mb={4}>
+          <Card bg="orange.50" borderWidth="2px" borderColor="orange.200" mb={4}>
             <CardBody>
               <HStack spacing={4}>
-                <Box bg="orange.400" p={3} borderRadius="md">
-                  <Text fontSize="2xl">📚</Text>
+                <Box bg="orange.500" p={3} borderRadius="md" color="white" fontWeight="bold" fontSize="lg">
+                  CBT
                 </Box>
                 <VStack align="start" spacing={0}>
                   <Text fontWeight="bold" fontSize="lg">
@@ -260,7 +260,7 @@ export default function TestPage() {
                     variant="outline"
                     onClick={onOpen}
                   >
-                    Daftar Soal 📋
+                    Daftar Soal
                   </Button>
                 </Box>
               </HStack>
@@ -380,7 +380,7 @@ export default function TestPage() {
                       onClick={handleFinish}
                       isLoading={submitting}
                     >
-                      Selesai ✅
+                      Selesai
                     </Button>
                   ) : (
                     <Button

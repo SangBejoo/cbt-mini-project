@@ -121,7 +121,7 @@ export default function SessionsPage() {
   return (
     <Container maxW="container.xl" py={10}>
       <VStack spacing={6}>
-        <Heading as="h1" size="xl" textAlign="center" mb={4}>
+        <Heading as="h1" size="xl" textAlign="center" mb={4} color="orange.600">
           Pilih Materi Tes
         </Heading>
 
@@ -133,21 +133,24 @@ export default function SessionsPage() {
               onClick={() => handleTopicClick(topic)}
               _hover={{ transform: 'translateY(-4px)', shadow: 'xl' }}
               transition="all 0.3s"
-              bg="blue.50"
+              bg="orange.50"
               borderWidth="2px"
-              borderColor="blue.200"
+              borderColor="orange.200"
             >
               <CardBody>
                 <VStack spacing={4} align="center">
                   <Box
-                    bg="orange.400"
+                    bg="orange.500"
                     p={4}
-                    borderRadius="full"
+                    borderRadius="md"
+                    color="white"
+                    fontWeight="bold"
+                    fontSize="xl"
                   >
-                    <Text fontSize="3xl">📚</Text>
+                    CBT
                   </Box>
                   <VStack spacing={1}>
-                    <Text fontWeight="bold" fontSize="lg" textAlign="center">
+                    <Text fontWeight="bold" fontSize="lg" textAlign="center" color="orange.700">
                       {topic.mataPelajaran.nama.toUpperCase()} {topic.tingkat.nama} SD KELAS {topic.tingkat.nama === '1' ? 'I' : topic.tingkat.nama === '2' ? 'II' : topic.tingkat.nama === '3' ? 'III' : 'IV'}
                     </Text>
                     <Text fontSize="sm" color="gray.600" textAlign="center">
@@ -164,7 +167,7 @@ export default function SessionsPage() {
                         router.push('/student/history');
                       }}
                     >
-                      Riwayat Nilai Tes 📋
+                      Riwayat Nilai Tes
                     </Button>
                     <Button
                       size="sm"
