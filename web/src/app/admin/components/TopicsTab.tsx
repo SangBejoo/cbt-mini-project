@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import {
   Box,
@@ -24,8 +23,6 @@ import {
   Select,
   useDisclosure,
   VStack,
-  Heading,
-  Container,
   useToast,
 } from '@chakra-ui/react';
 import axios from 'axios';
@@ -51,7 +48,7 @@ const API_BASE = 'http://localhost:8080/v1/topics';
 const LEVELS_API = 'http://localhost:8080/v1/levels';
 const SUBJECTS_API = 'http://localhost:8080/v1/subjects';
 
-export default function TopicsPage() {
+export default function TopicsTab() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -158,19 +155,8 @@ export default function TopicsPage() {
     }
   };
 
-  const getSubjectName = (id: number) => subjects.find(s => s.id === id)?.nama || 'Unknown';
-  const getLevelName = (id: number) => levels.find(l => l.id === id)?.nama || 'Unknown';
-
   return (
-    <Container maxW="container.lg" py={10}>
-      <Link href="/">
-        <Button mb={4} variant="outline">
-          Back to Home
-        </Button>
-      </Link>
-      <Heading as="h1" size="xl" mb={8}>
-        Manage Topics
-      </Heading>
+    <Box>
       <Button colorScheme="purple" onClick={handleCreate} mb={4}>
         Add Topic
       </Button>
@@ -258,6 +244,6 @@ export default function TopicsPage() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-    </Container>
+    </Box>
   );
 }

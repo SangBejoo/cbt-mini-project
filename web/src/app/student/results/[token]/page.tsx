@@ -18,6 +18,19 @@ import {
   StatNumber,
   StatGroup,
   Badge,
+  SimpleGrid,
+  HStack,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalCloseButton,
+  RadioGroup,
+  Radio,
+  Image,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -70,6 +83,8 @@ export default function ResultsPage() {
 
   const [result, setResult] = useState<TestResultResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [selectedQuestion, setSelectedQuestion] = useState<any>(null);
 
   useEffect(() => {
     fetchResult();
@@ -85,6 +100,11 @@ export default function ResultsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openQuestionDetail = (question: any) => {
+    setSelectedQuestion(question);
+    onOpen();
   };
 
   if (loading) {
@@ -172,6 +192,58 @@ export default function ResultsPage() {
           </CardBody>
         </Card>
 
+        {/* Question Review Section */}
+        <Card width="full">
+          <CardBody>
+            <VStack spacing={4} align="stretch">
+              <Heading size="md">Review Soal</Heading>
+              <SimpleGrid columns={{ base: 4, md: 6, lg: 8 }} spacing={2}>
+                {result.detailJawaban.map((jawaban) => {
+                  let colorScheme = 'gray';
+                  let statusText = 'Tidak Menjawab';
+
+                  if (jawaban.jawabanDipilih) {
+                    if (jawaban.isCorrect) {
+                      colorScheme = 'green';
+                      statusText = 'Benar';
+                    } else {
+                      colorScheme = 'red';
+                      statusText = 'Salah';
+                    }
+                  }
+
+                  return (
+                    <Button
+                      key={jawaban.nomorUrut}
+                      onClick={() => openQuestionDetail(jawaban)}
+                      size="sm"
+                      colorScheme={colorScheme}
+                      variant="solid"
+                      title={statusText}
+                    >
+                      {jawaban.nomorUrut}
+                    </Button>
+                  );
+                })}
+              </SimpleGrid>
+              <HStack spacing={4} fontSize="sm" justify="center">
+                <HStack>
+                  <Box w="12px" h="12px" bg="green.500" borderRadius="sm" />
+                  <Text>Benar</Text>
+                </HStack>
+                <HStack>
+                  <Box w="12px" h="12px" bg="red.500" borderRadius="sm" />
+                  <Text>Salah</Text>
+                </HStack>
+                <HStack>
+                  <Box w="12px" h="12px" bg="gray.500" borderRadius="sm" />
+                  <Text>Tidak Menjawab</Text>
+                </HStack>
+              </HStack>
+            </VStack>
+          </CardBody>
+        </Card>
+
         <VStack spacing={4}>
           <Link href="/student/history">
             <Button colorScheme="blue" size="lg">
@@ -185,6 +257,169 @@ export default function ResultsPage() {
           </Link>
         </VStack>
       </VStack>
+
+      {/* Question Detail Modal */}
+      <Modal isOpen={isOpen} onClose={onClose} size="xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>
+            Soal No. {selectedQuestion?.nomorUrut}
+            <Badge
+              ml={2}
+              colorScheme={
+                !selectedQuestion?.jawabanDipilih
+                  ? 'gray'
+                  : selectedQuestion?.isCorrect
+                  ? 'green'
+                  : 'red'
+              }
+            >
+              {!selectedQuestion?.jawabanDipilih
+                ? 'Tidak Menjawab'
+                : selectedQuestion?.isCorrect
+                ? 'Benar'
+                : 'Salah'}
+            </Badge>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {selectedQuestion && (
+              <VStack spacing={4} align="stretch">
+                <Text fontSize="lg" fontWeight="medium">
+                  {selectedQuestion.pertanyaan}
+                </Text>
+
+                <RadioGroup
+                  value={selectedQuestion.jawabanDipilih || ''}
+                  isReadOnly
+                >
+                  <VStack spacing={3} align="stretch">
+                    <Box
+                      p={3}
+                      borderWidth="1px"
+                      borderRadius="md"
+                      bg={
+                        selectedQuestion.jawabanBenar === 'A'
+                          ? 'green.50'
+                          : selectedQuestion.jawabanDipilih === 'A'
+                          ? 'red.50'
+                          : 'white'
+                      }
+                      borderColor={
+                        selectedQuestion.jawabanBenar === 'A'
+                          ? 'green.300'
+                          : selectedQuestion.jawabanDipilih === 'A'
+                          ? 'red.300'
+                          : 'gray.200'
+                      }
+                    >
+                      <Radio value="A" isReadOnly>
+                        A. {selectedQuestion.opsiA}
+                        {selectedQuestion.jawabanBenar === 'A' && (
+                          <Badge ml={2} colorScheme="green">Jawaban Benar</Badge>
+                        )}
+                        {selectedQuestion.jawabanDipilih === 'A' && selectedQuestion.jawabanBenar !== 'A' && (
+                          <Badge ml={2} colorScheme="red">Jawaban Anda</Badge>
+                        )}
+                      </Radio>
+                    </Box>
+                    <Box
+                      p={3}
+                      borderWidth="1px"
+                      borderRadius="md"
+                      bg={
+                        selectedQuestion.jawabanBenar === 'B'
+                          ? 'green.50'
+                          : selectedQuestion.jawabanDipilih === 'B'
+                          ? 'red.50'
+                          : 'white'
+                      }
+                      borderColor={
+                        selectedQuestion.jawabanBenar === 'B'
+                          ? 'green.300'
+                          : selectedQuestion.jawabanDipilih === 'B'
+                          ? 'red.300'
+                          : 'gray.200'
+                      }
+                    >
+                      <Radio value="B" isReadOnly>
+                        B. {selectedQuestion.opsiB}
+                        {selectedQuestion.jawabanBenar === 'B' && (
+                          <Badge ml={2} colorScheme="green">Jawaban Benar</Badge>
+                        )}
+                        {selectedQuestion.jawabanDipilih === 'B' && selectedQuestion.jawabanBenar !== 'B' && (
+                          <Badge ml={2} colorScheme="red">Jawaban Anda</Badge>
+                        )}
+                      </Radio>
+                    </Box>
+                    <Box
+                      p={3}
+                      borderWidth="1px"
+                      borderRadius="md"
+                      bg={
+                        selectedQuestion.jawabanBenar === 'C'
+                          ? 'green.50'
+                          : selectedQuestion.jawabanDipilih === 'C'
+                          ? 'red.50'
+                          : 'white'
+                      }
+                      borderColor={
+                        selectedQuestion.jawabanBenar === 'C'
+                          ? 'green.300'
+                          : selectedQuestion.jawabanDipilih === 'C'
+                          ? 'red.300'
+                          : 'gray.200'
+                      }
+                    >
+                      <Radio value="C" isReadOnly>
+                        C. {selectedQuestion.opsiC}
+                        {selectedQuestion.jawabanBenar === 'C' && (
+                          <Badge ml={2} colorScheme="green">Jawaban Benar</Badge>
+                        )}
+                        {selectedQuestion.jawabanDipilih === 'C' && selectedQuestion.jawabanBenar !== 'C' && (
+                          <Badge ml={2} colorScheme="red">Jawaban Anda</Badge>
+                        )}
+                      </Radio>
+                    </Box>
+                    <Box
+                      p={3}
+                      borderWidth="1px"
+                      borderRadius="md"
+                      bg={
+                        selectedQuestion.jawabanBenar === 'D'
+                          ? 'green.50'
+                          : selectedQuestion.jawabanDipilih === 'D'
+                          ? 'red.50'
+                          : 'white'
+                      }
+                      borderColor={
+                        selectedQuestion.jawabanBenar === 'D'
+                          ? 'green.300'
+                          : selectedQuestion.jawabanDipilih === 'D'
+                          ? 'red.300'
+                          : 'gray.200'
+                      }
+                    >
+                      <Radio value="D" isReadOnly>
+                        D. {selectedQuestion.opsiD}
+                        {selectedQuestion.jawabanBenar === 'D' && (
+                          <Badge ml={2} colorScheme="green">Jawaban Benar</Badge>
+                        )}
+                        {selectedQuestion.jawabanDipilih === 'D' && selectedQuestion.jawabanBenar !== 'D' && (
+                          <Badge ml={2} colorScheme="red">Jawaban Anda</Badge>
+                        )}
+                      </Radio>
+                    </Box>
+                  </VStack>
+                </RadioGroup>
+              </VStack>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={onClose}>Tutup</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Container>
   );
 }

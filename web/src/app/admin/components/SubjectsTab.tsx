@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import {
   Box,
@@ -22,96 +21,85 @@ import {
   FormLabel,
   Input,
   useDisclosure,
-  VStack,
-  Heading,
-  Container,
   useToast,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
-interface Level {
+interface Subject {
   id: number;
   nama: string;
 }
 
-const API_BASE = 'http://localhost:8080/v1/levels';
+const API_BASE = 'http://localhost:8080/v1/subjects';
 
-export default function LevelsPage() {
-  const [levels, setLevels] = useState<Level[]>([]);
-  const [editingLevel, setEditingLevel] = useState<Level | null>(null);
+export default function SubjectsTab() {
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [formData, setFormData] = useState({ nama: '' });
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
 
   useEffect(() => {
-    fetchLevels();
+    fetchSubjects();
   }, []);
 
-  const fetchLevels = async () => {
+  const fetchSubjects = async () => {
     try {
       const response = await axios.get(API_BASE);
       const data = response.data;
-      setLevels(
+      setSubjects(
         Array.isArray(data) ? data :
         Array.isArray(data.data) ? data.data :
-        Array.isArray(data.tingkat) ? data.tingkat : []
+        Array.isArray(data.mataPelajaran) ? data.mataPelajaran : []
       );
     } catch (error) {
-      toast({ title: 'Error fetching levels', status: 'error' });
-      setLevels([]);
+      toast({ title: 'Error fetching subjects', status: 'error' });
+      setSubjects([]);
     }
   };
 
   const handleCreate = () => {
-    setEditingLevel(null);
+    setEditingSubject(null);
     setFormData({ nama: '' });
     onOpen();
   };
 
-  const handleEdit = (level: Level) => {
-    setEditingLevel(level);
-    setFormData({ nama: level.nama });
+  const handleEdit = (subject: Subject) => {
+    setEditingSubject(subject);
+    setFormData({ nama: subject.nama });
     onOpen();
   };
 
   const handleDelete = async (id: number) => {
     try {
       await axios.delete(`${API_BASE}/${id}`);
-      fetchLevels();
-      toast({ title: 'Level deleted', status: 'success' });
+      fetchSubjects();
+      toast({ title: 'Subject deleted', status: 'success' });
     } catch (error) {
-      toast({ title: 'Error deleting level', status: 'error' });
+      toast({ title: 'Error deleting subject', status: 'error' });
     }
   };
 
   const handleSubmit = async () => {
     try {
-      if (editingLevel) {
-        await axios.put(`${API_BASE}/${editingLevel.id}`, formData);
-        toast({ title: 'Level updated', status: 'success' });
+      if (editingSubject) {
+        await axios.put(`${API_BASE}/${editingSubject.id}`, formData);
+        toast({ title: 'Subject updated', status: 'success' });
       } else {
         await axios.post(API_BASE, formData);
-        toast({ title: 'Level created', status: 'success' });
+        toast({ title: 'Subject created', status: 'success' });
       }
-      fetchLevels();
+      fetchSubjects();
       onClose();
     } catch (error) {
-      toast({ title: 'Error saving level', status: 'error' });
+      toast({ title: 'Error saving subject', status: 'error' });
     }
   };
 
   return (
-    <Container maxW="container.lg" py={10}>
-      <Link href="/">
-        <Button mb={4} variant="outline">
-          Back to Home
-        </Button>
-      </Link>
-      <Heading as="h1" size="xl" mb={8}>
-        Manage Levels
-      </Heading>
-      <Button colorScheme="blue" onClick={handleCreate} mb={4}>
-        Add Level
+    <Box>
+      <Button colorScheme="green" onClick={handleCreate} mb={4}>
+        Add Subject
       </Button>
       <Table variant="simple">
         <Thead>
@@ -122,15 +110,15 @@ export default function LevelsPage() {
           </Tr>
         </Thead>
         <Tbody>
-          {levels.map((level) => (
-            <Tr key={level.id}>
-              <Td>{level.id}</Td>
-              <Td>{level.nama}</Td>
+          {subjects.map((subject) => (
+            <Tr key={subject.id}>
+              <Td>{subject.id}</Td>
+              <Td>{subject.nama}</Td>
               <Td>
-                <Button size="sm" mr={2} onClick={() => handleEdit(level)}>
+                <Button size="sm" mr={2} onClick={() => handleEdit(subject)}>
                   Edit
                 </Button>
-                <Button size="sm" colorScheme="red" onClick={() => handleDelete(level.id)}>
+                <Button size="sm" colorScheme="red" onClick={() => handleDelete(subject.id)}>
                   Delete
                 </Button>
               </Td>
@@ -142,7 +130,7 @@ export default function LevelsPage() {
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>{editingLevel ? 'Edit Level' : 'Add Level'}</ModalHeader>
+          <ModalHeader>{editingSubject ? 'Edit Subject' : 'Add Subject'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <FormControl>
@@ -154,7 +142,7 @@ export default function LevelsPage() {
             </FormControl>
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={handleSubmit}>
+            <Button colorScheme="green" mr={3} onClick={handleSubmit}>
               Save
             </Button>
             <Button variant="ghost" onClick={onClose}>
@@ -163,6 +151,6 @@ export default function LevelsPage() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-    </Container>
+    </Box>
   );
 }

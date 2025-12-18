@@ -14,9 +14,23 @@ import {
   Card,
   CardBody,
   Text,
-  Progress,
   HStack,
   Badge,
+  SimpleGrid,
+  Flex,
+  Image,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalCloseButton,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatGroup,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -40,13 +54,13 @@ interface Question {
   };
   gambar?: Array<{
     id: number;
-    nama_file: string;
-    file_path: string;
-    file_size: number;
-    mime_type: string;
+    namaFile: string;
+    filePath: string;
+    fileSize: number;
+    mimeType: string;
     urutan: number;
     keterangan?: string;
-    created_at: string;
+    createdAt: string;
   }>;
 }
 
@@ -70,8 +84,16 @@ export default function TestPage() {
 
   const [sessionData, setSessionData] = useState<TestSessionData | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -90,7 +112,7 @@ export default function TestPage() {
       // Set answers for all questions
       const initialAnswers: Record<number, string> = {};
       data.soal.forEach((q: Question) => {
-        if (q.jawabanDipilih) {
+        if (q.jawabanDipilih && q.jawabanDipilih !== 'JAWABAN_INVALID') {
           initialAnswers[q.nomorUrut] = q.jawabanDipilih;
         }
       });
@@ -111,29 +133,65 @@ export default function TestPage() {
         nomor_urut: questionId,
         jawaban_dipilih: answer,
       });
-      toast({ title: 'Answer saved', status: 'success', duration: 1000 });
       // Refresh data to update answered count
       fetchAllQuestions();
     } catch (error) {
       console.error('Error submitting answer:', error);
-      toast({ title: 'Error saving answer', status: 'error' });
+      toast({ title: 'Error menyimpan jawaban', status: 'error' });
     }
   };
 
-  const handleFinish = async () => {
-    // Complete session
+  const handleFinish = () => {
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmFinish = () => {
+    setShowConfirmModal(false);
+    confirmFinish();
+  };
+
+  const handleCancelFinish = () => {
+    setShowConfirmModal(false);
+  };
+
+  const confirmFinish = async () => {
     setSubmitting(true);
     try {
       await axios.post(`${API_BASE}/${token}/complete`);
-      toast({ title: 'Test completed!', status: 'success' });
+      toast({ title: 'Tes selesai!', status: 'success' });
       router.push(`/student/results/${token}`);
     } catch (error) {
       console.error('Error completing test:', error);
-      toast({ title: 'Error completing test', status: 'error' });
+      toast({ title: 'Error menyelesaikan tes', status: 'error' });
     } finally {
       setSubmitting(false);
+      onClose();
     }
   };
+
+  const goToQuestion = (index: number) => {
+    setCurrentQuestionIndex(index);
+  };
+
+  const goToNextQuestion = () => {
+    if (currentQuestionIndex < sessionData!.soal.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    }
+  };
+
+  const goToPreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    }
+  };
+
+  if (!mounted) {
+    return (
+      <Container maxW="container.md" py={10} suppressHydrationWarning>
+        <Text>Loading question...</Text>
+      </Container>
+    );
+  }
 
   if (loading) {
     return (
@@ -146,98 +204,380 @@ export default function TestPage() {
   if (!sessionData?.soal || sessionData.soal.length === 0) {
     return (
       <Container maxW="container.md" py={10}>
-        <Text>No questions available for this test.</Text>
+        <Text>Tidak ada soal untuk tes ini.</Text>
         <Button onClick={() => router.push('/student')} mt={4}>
-          Back to Home
+          Kembali
         </Button>
       </Container>
     );
   }
 
-  const progress = (sessionData.dijawab_count / sessionData.total_soal) * 100;
+  const currentQuestion = sessionData.soal[currentQuestionIndex];
+  const getQuestionStatus = (index: number) => {
+    const nomorUrut = sessionData.soal[index].nomorUrut;
+    if (answers[nomorUrut]) return 'answered';
+    return 'unanswered';
+  };
+
+  const handleClearAnswer = async () => {
+    try {
+      await axios.post(`${API_BASE}/${token}/clear-answer`, {
+        nomor_urut: currentQuestion.nomorUrut,
+      });
+      const newAnswers = { ...answers };
+      delete newAnswers[currentQuestion.nomorUrut];
+      setAnswers(newAnswers);
+      fetchAllQuestions();
+    } catch (error) {
+      console.error('Error clearing answer:', error);
+      toast({ title: 'Error membatalkan jawaban', status: 'error' });
+    }
+  };
 
   return (
-    <Container maxW="container.xl" py={10}>
-      <VStack spacing={6}>
-        <HStack width="full" justify="space-between">
-          <Heading size="lg">Test Session</Heading>
-          <Badge colorScheme="blue" fontSize="md">
-            Answered: {sessionData.dijawab_count}/{sessionData.total_soal}
-          </Badge>
-        </HStack>
-
-        <Progress value={progress} width="full" colorScheme="blue" />
-
-        <VStack spacing={6} width="full" align="stretch">
-          {sessionData.soal.map((question, index) => (
-            <Card key={question.id} width="full">
-              <CardBody>
-                <VStack spacing={4} align="stretch">
-                  <HStack justify="space-between">
-                    <Heading size="md">Question {question.nomorUrut}</Heading>
-                    <Badge colorScheme={answers[question.nomorUrut] ? 'green' : 'gray'}>
-                      {answers[question.nomorUrut] ? 'Answered' : 'Not Answered'}
-                    </Badge>
-                  </HStack>
-
+    <Container maxW="container.xl" py={6}>
+      <Flex gap={6} direction={{ base: 'column', lg: 'row' }}>
+        {/* Main Question Area */}
+        <Box flex="1">
+          <Card bg="blue.50" borderWidth="2px" borderColor="blue.200" mb={4}>
+            <CardBody>
+              <HStack spacing={4}>
+                <Box bg="orange.400" p={3} borderRadius="md">
+                  <Text fontSize="2xl">📚</Text>
+                </Box>
+                <VStack align="start" spacing={0}>
+                  <Text fontWeight="bold" fontSize="lg">
+                    {currentQuestion.materi.mataPelajaran.nama.toUpperCase()} {currentQuestion.materi.tingkat.nama} SD KELAS {currentQuestion.materi.tingkat.nama === '1' ? 'I' : currentQuestion.materi.tingkat.nama === '2' ? 'II' : currentQuestion.materi.tingkat.nama === '3' ? 'III' : 'IV'}
+                  </Text>
                   <Text fontSize="sm" color="gray.600">
-                    {question.materi.mataPelajaran.nama} - {question.materi.nama} ({question.materi.tingkat.nama})
+                    {currentQuestion.materi.nama}
                   </Text>
+                </VStack>
+                <Box ml="auto">
+                  <Button
+                    size="sm"
+                    colorScheme="orange"
+                    variant="outline"
+                    onClick={onOpen}
+                  >
+                    Daftar Soal 📋
+                  </Button>
+                </Box>
+              </HStack>
+            </CardBody>
+          </Card>
 
-                  <Text fontSize="lg" fontWeight="medium">
-                    {question.pertanyaan}
-                  </Text>
+          <Card>
+            <CardBody>
+              <VStack spacing={6} align="stretch">
+                <Badge alignSelf="flex-start" colorScheme="blue" fontSize="md" px={3} py={1}>
+                  Soal No. {currentQuestion.nomorUrut}
+                </Badge>
 
-                  {question.gambar && question.gambar.length > 0 && (
-                    <VStack spacing={2} align="stretch">
-                      {question.gambar
+                <Text fontSize="lg" fontWeight="medium">
+                  {currentQuestion.pertanyaan}
+                </Text>
+
+                {currentQuestion.gambar && Array.isArray(currentQuestion.gambar) && currentQuestion.gambar.length > 0 && (
+                  <Box>
+                    <Text fontSize="sm" color="gray.600" mb={2}>
+                      Perhatikan gambar dibawah ini
+                    </Text>
+                    <VStack spacing={3}>
+                      {currentQuestion.gambar
                         .sort((a, b) => a.urutan - b.urutan)
                         .map((img) => (
-                          <Box key={img.id}>
-                            <img
-                              src={`http://localhost:8080/${img.file_path}`}
-                              alt={img.keterangan || 'Question image'}
-                              style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain' }}
+                          <Box key={img.id} borderWidth="1px" borderRadius="md" p={2} bg="gray.50">
+                            <Image
+                              src={img.filePath ? `http://localhost:8080/${img.filePath.replace(/\\/g, '/')}` : ''}
+                              alt={img.keterangan || 'Gambar soal'}
+                              maxH="300px"
+                              objectFit="contain"
+                              mx="auto"
                             />
                             {img.keterangan && (
-                              <Text fontSize="sm" color="gray.600" mt={1}>
+                              <Text fontSize="sm" color="gray.600" mt={2} textAlign="center">
                                 {img.keterangan}
                               </Text>
                             )}
                           </Box>
                         ))}
                     </VStack>
-                  )}
+                  </Box>
+                )}
 
-                  <RadioGroup
-                    value={answers[question.nomorUrut] || ''}
-                    onChange={(value) => handleAnswerChange(question.nomorUrut, value)}
+                <RadioGroup
+                  value={answers[currentQuestion.nomorUrut] || ''}
+                  onChange={(value) => handleAnswerChange(currentQuestion.nomorUrut, value)}
+                >
+                  <VStack spacing={3} align="stretch">
+                    <Box
+                      p={3}
+                      borderWidth="1px"
+                      borderRadius="md"
+                      cursor="pointer"
+                      _hover={{ bg: 'gray.50' }}
+                      bg={answers[currentQuestion.nomorUrut] === 'A' ? 'orange.50' : 'white'}
+                    >
+                      <Radio value="A">A. {currentQuestion.opsiA}</Radio>
+                    </Box>
+                    <Box
+                      p={3}
+                      borderWidth="1px"
+                      borderRadius="md"
+                      cursor="pointer"
+                      _hover={{ bg: 'gray.50' }}
+                      bg={answers[currentQuestion.nomorUrut] === 'B' ? 'orange.50' : 'white'}
+                    >
+                      <Radio value="B">B. {currentQuestion.opsiB}</Radio>
+                    </Box>
+                    <Box
+                      p={3}
+                      borderWidth="1px"
+                      borderRadius="md"
+                      cursor="pointer"
+                      _hover={{ bg: 'gray.50' }}
+                      bg={answers[currentQuestion.nomorUrut] === 'C' ? 'orange.50' : 'white'}
+                    >
+                      <Radio value="C">C. {currentQuestion.opsiC}</Radio>
+                    </Box>
+                    <Box
+                      p={3}
+                      borderWidth="1px"
+                      borderRadius="md"
+                      cursor="pointer"
+                      _hover={{ bg: 'gray.50' }}
+                      bg={answers[currentQuestion.nomorUrut] === 'D' ? 'orange.50' : 'white'}
+                    >
+                      <Radio value="D">D. {currentQuestion.opsiD}</Radio>
+                    </Box>
+                  </VStack>
+                </RadioGroup>
+
+                <HStack justify="space-between" pt={4}>
+                  <Button
+                    leftIcon={<Text>◀</Text>}
+                    onClick={goToPreviousQuestion}
+                    isDisabled={currentQuestionIndex === 0}
+                    colorScheme="orange"
+                    variant="outline"
                   >
-                    <VStack spacing={3} align="stretch">
-                      <Radio value="A">{question.opsiA}</Radio>
-                      <Radio value="B">{question.opsiB}</Radio>
-                      <Radio value="C">{question.opsiC}</Radio>
-                      <Radio value="D">{question.opsiD}</Radio>
-                    </VStack>
-                  </RadioGroup>
-                </VStack>
-              </CardBody>
-            </Card>
-          ))}
-        </VStack>
+                    Sebelum
+                  </Button>
+                  {answers[currentQuestion.nomorUrut] && (
+                    <Button
+                      colorScheme="red"
+                      variant="outline"
+                      onClick={handleClearAnswer}
+                      size="sm"
+                    >
+                      Batalkan Jawaban
+                    </Button>
+                  )}
+                  {currentQuestionIndex === sessionData.soal.length - 1 ? (
+                    <Button
+                      colorScheme="green"
+                      onClick={handleFinish}
+                      isLoading={submitting}
+                    >
+                      Selesai ✅
+                    </Button>
+                  ) : (
+                    <Button
+                      rightIcon={<Text>▶</Text>}
+                      onClick={goToNextQuestion}
+                      colorScheme="orange"
+                    >
+                      Selanjutnya
+                    </Button>
+                  )}
+                </HStack>
+              </VStack>
+            </CardBody>
+          </Card>
+        </Box>
 
-        <HStack spacing={4} width="full" justify="center">
-          <Button
-            onClick={handleFinish}
-            colorScheme="green"
-            size="lg"
-            isLoading={submitting}
-            loadingText="Completing test..."
-          >
-            Finish Test
-          </Button>
-        </HStack>
-      </VStack>
+        {/* Question Navigation Sidebar - Desktop Only */}
+        <Box width={{ base: 'full', lg: '300px' }} display={{ base: 'none', lg: 'block' }}>
+          <Card position="sticky" top="20px">
+            <CardBody>
+              <VStack spacing={4} align="stretch">
+                <Heading size="md" textAlign="center">Daftar Soal</Heading>
+                <SimpleGrid columns={5} spacing={2}>
+                  {sessionData.soal.map((q, index) => {
+                    const status = getQuestionStatus(index);
+                    return (
+                      <Button
+                        key={q.id}
+                        onClick={() => goToQuestion(index)}
+                        size="sm"
+                        colorScheme={
+                          currentQuestionIndex === index
+                            ? 'gray'
+                            : status === 'answered'
+                            ? 'green'
+                            : 'gray'
+                        }
+                        variant={currentQuestionIndex === index ? 'solid' : 'solid'}
+                      >
+                        {q.nomorUrut}
+                      </Button>
+                    );
+                  })}
+                </SimpleGrid>
+                <HStack spacing={2} fontSize="xs" justify="center">
+                  <HStack>
+                    <Box w="12px" h="12px" bg="green.500" borderRadius="sm" />
+                    <Text>Dijawab</Text>
+                  </HStack>
+                  <HStack>
+                    <Box w="12px" h="12px" bg="gray.500" borderRadius="sm" />
+                    <Text>Belum Dijawab</Text>
+                  </HStack>
+                </HStack>
+              </VStack>
+            </CardBody>
+          </Card>
+        </Box>
+      </Flex>
+
+      {/* Question Navigation Modal - Mobile */}
+      <Modal isOpen={isOpen} onClose={onClose} size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Daftar Soal</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <SimpleGrid columns={5} spacing={3}>
+              {sessionData.soal.map((q, index) => {
+                const status = getQuestionStatus(index);
+                return (
+                  <Button
+                    key={q.id}
+                    onClick={() => {
+                      goToQuestion(index);
+                      onClose();
+                    }}
+                    colorScheme={
+                      currentQuestionIndex === index
+                        ? 'gray'
+                        : status === 'answered'
+                        ? 'green'
+                        : 'gray'
+                    }
+                  >
+                    {q.nomorUrut}
+                  </Button>
+                );
+              })}
+            </SimpleGrid>
+            <HStack spacing={3} fontSize="sm" justify="center" mt={4}>
+              <HStack>
+                <Box w="12px" h="12px" bg="green.500" borderRadius="sm" />
+                <Text>Dijawab</Text>
+              </HStack>
+              <HStack>
+                <Box w="12px" h="12px" bg="gray.500" borderRadius="sm" />
+                <Text>Belum</Text>
+              </HStack>
+            </HStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={onClose}>Tutup</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Confirmation Modal */}
+      <Modal isOpen={showConfirmModal} onClose={handleCancelFinish} size="xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Konfirmasi Selesai Tes</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={6} align="stretch">
+              <Box textAlign="center">
+                <Text fontSize="lg" fontWeight="medium">
+                  Apakah Anda yakin ingin menyelesaikan tes?
+                </Text>
+                <Text fontSize="sm" color="gray.600" mt={2}>
+                  Pastikan semua jawaban sudah benar sebelum mengumpulkan.
+                </Text>
+              </Box>
+
+              <Card>
+                <CardBody>
+                  <VStack spacing={4}>
+                    <StatGroup width="full">
+                      <Stat>
+                        <StatLabel>Total Soal</StatLabel>
+                        <StatNumber>{sessionData?.soal.length || 0}</StatNumber>
+                      </Stat>
+                      <Stat>
+                        <StatLabel>Sudah Dijawab</StatLabel>
+                        <StatNumber color="green.500">
+                          {Object.keys(answers).length}
+                        </StatNumber>
+                      </Stat>
+                      <Stat>
+                        <StatLabel>Belum Dijawab</StatLabel>
+                        <StatNumber color="red.500">
+                          {(sessionData?.soal.length || 0) - Object.keys(answers).length}
+                        </StatNumber>
+                      </Stat>
+                    </StatGroup>
+                  </VStack>
+                </CardBody>
+              </Card>
+
+              <Box>
+                <Text fontWeight="medium" mb={3}>Status Soal:</Text>
+                <SimpleGrid columns={{ base: 6, md: 8, lg: 10 }} spacing={2}>
+                  {sessionData?.soal.map((q, index) => {
+                    const status = getQuestionStatus(index);
+                    return (
+                      <Button
+                        key={q.id}
+                        size="sm"
+                        colorScheme={
+                          status === 'answered' ? 'green' : 'gray'
+                        }
+                        variant="solid"
+                        isDisabled
+                        title={status === 'answered' ? 'Sudah dijawab' : 'Belum dijawab'}
+                      >
+                        {q.nomorUrut}
+                      </Button>
+                    );
+                  })}
+                </SimpleGrid>
+                <HStack spacing={4} fontSize="sm" justify="center" mt={3}>
+                  <HStack>
+                    <Box w="12px" h="12px" bg="green.500" borderRadius="sm" />
+                    <Text>Dijawab</Text>
+                  </HStack>
+                  <HStack>
+                    <Box w="12px" h="12px" bg="gray.500" borderRadius="sm" />
+                    <Text>Belum Dijawab</Text>
+                  </HStack>
+                </HStack>
+              </Box>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="outline" onClick={handleCancelFinish} mr={3}>
+              Batal
+            </Button>
+            <Button
+              colorScheme="green"
+              onClick={handleConfirmFinish}
+              isLoading={submitting}
+            >
+              Ya, Selesai Tes
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Container>
   );
 }
