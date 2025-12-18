@@ -30,33 +30,27 @@ import {
   Text,
   Badge,
   Image as ChakraImage,
-  Tabs,
-  TabList,
-  TabPanels,
-  Tab,
-  TabPanel,
-  Card,
-  CardBody,
-  CardHeader,
   Heading,
   SimpleGrid,
-  Flex,
-  Spacer
+  Divider,
+  Stepper,
+  Step,
+  StepIndicator,
+  StepStatus,
+  StepTitle,
+  StepSeparator,
 } from '@chakra-ui/react';
-import { EditIcon, DeleteIcon, AddIcon, AttachmentIcon } from '@chakra-ui/icons';
+import { EditIcon, DeleteIcon, AddIcon } from '@chakra-ui/icons';
 
 // --- Interfaces ---
-
 interface Level {
   id: number;
-  name: string;
+  nama: string;
 }
 
 interface Subject {
   id: number;
-  name: string;
-  level_id: number;
-  level_name?: string;
+  nama: string;
 }
 
 interface Topic {
@@ -64,11 +58,6 @@ interface Topic {
   mataPelajaran: { id: number; nama: string };
   tingkat: { id: number; nama: string };
   nama: string;
-}
-
-interface QuestionImage {
-  id: number;
-  image_url: string;
 }
 
 interface Question {
@@ -85,6 +74,7 @@ interface Question {
   opsiC: string;
   opsiD: string;
   jawabanBenar: string;
+  pembahasan?: string;
   gambar: {
     id: number;
     namaFile: string;
@@ -100,6 +90,12 @@ interface Question {
 // --- API Helpers ---
 const API_BASE = 'http://localhost:8080/v1';
 
+const steps = [
+  { title: 'Pilih', description: 'Materi & Tingkat' },
+  { title: 'Isi', description: 'Soal & Jawaban' },
+  { title: 'Gambar', description: 'Upload Gambar' },
+];
+
 export default function QuestionsTab() {
   const toast = useToast();
 
@@ -109,8 +105,16 @@ export default function QuestionsTab() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
 
-  // Loading states
-  const [isLoading, setIsLoading] = useState(false);
+  // Multi-step modal state
+  const { isOpen: isQuestionOpen, onOpen: onQuestionOpen, onClose: onQuestionClose } = useDisclosure();
+  const [currentStep, setCurrentStep] = useState(0);
+  const [currentQuestion, setCurrentQuestion] = useState<Partial<Question>>({});
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Delete confirmation
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+  const [currentDeleteId, setCurrentDeleteId] = useState<number | null>(null);
 
   // --- Fetch Data ---
   const fetchLevels = async () => {
@@ -121,7 +125,7 @@ export default function QuestionsTab() {
         setLevels(data.tingkat || []);
       }
     } catch (error) {
-      console.error("Failed to fetch levels", error);
+      console.error('Failed to fetch levels', error);
     }
   };
 
@@ -133,7 +137,7 @@ export default function QuestionsTab() {
         setSubjects(data.mataPelajaran || []);
       }
     } catch (error) {
-      console.error("Failed to fetch subjects", error);
+      console.error('Failed to fetch subjects', error);
     }
   };
 
@@ -145,7 +149,7 @@ export default function QuestionsTab() {
         setTopics(data.materi || []);
       }
     } catch (error) {
-      console.error("Failed to fetch topics", error);
+      console.error('Failed to fetch topics', error);
     }
   };
 
@@ -157,7 +161,7 @@ export default function QuestionsTab() {
         setQuestions(data.soal || []);
       }
     } catch (error) {
-      console.error("Failed to fetch questions", error);
+      console.error('Failed to fetch questions', error);
     }
   };
 
@@ -168,164 +172,61 @@ export default function QuestionsTab() {
     fetchQuestions();
   }, []);
 
-  // --- Modals & Form State ---
-  
-  // Level Modal
-  const { isOpen: isLevelOpen, onOpen: onLevelOpen, onClose: onLevelClose } = useDisclosure();
-  const [currentLevel, setCurrentLevel] = useState<Partial<Level>>({});
-  
-  // Subject Modal
-  const { isOpen: isSubjectOpen, onOpen: onSubjectOpen, onClose: onSubjectClose } = useDisclosure();
-  const [currentSubject, setCurrentSubject] = useState<Partial<Subject>>({});
+  // --- Handlers ---
 
-  // Topic Modal
-  const { isOpen: isTopicOpen, onOpen: onTopicOpen, onClose: onTopicClose } = useDisclosure();
-  const [currentTopic, setCurrentTopic] = useState<Partial<Topic>>({});
-
-  // Question Modal
-  const { isOpen: isQuestionOpen, onOpen: onQuestionOpen, onClose: onQuestionClose } = useDisclosure();
-  const [currentQuestion, setCurrentQuestion] = useState<Partial<Question>>({});
-  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Delete Confirmation Modal
-  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
-  const [currentDeleteId, setCurrentDeleteId] = useState<number | null>(null);
-
-  // --- Handlers: Level ---
-
-  const handleSaveLevel = async () => {
-    if (!currentLevel.name) {
-      toast({ title: 'Name required', status: 'error' });
-      return;
-    }
-    const method = currentLevel.id ? 'PUT' : 'POST';
-    const url = currentLevel.id ? `${API_BASE}/levels/${currentLevel.id}` : `${API_BASE}/levels`;
-
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentLevel),
-      });
-      if (res.ok) {
-        toast({ title: 'Level saved', status: 'success' });
-        fetchLevels();
-        onLevelClose();
-      } else {
-        toast({ title: 'Failed to save level', status: 'error' });
-      }
-    } catch (e) {
-      toast({ title: 'Error saving level', status: 'error' });
-    }
+  const handleOpenNewQuestion = () => {
+    setCurrentQuestion({
+      pertanyaan: '',
+      opsiA: '',
+      opsiB: '',
+      opsiC: '',
+      opsiD: '',
+      jawabanBenar: 'A',
+      pembahasan: '',
+    });
+    setSelectedFiles(null);
+    setCurrentStep(0);
+    onQuestionOpen();
   };
 
-  const handleDeleteLevel = async (id: number) => {
-    if (!confirm('Are you sure? This might delete related subjects.')) return;
-    try {
-      const res = await fetch(`${API_BASE}/levels/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        toast({ title: 'Level deleted', status: 'success' });
-        fetchLevels();
-      } else {
-        toast({ title: 'Failed to delete', status: 'error' });
-      }
-    } catch (e) {
-      toast({ title: 'Error deleting', status: 'error' });
-    }
+  const handleEditQuestion = (question: Question) => {
+    setCurrentQuestion(question);
+    setSelectedFiles(null);
+    setCurrentStep(0);
+    onQuestionOpen();
   };
 
-  // --- Handlers: Subject ---
-
-  const handleSaveSubject = async () => {
-    if (!currentSubject.name || !currentSubject.level_id) {
-      toast({ title: 'Name and Level required', status: 'error' });
-      return;
-    }
-    const method = currentSubject.id ? 'PUT' : 'POST';
-    const url = currentSubject.id ? `${API_BASE}/subjects/${currentSubject.id}` : `${API_BASE}/subjects`;
-
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentSubject),
-      });
-      if (res.ok) {
-        toast({ title: 'Subject saved', status: 'success' });
-        fetchSubjects();
-        onSubjectClose();
-      } else {
-        toast({ title: 'Failed to save subject', status: 'error' });
+  const handleNextStep = () => {
+    // Validation for each step
+    if (currentStep === 0) {
+      if (!currentQuestion.materi?.id) {
+        toast({ title: 'Pilih Materi terlebih dahulu', status: 'error' });
+        return;
       }
-    } catch (e) {
-      toast({ title: 'Error saving subject', status: 'error' });
+    } else if (currentStep === 1) {
+      if (
+        !currentQuestion.pertanyaan ||
+        !currentQuestion.opsiA ||
+        !currentQuestion.opsiB ||
+        !currentQuestion.opsiC ||
+        !currentQuestion.opsiD ||
+        !currentQuestion.jawabanBenar
+      ) {
+        toast({ title: 'Semua field harus diisi', status: 'error' });
+        return;
+      }
     }
+
+    setCurrentStep(currentStep + 1);
   };
 
-  const handleDeleteSubject = async (id: number) => {
-    if (!confirm('Are you sure?')) return;
-    try {
-      const res = await fetch(`${API_BASE}/subjects/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        toast({ title: 'Subject deleted', status: 'success' });
-        fetchSubjects();
-      } else {
-        toast({ title: 'Failed to delete', status: 'error' });
-      }
-    } catch (e) {
-      toast({ title: 'Error deleting', status: 'error' });
-    }
+  const handlePrevStep = () => {
+    setCurrentStep(currentStep - 1);
   };
-
-  // --- Handlers: Topic ---
-
-  const handleSaveTopic = async () => {
-    if (!currentTopic.name || !currentTopic.subject_id) {
-      toast({ title: 'Name and Subject required', status: 'error' });
-      return;
-    }
-    const method = currentTopic.id ? 'PUT' : 'POST';
-    const url = currentTopic.id ? `${API_BASE}/topics/${currentTopic.id}` : `${API_BASE}/topics`;
-
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentTopic),
-      });
-      if (res.ok) {
-        toast({ title: 'Topic saved', status: 'success' });
-        fetchTopics();
-        onTopicClose();
-      } else {
-        toast({ title: 'Failed to save topic', status: 'error' });
-      }
-    } catch (e) {
-      toast({ title: 'Error saving topic', status: 'error' });
-    }
-  };
-
-  const handleDeleteTopic = async (id: number) => {
-    if (!confirm('Are you sure?')) return;
-    try {
-      const res = await fetch(`${API_BASE}/topics/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        toast({ title: 'Topic deleted', status: 'success' });
-        fetchTopics();
-      } else {
-        toast({ title: 'Failed to delete', status: 'error' });
-      }
-    } catch (e) {
-      toast({ title: 'Error deleting', status: 'error' });
-    }
-  };
-
-  // --- Handlers: Question ---
 
   const handleSaveQuestion = async () => {
     if (!currentQuestion.pertanyaan || !currentQuestion.opsiA || !currentQuestion.opsiB || !currentQuestion.opsiC || !currentQuestion.opsiD || !currentQuestion.jawabanBenar || !currentQuestion.materi?.id) {
-      toast({ title: 'All fields required', status: 'error' });
+      toast({ title: 'Semua field harus diisi', status: 'error' });
       return;
     }
 
@@ -338,7 +239,8 @@ export default function QuestionsTab() {
       opsiC: currentQuestion.opsiC,
       opsiD: currentQuestion.opsiD,
       jawabanBenar: currentQuestion.jawabanBenar,
-      imageBytes: []
+      pembahasan: currentQuestion.pembahasan || '',
+      imageBytes: [],
     };
 
     if (selectedFiles) {
@@ -349,7 +251,7 @@ export default function QuestionsTab() {
           reader.onload = () => resolve(reader.result as string);
           reader.readAsDataURL(file);
         });
-        data.imageBytes.push(base64.split(',')[1]); // remove data:image/...;base64,
+        data.imageBytes.push(base64.split(',')[1]);
       }
     }
 
@@ -360,20 +262,21 @@ export default function QuestionsTab() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data), 
+        body: JSON.stringify(data),
       });
 
       if (res.ok) {
-        toast({ title: 'Question saved', status: 'success' });
+        toast({ title: 'Soal berhasil disimpan', status: 'success' });
         fetchQuestions();
         onQuestionClose();
+        setCurrentStep(0);
         setSelectedFiles(null);
       } else {
         const errorText = await res.text();
-        toast({ title: `Failed to save question: ${errorText}`, status: 'error' });
+        toast({ title: `Gagal menyimpan soal: ${errorText}`, status: 'error' });
       }
     } catch (e) {
-      toast({ title: 'Error saving question', status: 'error' });
+      toast({ title: 'Error menyimpan soal', status: 'error' });
     }
   };
 
@@ -395,88 +298,96 @@ export default function QuestionsTab() {
   };
 
   const handleDeleteImage = async (questionId: number, imageId: number) => {
-    if (!confirm('Delete this image?')) return;
+    if (!confirm('Hapus gambar ini?')) return;
     try {
       const res = await fetch(`${API_BASE}/questions/${questionId}/images/${imageId}`, {
         method: 'DELETE',
       });
       if (res.ok) {
-        toast({ title: 'Image deleted', status: 'success' });
-        // Refresh questions to update the list
+        toast({ title: 'Gambar berhasil dihapus', status: 'success' });
         fetchQuestions();
-        
-        // Also update the current modal state if open
         if (currentQuestion && currentQuestion.id === questionId) {
-           const updatedImages = currentQuestion.images?.filter(img => img.id !== imageId);
-           setCurrentQuestion({ ...currentQuestion, images: updatedImages });
+          const updatedImages = currentQuestion.gambar?.filter((img) => img.id !== imageId);
+          setCurrentQuestion({ ...currentQuestion, gambar: updatedImages });
         }
       } else {
-        toast({ title: 'Failed to delete image', status: 'error' });
+        toast({ title: 'Gagal menghapus gambar', status: 'error' });
       }
     } catch (e) {
-      toast({ title: 'Error deleting image', status: 'error' });
+      toast({ title: 'Error menghapus gambar', status: 'error' });
     }
   };
 
   // --- Render Helpers ---
 
-  const getLevelName = (id: number) => levels.find(l => l.id === id)?.name || id;
-  const getSubjectName = (id: number) => subjects.find(s => s.id === id)?.name || id;
-  const getTopicName = (id: number) => topics.find(t => t.id === id)?.nama || id;
-
-  const groupedQuestions = questions.reduce((acc, q) => {
-    const subjectId = q.materi.mataPelajaran.id;
-    if (!acc[subjectId]) {
-      acc[subjectId] = {
-        subject: q.materi.mataPelajaran,
-        questions: []
-      };
-    }
-    acc[subjectId].questions.push(q);
-    return acc;
-  }, {} as Record<number, { subject: { id: number; nama: string }, questions: Question[] }>);
+  const groupedQuestions = questions.reduce(
+    (acc, q) => {
+      const subjectId = q.materi.mataPelajaran.id;
+      if (!acc[subjectId]) {
+        acc[subjectId] = {
+          subject: q.materi.mataPelajaran,
+          questions: [],
+        };
+      }
+      acc[subjectId].questions.push(q);
+      return acc;
+    },
+    {} as Record<number, { subject: { id: number; nama: string }; questions: Question[] }>
+  );
 
   return (
     <Box>
-      <Button leftIcon={<AddIcon />} colorScheme="blue" onClick={() => { setCurrentQuestion({ pertanyaan: '', opsiA: '', opsiB: '', opsiC: '', opsiD: '', jawabanBenar: 'A' }); setSelectedFiles(null); onQuestionOpen(); }} mb={4}>
-        Add Question
+      <Button leftIcon={<AddIcon />} colorScheme="blue" onClick={handleOpenNewQuestion} mb={4}>
+        Tambah Soal
       </Button>
+
       {Object.values(groupedQuestions).map((group) => (
         <Box key={group.subject.id} mb={8}>
-          <Heading size="md" mb={4}>{group.subject.nama}</Heading>
+          <Heading size="md" mb={4}>
+            {group.subject.nama}
+          </Heading>
           <Table variant="simple">
             <Thead>
               <Tr>
-                <Th>Question</Th>
-                <Th>Topic</Th>
-                <Th>Level</Th>
-                <Th>Correct Answer</Th>
-                <Th>Images</Th>
-                <Th>Actions</Th>
+                <Th>Soal</Th>
+                <Th>Materi</Th>
+                <Th>Tingkat</Th>
+                <Th>Jawaban Benar</Th>
+                <Th>Gambar</Th>
+                <Th>Aksi</Th>
               </Tr>
             </Thead>
             <Tbody>
               {group.questions.map((q) => (
                 <Tr key={q.id}>
-                  <Td maxW="300px" isTruncated>{q.pertanyaan}</Td>
+                  <Td maxW="300px" isTruncated>
+                    {q.pertanyaan}
+                  </Td>
                   <Td>{q.materi.nama}</Td>
                   <Td>{q.materi.tingkat.nama}</Td>
-                  <Td>{q.jawabanBenar}</Td>
-                  <Td>{q.gambar.length}</Td>
+                  <Td>
+                    <Badge colorScheme="green">{q.jawabanBenar}</Badge>
+                  </Td>
+                  <Td>
+                    <Badge colorScheme="blue">{q.gambar.length}</Badge>
+                  </Td>
                   <Td>
                     <IconButton
                       aria-label="Edit"
                       icon={<EditIcon />}
                       size="sm"
                       mr={2}
-                      onClick={() => { setCurrentQuestion(q); setSelectedFiles(null); onQuestionOpen(); }}
+                      onClick={() => handleEditQuestion(q)}
                     />
                     <IconButton
                       aria-label="Delete"
                       icon={<DeleteIcon />}
                       size="sm"
                       colorScheme="red"
-                      onClick={() => { setCurrentDeleteId(q.id); onDeleteOpen(); }}
+                      onClick={() => {
+                        setCurrentDeleteId(q.id);
+                        onDeleteOpen();
+                      }}
                     />
                   </Td>
                 </Tr>
@@ -486,124 +397,296 @@ export default function QuestionsTab() {
         </Box>
       ))}
 
-      {/* Question Modal */}
-      <Modal isOpen={isQuestionOpen} onClose={onQuestionClose} size="xl">
+      {/* Multi-Step Question Modal */}
+      <Modal isOpen={isQuestionOpen} onClose={onQuestionClose} size="2xl" closeOnEsc={false} closeOnOverlayClick={false}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>{currentQuestion.id ? 'Edit Question' : 'Add Question'}</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <VStack spacing={4}>
-              <FormControl>
-                <FormLabel>Topic</FormLabel>
-                <Select
-                  placeholder="Select Topic"
-                  value={currentQuestion.materi?.id || ''}
-                  onChange={(e) => {
-                    const topicId = parseInt(e.target.value);
-                    const topic = topics.find(t => t.id === topicId);
-                    setCurrentQuestion({ ...currentQuestion, materi: topic });
-                  }}
-                >
-                  {topics.map(t => <option key={t.id} value={t.id}>{t.nama} ({t.mataPelajaran.nama})</option>)}
-                </Select>
-              </FormControl>
+          <ModalHeader>{currentQuestion.id ? 'Edit Soal' : 'Tambah Soal Baru'}</ModalHeader>
+          <ModalCloseButton isDisabled={currentStep > 0} />
 
-              <FormControl>
-                <FormLabel>Question</FormLabel>
-                <Textarea
-                  value={currentQuestion.pertanyaan || ''}
-                  onChange={(e) => setCurrentQuestion({ ...currentQuestion, pertanyaan: e.target.value })}
-                  rows={3}
-                />
-              </FormControl>
+          <Stepper size="sm" index={currentStep} mb={6} colorScheme="blue" px={6} pt={4}>
+            {steps.map((step, index) => (
+              <Step key={index}>
+                <StepIndicator>
+                  <StepStatus complete={`✓`} incomplete={index + 1} active={index + 1} />
+                </StepIndicator>
+                <Box flexShrink="0">
+                  <StepTitle fontSize="sm">{step.title}</StepTitle>
+                  <Text fontSize="xs" color="gray.500">{step.description}</Text>
+                </Box>
+                <StepSeparator />
+              </Step>
+            ))}
+          </Stepper>
 
-              <FormControl>
-                <FormLabel>Option A</FormLabel>
-                <Input
-                  value={currentQuestion.opsiA || ''}
-                  onChange={(e) => setCurrentQuestion({ ...currentQuestion, opsiA: e.target.value })}
-                />
-              </FormControl>
+          <ModalBody pb={6}>
+            {/* STEP 1: Select Topic & Level */}
+            {currentStep === 0 && (
+              <VStack spacing={4} align="stretch">
+                <Box>
+                  <Heading size="sm" mb={4}>
+                    Langkah 1: Pilih Materi & Tingkatan
+                  </Heading>
+                  <Divider mb={4} />
+                </Box>
 
-              <FormControl>
-                <FormLabel>Option B</FormLabel>
-                <Input
-                  value={currentQuestion.opsiB || ''}
-                  onChange={(e) => setCurrentQuestion({ ...currentQuestion, opsiB: e.target.value })}
-                />
-              </FormControl>
+                <FormControl isRequired>
+                  <FormLabel fontWeight="bold">Pilih Materi</FormLabel>
+                  <Select
+                    placeholder="-- Pilih Materi --"
+                    value={currentQuestion.materi?.id || ''}
+                    onChange={(e) => {
+                      const topicId = parseInt(e.target.value);
+                      const topic = topics.find((t) => t.id === topicId);
+                      setCurrentQuestion({ ...currentQuestion, materi: topic });
+                    }}
+                    size="lg"
+                    focusBorderColor="blue.400"
+                  >
+                    {topics.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.nama} - {t.mataPelajaran.nama} ({t.tingkat.nama})
+                      </option>
+                    ))}
+                  </Select>
+                </FormControl>
 
-              <FormControl>
-                <FormLabel>Option C</FormLabel>
-                <Input
-                  value={currentQuestion.opsiC || ''}
-                  onChange={(e) => setCurrentQuestion({ ...currentQuestion, opsiC: e.target.value })}
-                />
-              </FormControl>
+                {currentQuestion.materi && (
+                  <Box bg="blue.50" p={4} borderRadius="md" borderLeft="4px solid" borderLeftColor="blue.400">
+                    <VStack align="start" spacing={2}>
+                      <Text>
+                        <strong>Mata Pelajaran:</strong> {currentQuestion.materi.mataPelajaran.nama}
+                      </Text>
+                      <Text>
+                        <strong>Tingkatan:</strong> <Badge colorScheme="blue">{currentQuestion.materi.tingkat.nama}</Badge>
+                      </Text>
+                      <Text>
+                        <strong>Materi:</strong> {currentQuestion.materi.nama}
+                      </Text>
+                    </VStack>
+                  </Box>
+                )}
+              </VStack>
+            )}
 
-              <FormControl>
-                <FormLabel>Option D</FormLabel>
-                <Input
-                  value={currentQuestion.opsiD || ''}
-                  onChange={(e) => setCurrentQuestion({ ...currentQuestion, opsiD: e.target.value })}
-                />
-              </FormControl>
+            {/* STEP 2: Question & Answers */}
+            {currentStep === 1 && (
+              <VStack spacing={4} align="stretch">
+                <Box>
+                  <Heading size="sm" mb={4}>
+                    Langkah 2: Soal, Opsi Jawaban & Pembahasan
+                  </Heading>
+                  <Divider mb={4} />
+                </Box>
 
-              <FormControl>
-                <FormLabel>Correct Answer</FormLabel>
-                <Select
-                  value={currentQuestion.jawabanBenar || ''}
-                  onChange={(e) => setCurrentQuestion({ ...currentQuestion, jawabanBenar: e.target.value })}
-                >
-                  <option value="A">A</option>
-                  <option value="B">B</option>
-                  <option value="C">C</option>
-                  <option value="D">D</option>
-                </Select>
-              </FormControl>
+                <FormControl isRequired>
+                  <FormLabel fontWeight="bold">Soal/Pertanyaan</FormLabel>
+                  <Textarea
+                    value={currentQuestion.pertanyaan || ''}
+                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, pertanyaan: e.target.value })}
+                    placeholder="Masukkan pertanyaan soal di sini..."
+                    rows={4}
+                    size="lg"
+                    focusBorderColor="blue.400"
+                  />
+                </FormControl>
 
-              <FormControl>
-                <FormLabel>Images</FormLabel>
+                <Divider my={2} />
+
+                <FormControl isRequired>
+                  <FormLabel fontWeight="bold">A. Opsi A</FormLabel>
+                  <Input
+                    value={currentQuestion.opsiA || ''}
+                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, opsiA: e.target.value })}
+                    placeholder="Masukkan pilihan A..."
+                    size="lg"
+                    focusBorderColor="blue.400"
+                  />
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel fontWeight="bold">B. Opsi B</FormLabel>
+                  <Input
+                    value={currentQuestion.opsiB || ''}
+                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, opsiB: e.target.value })}
+                    placeholder="Masukkan pilihan B..."
+                    size="lg"
+                    focusBorderColor="blue.400"
+                  />
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel fontWeight="bold">C. Opsi C</FormLabel>
+                  <Input
+                    value={currentQuestion.opsiC || ''}
+                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, opsiC: e.target.value })}
+                    placeholder="Masukkan pilihan C..."
+                    size="lg"
+                    focusBorderColor="blue.400"
+                  />
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel fontWeight="bold">D. Opsi D</FormLabel>
+                  <Input
+                    value={currentQuestion.opsiD || ''}
+                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, opsiD: e.target.value })}
+                    placeholder="Masukkan pilihan D..."
+                    size="lg"
+                    focusBorderColor="blue.400"
+                  />
+                </FormControl>
+
+                <Divider my={2} />
+
+                <FormControl isRequired>
+                  <FormLabel fontWeight="bold">Jawaban Benar</FormLabel>
+                  <Select
+                    value={currentQuestion.jawabanBenar || 'A'}
+                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, jawabanBenar: e.target.value })}
+                    size="lg"
+                    focusBorderColor="green.400"
+                    bg="green.50"
+                  >
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                  </Select>
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel fontWeight="bold">Pembahasan (Opsional)</FormLabel>
+                  <Textarea
+                    value={currentQuestion.pembahasan || ''}
+                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, pembahasan: e.target.value })}
+                    placeholder="Masukkan penjelasan untuk membantu siswa memahami jawaban yang benar..."
+                    rows={3}
+                    size="lg"
+                    focusBorderColor="blue.400"
+                  />
+                  <Text fontSize="xs" color="gray.500" mt={1}>
+                    Pembahasan membantu siswa belajar lebih dalam
+                  </Text>
+                </FormControl>
+              </VStack>
+            )}
+
+            {/* STEP 3: Images */}
+            {currentStep === 2 && (
+              <VStack spacing={4} align="start" w="100%">
+                <Box w="100%">
+                  <Heading size="sm" mb={4}>
+                    Langkah 3: Upload Gambar (Opsional)
+                  </Heading>
+                  <Divider mb={4} />
+                </Box>
+
                 {/* Existing Images */}
                 {currentQuestion.gambar && currentQuestion.gambar.length > 0 && (
-                  <SimpleGrid columns={3} spacing={2} mb={3}>
-                    {currentQuestion.gambar.map((img) => (
-                      <Box key={img.id} position="relative" borderWidth="1px" borderRadius="md" overflow="hidden">
-                        <ChakraImage src={`http://localhost:8080/${img.filePath.replace(/\\/g, '/')}`} alt="Question Image" boxSize="100px" objectFit="cover" />
-                        <IconButton
-                          aria-label="Delete Image"
-                          icon={<DeleteIcon />}
-                          size="xs"
-                          colorScheme="red"
-                          position="absolute"
-                          top={1}
-                          right={1}
-                          onClick={() => handleDeleteImage(currentQuestion.id!, img.id)}
-                        />
-                      </Box>
-                    ))}
-                  </SimpleGrid>
+                  <Box w="100%">
+                    <Text fontWeight="bold" mb={3}>
+                      Gambar yang Ada ({currentQuestion.gambar.length})
+                    </Text>
+                    <SimpleGrid columns={[2, 3, 4]} spacing={3}>
+                      {currentQuestion.gambar.map((img) => (
+                        <Box
+                          key={img.id}
+                          position="relative"
+                          borderWidth="1px"
+                          borderRadius="md"
+                          overflow="hidden"
+                          _hover={{ shadow: 'md' }}
+                          bg="gray.50"
+                        >
+                          <ChakraImage
+                            src={`http://localhost:8080/${img.filePath.replace(/\\/g, '/')}`}
+                            alt="Question Image"
+                            boxSize="100px"
+                            objectFit="cover"
+                          />
+                          <IconButton
+                            aria-label="Delete Image"
+                            icon={<DeleteIcon />}
+                            size="xs"
+                            colorScheme="red"
+                            position="absolute"
+                            top={1}
+                            right={1}
+                            onClick={() => handleDeleteImage(currentQuestion.id!, img.id)}
+                          />
+                        </Box>
+                      ))}
+                    </SimpleGrid>
+                    <Divider my={4} />
+                  </Box>
                 )}
-                
+
                 {/* Upload New Images */}
-                <Input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  ref={fileInputRef}
-                  onChange={(e) => setSelectedFiles(e.target.files)}
-                  pt={1}
-                />
-                <Text fontSize="sm" color="gray.500" mt={1}>
-                  Supported formats: JPG, PNG, GIF. Max 5MB.
-                </Text>
-              </FormControl>
-            </VStack>
+                <FormControl w="100%">
+                  <FormLabel fontWeight="bold">Upload Gambar Baru</FormLabel>
+                  <Input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    ref={fileInputRef}
+                    onChange={(e) => setSelectedFiles(e.target.files)}
+                    size="lg"
+                    focusBorderColor="blue.400"
+                  />
+                  <Text fontSize="xs" color="gray.500" mt={2}>
+                    Format: JPG, PNG, GIF. Maksimal 5MB per file.
+                  </Text>
+                </FormControl>
+
+                {selectedFiles && selectedFiles.length > 0 && (
+                  <Box bg="green.50" p={3} borderRadius="md" w="100%" borderLeft="4px solid" borderLeftColor="green.400">
+                    <Text fontWeight="bold" color="green.700">
+                      {selectedFiles.length} file siap di-upload
+                    </Text>
+                  </Box>
+                )}
+
+                <Box bg="gray.50" p={3} borderRadius="md" w="100%">
+                  <Text fontSize="sm" color="gray.600">
+                    Gambar opsional. Klik &quot;Simpan Soal&quot; untuk menyelesaikan pembuatan soal.
+                  </Text>
+                </Box>
+              </VStack>
+            )}
           </ModalBody>
+
           <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={handleSaveQuestion}>Save</Button>
-            <Button onClick={onQuestionClose}>Cancel</Button>
+            <HStack spacing={2}>
+              {currentStep > 0 && (
+                <Button variant="outline" onClick={handlePrevStep}>
+                  ← Kembali
+                </Button>
+              )}
+
+              {currentStep < steps.length - 1 && (
+                <Button colorScheme="blue" onClick={handleNextStep}>
+                  Lanjut →
+                </Button>
+              )}
+
+              {currentStep === steps.length - 1 && (
+                <Button colorScheme="green" onClick={handleSaveQuestion}>
+                  Simpan Soal
+                </Button>
+              )}
+
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  onQuestionClose();
+                  setCurrentStep(0);
+                  setSelectedFiles(null);
+                }}
+              >
+                Batal
+              </Button>
+            </HStack>
           </ModalFooter>
         </ModalContent>
       </Modal>
@@ -615,10 +698,12 @@ export default function QuestionsTab() {
           <ModalHeader>Konfirmasi Hapus</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            Apakah Anda yakin ingin menghapus soal ini?
+            <Text>Apakah Anda yakin ingin menghapus soal ini? Tindakan ini tidak dapat dibatalkan.</Text>
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="red" mr={3} onClick={handleDeleteQuestion}>Ya, Hapus</Button>
+            <Button colorScheme="red" mr={3} onClick={handleDeleteQuestion}>
+              Ya, Hapus
+            </Button>
             <Button onClick={onDeleteClose}>Batal</Button>
           </ModalFooter>
         </ModalContent>

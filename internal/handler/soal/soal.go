@@ -30,7 +30,7 @@ func (h *soalHandler) CreateSoal(ctx context.Context, req *base.CreateSoalReques
 		imageFilesBytes = req.ImageBytes
 	}
 	
-	s, err := h.usecase.CreateSoal(int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, jawabanBenar, imageFilesBytes)
+	s, err := h.usecase.CreateSoal(int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, req.Pembahasan, jawabanBenar, imageFilesBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -60,6 +60,12 @@ func (h *soalHandler) CreateSoal(ctx context.Context, req *base.CreateSoalReques
 			OpsiC:        s.OpsiC,
 			OpsiD:        s.OpsiD,
 			JawabanBenar: base.JawabanOption(base.JawabanOption_value[string(s.JawabanBenar)]),
+			Pembahasan: func() string {
+				if s.Pembahasan != nil {
+					return *s.Pembahasan
+				}
+				return ""
+			}(),
 			Gambar:       protoGambar,
 		},
 	}, nil
@@ -87,6 +93,12 @@ func (h *soalHandler) GetSoal(ctx context.Context, req *base.GetSoalRequest) (*b
 			OpsiC:         s.OpsiC,
 			OpsiD:         s.OpsiD,
 			JawabanBenar:  base.JawabanOption(base.JawabanOption_value[string(s.JawabanBenar)]),
+			Pembahasan: func() string {
+				if s.Pembahasan != nil {
+					return *s.Pembahasan
+				}
+				return ""
+			}(),
 			Gambar:        convertSoalGambarToProto(s.Gambar),
 		},
 	}, nil
@@ -164,7 +176,7 @@ func (h *soalHandler) UpdateSoal(ctx context.Context, req *base.UpdateSoalReques
 		imageFilesBytes = req.ImageBytes
 	}
 	
-	s, err := h.usecase.UpdateSoal(int(req.Id), int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, jawabanBenar, imageFilesBytes)
+	s, err := h.usecase.UpdateSoal(int(req.Id), int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, req.Pembahasan, jawabanBenar, imageFilesBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -194,6 +206,12 @@ func (h *soalHandler) UpdateSoal(ctx context.Context, req *base.UpdateSoalReques
 			OpsiC:        s.OpsiC,
 			OpsiD:        s.OpsiD,
 			JawabanBenar: base.JawabanOption(base.JawabanOption_value[string(s.JawabanBenar)]),
+			Pembahasan: func() string {
+				if s.Pembahasan != nil {
+					return *s.Pembahasan
+				}
+				return ""
+			}(),
 			Gambar:       protoGambar,
 		},
 	}, nil
@@ -248,6 +266,12 @@ func (h *soalHandler) ListSoal(ctx context.Context, req *base.ListSoalRequest) (
 			OpsiC:         s.OpsiC,
 			OpsiD:         s.OpsiD,
 			JawabanBenar:  base.JawabanOption(base.JawabanOption_value[string(s.JawabanBenar)]),
+			Pembahasan: func() string {
+				if s.Pembahasan != nil {
+					return *s.Pembahasan
+				}
+				return ""
+			}(),
 			Gambar:         convertSoalGambarToProto(s.Gambar),
 		})
 	}

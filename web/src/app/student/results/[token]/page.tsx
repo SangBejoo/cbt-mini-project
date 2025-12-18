@@ -138,19 +138,31 @@ export default function ResultsPage() {
 
   if (loading) {
     return (
-      <Container maxW="container.md" py={10}>
-        <Text>Loading results...</Text>
+      <Container maxW="container.lg" py={10}>
+        <VStack spacing={6}>
+          <Heading size="lg">Loading Test Results...</Heading>
+          <Box p={8} bg="blue.50" borderRadius="lg" w="full" textAlign="center">
+            <Text fontSize="lg" color="blue.600">Please wait while we fetch your results</Text>
+            <Text fontSize="sm" color="gray.600" mt={2}>This may take a few moments...</Text>
+          </Box>
+        </VStack>
       </Container>
     );
   }
 
   if (!result?.sessionInfo) {
     return (
-      <Container maxW="container.md" py={10}>
-        <Text>Results not available.</Text>
-        <Link href="/student">
-          <Button mt={4}>Back to Home</Button>
-        </Link>
+      <Container maxW="container.lg" py={10}>
+        <VStack spacing={6}>
+          <Heading size="lg" color="red.500">Results Not Available</Heading>
+          <Box p={8} bg="red.50" borderRadius="lg" w="full" textAlign="center">
+            <Text fontSize="lg" color="red.600">Unable to load test results</Text>
+            <Text fontSize="sm" color="gray.600" mt={2}>Please check your session token or try again later</Text>
+            <Link href="/student">
+              <Button mt={4} colorScheme="blue">Back to Home</Button>
+            </Link>
+          </Box>
+        </VStack>
       </Container>
     );
   }
@@ -165,72 +177,76 @@ export default function ResultsPage() {
   const actualDurationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
 
   return (
-    <Container maxW="container.md" py={10}>
-      <VStack spacing={6}>
-        <Heading as="h1" size="xl" textAlign="center">
-          Test Results
-        </Heading>
+    <Container maxW="container.lg" py={10}>
+      <VStack spacing={8}>
+        <Box textAlign="center">
+          <Heading as="h1" size="2xl" color="blue.600" mb={2}>
+            📊 Test Results
+          </Heading>
+          <Text fontSize="lg" color="gray.600">
+            Review your performance and learn from the questions
+          </Text>
+        </Box>
 
-        <Card width="full">
+        <Card width="full" shadow="lg" borderRadius="xl">
           <CardBody>
             <VStack spacing={6}>
-              <Box textAlign="center">
-                <Text fontSize="2xl" fontWeight="bold" color={isPassed ? 'green.500' : 'red.500'}>
+              <Box textAlign="center" p={6} bg={isPassed ? 'green.50' : 'red.50'} borderRadius="lg" w="full">
+                <Text fontSize="4xl" fontWeight="bold" color={isPassed ? 'green.600' : 'red.600'} mb={2}>
                   {scorePercentage.toFixed(1)}%
                 </Text>
-                <Badge colorScheme={isPassed ? 'green' : 'red'} fontSize="md">
-                  {isPassed ? 'PASSED' : 'FAILED'}
+                <Badge colorScheme={isPassed ? 'green' : 'red'} fontSize="lg" px={4} py={2} borderRadius="full">
+                  {isPassed ? '✅ PASSED' : '❌ FAILED'}
                 </Badge>
+                <Text fontSize="sm" color="gray.600" mt={2}>
+                  Passing score: 70%
+                </Text>
               </Box>
 
-              <StatGroup width="full">
-                <Stat>
-                  <StatLabel>Participant</StatLabel>
-                  <StatNumber>{sessionInfo.namaPeserta}</StatNumber>
+              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6} w="full">
+                <Stat textAlign="center">
+                  <StatLabel fontSize="sm" color="gray.600">👤 Participant</StatLabel>
+                  <StatNumber fontSize="lg" color="blue.600">{sessionInfo.namaPeserta}</StatNumber>
                 </Stat>
-                <Stat>
-                  <StatLabel>Correct Answers</StatLabel>
-                  <StatNumber>{sessionInfo.jumlahBenar}/{sessionInfo.totalSoal}</StatNumber>
+                <Stat textAlign="center">
+                  <StatLabel fontSize="sm" color="gray.600">📚 Subject</StatLabel>
+                  <StatNumber fontSize="lg" color="purple.600">{sessionInfo.mataPelajaran.nama}</StatNumber>
                 </Stat>
-                <Stat>
-                  <StatLabel>Subject</StatLabel>
-                  <StatNumber>{sessionInfo.mataPelajaran.nama}</StatNumber>
-                </Stat>
-              </StatGroup>
-
-              <StatGroup width="full">
-                <Stat>
-                  <StatLabel>Level</StatLabel>
-                  <StatNumber>{sessionInfo.tingkat.nama}</StatNumber>
-                </Stat>
-                <Stat>
-                  <StatLabel>Duration</StatLabel>
-                  <StatNumber>{actualDurationMinutes} minutes</StatNumber>
-                </Stat>
-                <Stat>
-                  <StatLabel>Status</StatLabel>
-                  <StatNumber>
-                    <Badge colorScheme={sessionInfo.status === 'COMPLETED' ? 'green' : 'yellow'}>
-                      {sessionInfo.status}
-                    </Badge>
+                <Stat textAlign="center">
+                  <StatLabel fontSize="sm" color="gray.600">📊 Score</StatLabel>
+                  <StatNumber fontSize="lg" color={isPassed ? 'green.600' : 'red.600'}>
+                    {sessionInfo.jumlahBenar}/{sessionInfo.totalSoal}
                   </StatNumber>
                 </Stat>
-              </StatGroup>
+                <Stat textAlign="center">
+                  <StatLabel fontSize="sm" color="gray.600">⏱️ Duration</StatLabel>
+                  <StatNumber fontSize="lg" color="orange.600">{actualDurationMinutes} min</StatNumber>
+                </Stat>
+              </SimpleGrid>
 
-              <Box width="full">
-                <Text fontWeight="medium" mb={2}>Time Information:</Text>
-                <Text>Started: {new Date(sessionInfo.waktuMulai).toLocaleString()}</Text>
-                <Text>Completed: {new Date(sessionInfo.waktuSelesai).toLocaleString()}</Text>
+              <Box width="full" p={4} bg="gray.50" borderRadius="lg">
+                <Text fontWeight="medium" mb={3} color="gray.700">📅 Session Details:</Text>
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                  <Text>🏫 Level: <Badge colorScheme="purple">{sessionInfo.tingkat.nama}</Badge></Text>
+                  <Text>📊 Status: <Badge colorScheme={sessionInfo.status === 'COMPLETED' ? 'green' : 'yellow'}>{sessionInfo.status}</Badge></Text>
+                  <Text>🕐 Started: {new Date(sessionInfo.waktuMulai).toLocaleString()}</Text>
+                  <Text>🏁 Completed: {new Date(sessionInfo.waktuSelesai).toLocaleString()}</Text>
+                </SimpleGrid>
               </Box>
             </VStack>
           </CardBody>
         </Card>
 
         {/* Question Review Section */}
-        <Card width="full">
+        <Card width="full" shadow="lg" borderRadius="xl">
           <CardBody>
-            <VStack spacing={4} align="stretch">
-              <Heading size="md">Review Soal</Heading>
+            <VStack spacing={6} align="stretch">
+              <Box textAlign="center">
+                <Heading size="lg" color="blue.600">🔍 Question Review</Heading>
+                <Text fontSize="sm" color="gray.600" mt={1}>
+                  Click on question numbers to review answers and explanations
+                </Text>
+              </Box>
               <SimpleGrid columns={{ base: 4, md: 6, lg: 8 }} spacing={2}>
                 {result.detailJawaban.map((jawaban) => {
                   let colorScheme = 'gray';
@@ -254,24 +270,27 @@ export default function ResultsPage() {
                       colorScheme={colorScheme}
                       variant="solid"
                       title={statusText}
+                      borderRadius="full"
+                      fontSize="md"
+                      fontWeight="bold"
                     >
                       {jawaban.nomorUrut}
                     </Button>
                   );
                 })}
               </SimpleGrid>
-              <HStack spacing={4} fontSize="sm" justify="center">
+              <HStack spacing={6} fontSize="sm" justify="center">
                 <HStack>
                   <Box w="12px" h="12px" bg="green.500" borderRadius="sm" />
-                  <Text>Benar</Text>
+                  <Text>✅ Correct</Text>
                 </HStack>
                 <HStack>
                   <Box w="12px" h="12px" bg="red.500" borderRadius="sm" />
-                  <Text>Salah</Text>
+                  <Text>❌ Wrong</Text>
                 </HStack>
                 <HStack>
                   <Box w="12px" h="12px" bg="gray.500" borderRadius="sm" />
-                  <Text>Tidak Menjawab</Text>
+                  <Text>⚪ Not Answered</Text>
                 </HStack>
               </HStack>
               <Button
@@ -358,30 +377,34 @@ export default function ResultsPage() {
 
                           {/* Gambar Soal */}
                           {currentJawaban.gambar && Array.isArray(currentJawaban.gambar) && currentJawaban.gambar.length > 0 && (
-                            <Box>
-                              <Text fontSize="sm" color="gray.600" mb={2}>
-                                Perhatikan gambar dibawah ini
+                            <Box mt={4}>
+                              <Text fontSize="sm" color="gray.600" mb={3} fontWeight="medium">
+                                🖼️ Gambar Pendukung
                               </Text>
-                              <VStack spacing={3}>
+                              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                                 {currentJawaban.gambar
                                   .sort((a, b) => a.urutan - b.urutan)
                                   .map((img) => (
-                                    <Box key={img.id} borderWidth="1px" borderRadius="md" p={2} bg="white">
+                                    <Box key={img.id} borderWidth="2px" borderRadius="lg" p={3} bg="white" borderColor="gray.200" shadow="sm">
                                       <Image
                                         src={img.filePath ? `http://localhost:8080/${img.filePath.replace(/\\/g, '/')}` : ''}
                                         alt={img.keterangan || 'Gambar soal'}
-                                        maxH="300px"
+                                        maxH="250px"
                                         objectFit="contain"
                                         mx="auto"
+                                        borderRadius="md"
                                       />
                                       {img.keterangan && (
-                                        <Text fontSize="sm" color="gray.600" mt={2} textAlign="center">
+                                        <Text fontSize="sm" color="gray.700" mt={2} textAlign="center" fontStyle="italic">
                                           {img.keterangan}
                                         </Text>
                                       )}
+                                      <Text fontSize="xs" color="gray.500" mt={1} textAlign="center">
+                                        Gambar {img.urutan}
+                                      </Text>
                                     </Box>
                                   ))}
-                              </VStack>
+                              </SimpleGrid>
                             </Box>
                           )}
 
@@ -434,12 +457,23 @@ export default function ResultsPage() {
                           </VStack>
 
                           {/* Pembahasan */}
-                          {currentJawaban.pembahasan && (
-                            <Box mt={6} p={4} bg="blue.50" borderRadius="md" border="1px solid" borderColor="blue.200">
-                              <Text fontWeight="bold" color="blue.800" mb={2}>
-                                Pembahasan:
-                              </Text>
-                              <Text color="blue.700" whiteSpace="pre-wrap">
+                          {currentJawaban.pembahasan && currentJawaban.pembahasan.trim() && (
+                            <Box mt={6} p={6} bg="blue.50" borderRadius="lg" border="2px solid" borderColor="blue.200" position="relative">
+                              <Box
+                                position="absolute"
+                                top="-12px"
+                                left="20px"
+                                bg="blue.500"
+                                color="white"
+                                px={3}
+                                py={1}
+                                borderRadius="md"
+                                fontSize="sm"
+                                fontWeight="bold"
+                              >
+                                📚 Pembahasan
+                              </Box>
+                              <Text color="blue.800" whiteSpace="pre-wrap" lineHeight="1.6" mt={2}>
                                 {currentJawaban.pembahasan}
                               </Text>
                             </Box>
@@ -493,30 +527,43 @@ export default function ResultsPage() {
       </VStack>
 
       {/* Question Detail Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="xl">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>
-            Soal No. {selectedQuestion?.nomorUrut}
-            <Badge
-              ml={2}
-              colorScheme={
-                !selectedQuestion?.jawabanDipilih
-                  ? 'gray'
+      <Modal isOpen={isOpen} onClose={onClose} size="4xl" scrollBehavior="inside">
+        <ModalOverlay backdropFilter="blur(4px)" />
+        <ModalContent borderRadius="2xl" shadow="2xl">
+          <ModalHeader bg="blue.50" borderRadius="2xl 2xl 0 0" pb={4}>
+            <HStack justify="space-between" align="center">
+              <Box>
+                <Text fontSize="xl" fontWeight="bold" color="blue.700">
+                  📝 Question {selectedQuestion?.nomorUrut}
+                </Text>
+                <Text fontSize="sm" color="gray.600" mt={1}>
+                  Review your answer and learn from the explanation
+                </Text>
+              </Box>
+              <Badge
+                size="lg"
+                colorScheme={
+                  !selectedQuestion?.jawabanDipilih
+                    ? 'gray'
+                    : selectedQuestion?.isCorrect
+                    ? 'green'
+                    : 'red'
+                }
+                fontSize="md"
+                px={4}
+                py={2}
+                borderRadius="full"
+              >
+                {!selectedQuestion?.jawabanDipilih
+                  ? '⚪ Not Answered'
                   : selectedQuestion?.isCorrect
-                  ? 'green'
-                  : 'red'
-              }
-            >
-              {!selectedQuestion?.jawabanDipilih
-                ? 'Tidak Menjawab'
-                : selectedQuestion?.isCorrect
-                ? 'Benar'
-                : 'Salah'}
-            </Badge>
+                  ? '✅ Correct'
+                  : '❌ Wrong'}
+              </Badge>
+            </HStack>
           </ModalHeader>
           <ModalCloseButton />
-          <ModalBody>
+          <ModalBody p={6}>
             {selectedQuestion && (
               <VStack spacing={4} align="stretch">
                 <Text fontSize="lg" fontWeight="medium">
@@ -649,8 +696,44 @@ export default function ResultsPage() {
               </VStack>
             )}
           </ModalBody>
-          <ModalFooter>
-            <Button onClick={onClose}>Tutup</Button>
+          <ModalFooter bg="gray.50" borderRadius="0 0 2xl 2xl">
+            <HStack spacing={4} w="full" justify="space-between">
+              <Button
+                leftIcon={<Text>◀</Text>}
+                onClick={() => {
+                  const currentIndex = result.detailJawaban.findIndex(q => q.nomorUrut === selectedQuestion?.nomorUrut);
+                  if (currentIndex > 0) {
+                    setSelectedQuestion(result.detailJawaban[currentIndex - 1]);
+                  }
+                }}
+                isDisabled={result.detailJawaban.findIndex(q => q.nomorUrut === selectedQuestion?.nomorUrut) === 0}
+                colorScheme="blue"
+                variant="outline"
+              >
+                Previous
+              </Button>
+              <Text fontSize="sm" color="gray.600" alignSelf="center">
+                Question {selectedQuestion?.nomorUrut} of {result.detailJawaban.length}
+              </Text>
+              <HStack>
+                <Button
+                  rightIcon={<Text>▶</Text>}
+                  onClick={() => {
+                    const currentIndex = result.detailJawaban.findIndex(q => q.nomorUrut === selectedQuestion?.nomorUrut);
+                    if (currentIndex < result.detailJawaban.length - 1) {
+                      setSelectedQuestion(result.detailJawaban[currentIndex + 1]);
+                    }
+                  }}
+                  isDisabled={result.detailJawaban.findIndex(q => q.nomorUrut === selectedQuestion?.nomorUrut) === result.detailJawaban.length - 1}
+                  colorScheme="blue"
+                >
+                  Next
+                </Button>
+                <Button onClick={onClose} colorScheme="gray">
+                  Close
+                </Button>
+              </HStack>
+            </HStack>
           </ModalFooter>
         </ModalContent>
       </Modal>
