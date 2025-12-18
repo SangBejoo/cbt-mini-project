@@ -96,7 +96,7 @@ func (r *testSessionRepositoryImpl) GetSessionQuestions(token string) ([]entity.
 // Get all questions for session with soal data
 func (r *testSessionRepositoryImpl) GetAllQuestionsForSession(token string) ([]entity.TestSessionSoal, error) {
 	var sessionSoals []entity.TestSessionSoal
-	err := r.db.Preload("Soal").Preload("Soal.Materi").Preload("Soal.Materi.MataPelajaran").Preload("Soal.Materi.Tingkat").
+	err := r.db.Preload("Soal").Preload("Soal.Materi").Preload("Soal.Materi.MataPelajaran").Preload("Soal.Materi.Tingkat").Preload("Soal.Gambar").
 		Joins("JOIN test_session ON test_session_soal.id_test_session = test_session.id").
 		Where("test_session.session_token = ?", token).Order("nomor_urut").Find(&sessionSoals).Error
 	return sessionSoals, err
@@ -108,7 +108,7 @@ func (r *testSessionRepositoryImpl) GetQuestionByOrder(token string, nomorUrut i
 	err := r.db.Joins("JOIN test_session_soal ON test_session_soal.id_soal = soal.id").
 		Joins("JOIN test_session ON test_session_soal.id_test_session = test_session.id").
 		Where("test_session.session_token = ? AND test_session_soal.nomor_urut = ?", token, nomorUrut).
-		Preload("Materi").First(&soal).Error
+		Preload("Materi").Preload("Materi.MataPelajaran").Preload("Materi.Tingkat").Preload("Gambar").First(&soal).Error
 	if err != nil {
 		return nil, err
 	}

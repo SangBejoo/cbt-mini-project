@@ -4,6 +4,10 @@ import (
 	"cbt-test-mini-project/internal/entity"
 	"cbt-test-mini-project/internal/repository/test_soal"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
 )
 
 // soalUsecaseImpl implements SoalUsecase
@@ -16,8 +20,46 @@ func NewSoalUsecase(repo test_soal.SoalRepository) SoalUsecase {
 	return &soalUsecaseImpl{repo: repo}
 }
 
-// CreateSoal creates a new soal
-func (u *soalUsecaseImpl) CreateSoal(idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD string, jawabanBenar entity.JawabanOption) (*entity.Soal, error) {
+// saveImages saves multiple image files and returns list of SoalGambar entities
+func (u *soalUsecaseImpl) saveImages(imageFilesBytes [][]byte) ([]entity.SoalGambar, error) {
+	var gambar []entity.SoalGambar
+	
+	if len(imageFilesBytes) == 0 {
+		return gambar, nil
+	}
+
+	dir := "uploads/images"
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return nil, err
+	}
+
+	for i, imageBytes := range imageFilesBytes {
+		if len(imageBytes) == 0 {
+			continue
+		}
+
+		filename := fmt.Sprintf("%d_%d_%d.jpg", time.Now().Unix(), time.Now().Nanosecond(), i)
+		filePath := filepath.Join(dir, filename)
+
+		if err := os.WriteFile(filePath, imageBytes, 0644); err != nil {
+			return nil, err
+		}
+
+		urutan := i + 1
+		gambar = append(gambar, entity.SoalGambar{
+			NamaFile: filename,
+			FilePath: filePath,
+			FileSize: len(imageBytes),
+			MimeType: "image/jpeg",
+			Urutan:   urutan,
+		})
+	}
+
+	return gambar, nil
+}
+
+// CreateSoal creates a new soal with multiple images
+func (u *soalUsecaseImpl) CreateSoal(idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD string, jawabanBenar entity.JawabanOption, imageFilesBytes [][]byte) (*entity.Soal, error) {
 	if pertanyaan == "" || opsiA == "" || opsiB == "" || opsiC == "" || opsiD == "" {
 		return nil, errors.New("all fields must be filled")
 	}
@@ -25,17 +67,23 @@ func (u *soalUsecaseImpl) CreateSoal(idMateri, idTingkat int, pertanyaan, opsiA,
 		return nil, errors.New("invalid jawaban benar")
 	}
 
-	s := &entity.Soal{
-		IDMateri:   idMateri,
-		IDTingkat:  idTingkat,
-		Pertanyaan: pertanyaan,
-		OpsiA:      opsiA,
-		OpsiB:      opsiB,
-		OpsiC:      opsiC,
-		OpsiD:      opsiD,
-		JawabanBenar: jawabanBenar,
+	gambar, err := u.saveImages(imageFilesBytes)
+	if err != nil {
+		return nil, err
 	}
-	err := u.repo.Create(s)
+
+	s := &entity.Soal{
+		IDMateri:     idMateri,
+		IDTingkat:    idTingkat,
+		Pertanyaan:   pertanyaan,
+		OpsiA:        opsiA,
+		OpsiB:        opsiB,
+		OpsiC:        opsiC,
+		OpsiD:        opsiD,
+		JawabanBenar: jawabanBenar,
+		Gambar:       gambar,
+	}
+	err = u.repo.Create(s)
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +95,8 @@ func (u *soalUsecaseImpl) GetSoal(id int) (*entity.Soal, error) {
 	return u.repo.GetByID(id)
 }
 
-// UpdateSoal updates existing
-func (u *soalUsecaseImpl) UpdateSoal(id, idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD string, jawabanBenar entity.JawabanOption) (*entity.Soal, error) {
+// UpdateSoal updates existing with multiple images
+func (u *soalUsecaseImpl) UpdateSoal(id, idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD string, jawabanBenar entity.JawabanOption, imageFilesBytes [][]byte) (*entity.Soal, error) {
 	if pertanyaan == "" || opsiA == "" || opsiB == "" || opsiC == "" || opsiD == "" {
 		return nil, errors.New("all fields must be filled")
 	}
@@ -59,6 +107,14 @@ func (u *soalUsecaseImpl) UpdateSoal(id, idMateri, idTingkat int, pertanyaan, op
 	s, err := u.repo.GetByID(id)
 	if err != nil {
 		return nil, err
+	}
+
+	gambar, err := u.saveImages(imageFilesBytes)
+	if err != nil {
+		return nil, err
+	}
+	if len(gambar) > 0 {
+		s.Gambar = gambar
 	}
 
 	s.IDMateri = idMateri

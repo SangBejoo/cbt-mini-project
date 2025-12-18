@@ -251,6 +251,14 @@ message ListTingkatResponse {
 // SOAL MESSAGES
 // ========================================
 
+// Image metadata for soal
+message SoalGambar {
+    int32 id = 1;
+    string file_path = 2;
+    int32 urutan = 3;
+    string keterangan = 4;
+}
+
 // Full soal with answer (for admin/teacher only)
 message SoalFull {
     int32 id = 1;
@@ -261,6 +269,7 @@ message SoalFull {
     string opsi_c = 6;
     string opsi_d = 7;
     JawabanOption jawaban_benar = 8;
+    repeated SoalGambar gambar = 9;
 }
 
 // Soal for student (no answer exposed)
@@ -275,6 +284,7 @@ message SoalForStudent {
     JawabanOption jawaban_dipilih = 8;  // If already answered
     bool is_answered = 9;
     Materi materi = 10;
+    repeated SoalGambar gambar = 11;
 }
 
 message CreateSoalRequest {
@@ -286,6 +296,7 @@ message CreateSoalRequest {
     string opsi_c = 6;
     string opsi_d = 7;
     JawabanOption jawaban_benar = 8;
+    repeated bytes image_bytes = 9;
 }
 
 message GetSoalRequest {
@@ -302,6 +313,7 @@ message UpdateSoalRequest {
     string opsi_c = 7;
     string opsi_d = 8;
     JawabanOption jawaban_benar = 9;
+    repeated bytes image_bytes = 10;
 }
 
 message DeleteSoalRequest {

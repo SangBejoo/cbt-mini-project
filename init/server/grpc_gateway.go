@@ -16,14 +16,24 @@ import (
 )
 
 func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repository) error {
-	mux := runtime.NewServeMux()
+	gwMux := runtime.NewServeMux()
 
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 
 	// Register your services here
-	dependency.InitRestGatewayDependency(mux, opts, ctx, cfg)
+	dependency.InitRestGatewayDependency(gwMux, opts, ctx, cfg)
+
+	// Create a custom mux to handle both API and static files
+	mux := http.NewServeMux()
+
+	// Serve static files from uploads directory
+	uploadsDir := "./uploads"
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
+
+	// Serve API through gRPC-Gateway
+	mux.Handle("/", gwMux)
 
 	// Wrap mux with CORS middleware
 	fmt.Printf("Starting HTTP server on port %d\n", cfg.RestServer.Port)

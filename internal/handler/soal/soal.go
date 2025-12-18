@@ -18,29 +18,47 @@ func NewSoalHandler(usecase soal.SoalUsecase) base.SoalServiceServer {
 	return &soalHandler{usecase: usecase}
 }
 
-// CreateSoal creates a new soal
+// CreateSoal creates a new soal with multiple images
 func (h *soalHandler) CreateSoal(ctx context.Context, req *base.CreateSoalRequest) (*base.SoalResponse, error) {
 	jawabanBenar := entity.JawabanOption(req.JawabanBenar.String()[0])
-	s, err := h.usecase.CreateSoal(int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, jawabanBenar)
+	
+	// Handle multiple image_bytes from repeated field
+	var imageFilesBytes [][]byte
+	if len(req.ImageBytes) > 0 {
+		imageFilesBytes = req.ImageBytes
+	}
+	
+	s, err := h.usecase.CreateSoal(int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, jawabanBenar, imageFilesBytes)
 	if err != nil {
 		return nil, err
 	}
 
+	// Convert gambar entities to proto gambar
+	var protoGambar []*base.SoalGambar
+	for _, g := range s.Gambar {
+		protoGambar = append(protoGambar, &base.SoalGambar{
+			Id:       int32(g.ID),
+			FilePath: g.FilePath,
+			Urutan:   int32(g.Urutan),
+		})
+	}
+
 	return &base.SoalResponse{
 		Soal: &base.SoalFull{
-			Id:            int32(s.ID),
-			Materi:        &base.Materi{
-				Id: int32(s.Materi.ID),
+			Id: int32(s.ID),
+			Materi: &base.Materi{
+				Id:            int32(s.Materi.ID),
 				MataPelajaran: &base.MataPelajaran{Id: int32(s.Materi.MataPelajaran.ID), Nama: s.Materi.MataPelajaran.Nama},
-				Tingkat: &base.Tingkat{Id: int32(s.Materi.Tingkat.ID), Nama: s.Materi.Tingkat.Nama},
-				Nama: s.Materi.Nama,
+				Tingkat:       &base.Tingkat{Id: int32(s.Materi.Tingkat.ID), Nama: s.Materi.Tingkat.Nama},
+				Nama:          s.Materi.Nama,
 			},
-			Pertanyaan:    s.Pertanyaan,
-			OpsiA:         s.OpsiA,
-			OpsiB:         s.OpsiB,
-			OpsiC:         s.OpsiC,
-			OpsiD:         s.OpsiD,
-			JawabanBenar:  base.JawabanOption(base.JawabanOption_value[string(s.JawabanBenar)]),
+			Pertanyaan:   s.Pertanyaan,
+			OpsiA:        s.OpsiA,
+			OpsiB:        s.OpsiB,
+			OpsiC:        s.OpsiC,
+			OpsiD:        s.OpsiD,
+			JawabanBenar: base.JawabanOption(base.JawabanOption_value[string(s.JawabanBenar)]),
+			Gambar:       protoGambar,
 		},
 	}, nil
 }
@@ -67,33 +85,52 @@ func (h *soalHandler) GetSoal(ctx context.Context, req *base.GetSoalRequest) (*b
 			OpsiC:         s.OpsiC,
 			OpsiD:         s.OpsiD,
 			JawabanBenar:  base.JawabanOption(base.JawabanOption_value[string(s.JawabanBenar)]),
+			Gambar:        convertSoalGambarToProto(s.Gambar),
 		},
 	}, nil
 }
 
-// UpdateSoal updates soal
+// UpdateSoal updates soal with multiple images
 func (h *soalHandler) UpdateSoal(ctx context.Context, req *base.UpdateSoalRequest) (*base.SoalResponse, error) {
 	jawabanBenar := entity.JawabanOption(req.JawabanBenar.String()[0])
-	s, err := h.usecase.UpdateSoal(int(req.Id), int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, jawabanBenar)
+	
+	// Handle multiple image_bytes from repeated field
+	var imageFilesBytes [][]byte
+	if len(req.ImageBytes) > 0 {
+		imageFilesBytes = req.ImageBytes
+	}
+	
+	s, err := h.usecase.UpdateSoal(int(req.Id), int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, jawabanBenar, imageFilesBytes)
 	if err != nil {
 		return nil, err
 	}
 
+	// Convert gambar entities to proto gambar
+	var protoGambar []*base.SoalGambar
+	for _, g := range s.Gambar {
+		protoGambar = append(protoGambar, &base.SoalGambar{
+			Id:       int32(g.ID),
+			FilePath: g.FilePath,
+			Urutan:   int32(g.Urutan),
+		})
+	}
+
 	return &base.SoalResponse{
 		Soal: &base.SoalFull{
-			Id:            int32(s.ID),
-			Materi:        &base.Materi{
-				Id: int32(s.Materi.ID),
+			Id: int32(s.ID),
+			Materi: &base.Materi{
+				Id:            int32(s.Materi.ID),
 				MataPelajaran: &base.MataPelajaran{Id: int32(s.Materi.MataPelajaran.ID), Nama: s.Materi.MataPelajaran.Nama},
-				Tingkat: &base.Tingkat{Id: int32(s.Materi.Tingkat.ID), Nama: s.Materi.Tingkat.Nama},
-				Nama: s.Materi.Nama,
+				Tingkat:       &base.Tingkat{Id: int32(s.Materi.Tingkat.ID), Nama: s.Materi.Tingkat.Nama},
+				Nama:          s.Materi.Nama,
 			},
-			Pertanyaan:    s.Pertanyaan,
-			OpsiA:         s.OpsiA,
-			OpsiB:         s.OpsiB,
-			OpsiC:         s.OpsiC,
-			OpsiD:         s.OpsiD,
-			JawabanBenar:  base.JawabanOption(base.JawabanOption_value[string(s.JawabanBenar)]),
+			Pertanyaan:   s.Pertanyaan,
+			OpsiA:        s.OpsiA,
+			OpsiB:        s.OpsiB,
+			OpsiC:        s.OpsiC,
+			OpsiD:        s.OpsiD,
+			JawabanBenar: base.JawabanOption(base.JawabanOption_value[string(s.JawabanBenar)]),
+			Gambar:       protoGambar,
 		},
 	}, nil
 }
@@ -159,4 +196,21 @@ func (h *soalHandler) ListSoal(ctx context.Context, req *base.ListSoalRequest) (
 			PageSize:    int32(pagination.PageSize),
 		},
 	}, nil
+}
+
+// convertSoalGambarToProto converts entity.SoalGambar slice to proto SoalGambar slice
+func convertSoalGambarToProto(gambar []entity.SoalGambar) []*base.SoalGambar {
+	if len(gambar) == 0 {
+		return nil
+	}
+	
+	var protoGambar []*base.SoalGambar
+	for _, g := range gambar {
+		protoGambar = append(protoGambar, &base.SoalGambar{
+			Id:       int32(g.ID),
+			FilePath: g.FilePath,
+			Urutan:   int32(g.Urutan),
+		})
+	}
+	return protoGambar
 }

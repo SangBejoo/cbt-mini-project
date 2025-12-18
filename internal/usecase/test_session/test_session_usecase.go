@@ -111,6 +111,8 @@ func (u *testSessionUsecaseImpl) GetTestQuestions(sessionToken string, nomorUrut
 		OpsiD:          soal.OpsiD,
 		JawabanDipilih: jawabanDipilih,
 		IsAnswered:     isAnswered,
+		Materi:         soal.Materi,
+		Gambar:         soal.Gambar,
 	}
 
 	return soalForStudent, nil
@@ -154,6 +156,7 @@ func (u *testSessionUsecaseImpl) GetAllTestQuestions(sessionToken string) ([]ent
 			JawabanDipilih: jawabanDipilih,
 			IsAnswered:     isAnswered,
 			Materi:         soal.Soal.Materi,
+			Gambar:         soal.Soal.Gambar,
 		})
 	}
 

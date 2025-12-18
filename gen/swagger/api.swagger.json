@@ -1138,6 +1138,13 @@
         },
         "jawabanBenar": {
           "$ref": "#/definitions/baseJawabanOption"
+        },
+        "imageBytes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "byte"
+          }
         }
       }
     },
@@ -1216,6 +1223,13 @@
         },
         "jawabanBenar": {
           "$ref": "#/definitions/baseJawabanOption"
+        },
+        "imageBytes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "byte"
+          }
         }
       }
     },
@@ -1582,6 +1596,13 @@
         },
         "materi": {
           "$ref": "#/definitions/baseMateri"
+        },
+        "gambar": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseSoalGambar"
+          }
         }
       },
       "title": "Soal for student (no answer exposed)"
@@ -1613,9 +1634,36 @@
         },
         "jawabanBenar": {
           "$ref": "#/definitions/baseJawabanOption"
+        },
+        "gambar": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseSoalGambar"
+          }
         }
       },
       "title": "Full soal with answer (for admin/teacher only)"
+    },
+    "baseSoalGambar": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "filePath": {
+          "type": "string"
+        },
+        "urutan": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "keterangan": {
+          "type": "string"
+        }
+      },
+      "title": "Image metadata for soal"
     },
     "baseSoalResponse": {
       "type": "object",

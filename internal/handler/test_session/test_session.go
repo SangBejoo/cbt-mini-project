@@ -6,6 +6,7 @@ import (
 	"cbt-test-mini-project/internal/usecase/test_session"
 	tingkatUsecase "cbt-test-mini-project/internal/usecase/tingkat"
 	"context"
+	"errors"
 	"strings"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -53,6 +54,9 @@ func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.Get
 	if err != nil {
 		return nil, err
 	}
+	if session == nil {
+		return nil, errors.New("session not found")
+	}
 
 	soals, err := h.usecase.GetAllTestQuestions(req.SessionToken)
 	if err != nil {
@@ -94,6 +98,7 @@ func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.Get
 				MataPelajaran:  &base.MataPelajaran{Id: int32(s.Materi.MataPelajaran.ID), Nama: s.Materi.MataPelajaran.Nama},
 				Tingkat:        &base.Tingkat{Id: int32(s.Materi.Tingkat.ID), Nama: s.Materi.Tingkat.Nama},
 			},
+			Gambar:         convertSoalGambarToProto(s.Gambar),
 		})
 	}
 
@@ -273,4 +278,21 @@ func (h *testSessionHandler) convertToProtoTestSession(session *entity.TestSessi
 		TotalSoal:       totalSoal,
 		Status:          status,
 	}
+}
+
+// convertSoalGambarToProto converts entity.SoalGambar slice to proto SoalGambar slice
+func convertSoalGambarToProto(gambar []entity.SoalGambar) []*base.SoalGambar {
+	if len(gambar) == 0 {
+		return nil
+	}
+	
+	var protoGambar []*base.SoalGambar
+	for _, g := range gambar {
+		protoGambar = append(protoGambar, &base.SoalGambar{
+			Id:       int32(g.ID),
+			FilePath: g.FilePath,
+			Urutan:   int32(g.Urutan),
+		})
+	}
+	return protoGambar
 }

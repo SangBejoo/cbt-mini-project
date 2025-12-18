@@ -28,7 +28,13 @@ import {
   Heading,
   Container,
   useToast,
+  HStack,
+  Image,
+  IconButton,
+  Text,
+  Badge,
 } from '@chakra-ui/react';
+import { CloseIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 
 interface Question {
@@ -45,6 +51,12 @@ interface Question {
   opsiC: string;
   opsiD: string;
   jawabanBenar: string;
+  gambar?: Array<{
+    id: number;
+    file_path: string;
+    urutan: number;
+    keterangan?: string;
+  }>;
 }
 
 interface Topic {
@@ -75,6 +87,13 @@ export default function QuestionsPage() {
     opsiC: '',
     opsiD: '',
     jawabanBenar: '',
+    images: [] as File[],
+    existingImages: [] as Array<{
+      id: number;
+      file_path: string;
+      urutan: number;
+      keterangan?: string;
+    }>,
   });
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
@@ -141,6 +160,8 @@ export default function QuestionsPage() {
       opsiC: '',
       opsiD: '',
       jawabanBenar: '',
+      images: [],
+      existingImages: [],
     });
     onOpen();
   };
@@ -156,6 +177,8 @@ export default function QuestionsPage() {
       opsiC: question.opsiC,
       opsiD: question.opsiD,
       jawabanBenar: question.jawabanBenar,
+      images: [],
+      existingImages: question.gambar || [],
     });
     onOpen();
   };
@@ -171,16 +194,27 @@ export default function QuestionsPage() {
   };
 
   const handleSubmit = async () => {
-    const data = {
-      idMateri: parseInt(formData.idMateri),
-      idTingkat: parseInt(formData.idTingkat),
+    const data: any = {
+      id_materi: parseInt(formData.idMateri),
+      id_tingkat: parseInt(formData.idTingkat),
       pertanyaan: formData.pertanyaan,
-      opsiA: formData.opsiA,
-      opsiB: formData.opsiB,
-      opsiC: formData.opsiC,
-      opsiD: formData.opsiD,
-      jawabanBenar: formData.jawabanBenar,
+      opsi_a: formData.opsiA,
+      opsi_b: formData.opsiB,
+      opsi_c: formData.opsiC,
+      opsi_d: formData.opsiD,
+      jawaban_benar: formData.jawabanBenar,
     };
+
+    if (formData.images.length > 0) {
+      const imageBytesArray = await Promise.all(
+        formData.images.map(async (file) => {
+          const imageBytes = await file.arrayBuffer();
+          return btoa(String.fromCharCode(...new Uint8Array(imageBytes)));
+        })
+      );
+      data.image_bytes = imageBytesArray;
+    }
+
     try {
       if (editingQuestion) {
         await axios.put(`${API_BASE}/${editingQuestion.id}`, data);
@@ -198,6 +232,30 @@ export default function QuestionsPage() {
 
   const getTopicName = (id: number) => topics.find(t => t.id === id)?.nama || 'Unknown';
   const getLevelName = (id: number) => levels.find(l => l.id === id)?.nama || 'Unknown';
+
+  const handleAddImages = (files: FileList | null) => {
+    if (files) {
+      const newImages = Array.from(files);
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, ...newImages]
+      }));
+    }
+  };
+
+  const handleRemoveNewImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleRemoveExistingImage = (imageId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      existingImages: prev.existingImages.filter(img => img.id !== imageId)
+    }));
+  };
 
   const groupedQuestions = questions.reduce((acc, q) => {
     const key = `${q.materi.id}-${q.materi.tingkat.id}`;
@@ -237,6 +295,7 @@ export default function QuestionsPage() {
                   <Th>ID</Th>
                   <Th>Question</Th>
                   <Th>Correct Answer</Th>
+                  <Th>Image</Th>
                   <Th>Actions</Th>
                 </Tr>
               </Thead>
@@ -246,6 +305,34 @@ export default function QuestionsPage() {
                     <Td>{question.id}</Td>
                     <Td>{question.pertanyaan.substring(0, 50)}...</Td>
                     <Td>{question.jawabanBenar}</Td>
+                    <Td>
+                      {question.gambar && question.gambar.length > 0 ? (
+                        <HStack spacing={2}>
+                          {question.gambar.map((img, index) => (
+                            <Box key={img.id} position="relative">
+                              <Image
+                                src={`http://localhost:8080/${img.file_path}`}
+                                alt={`Question ${index + 1}`}
+                                boxSize="50px"
+                                objectFit="cover"
+                                borderRadius="md"
+                              />
+                              <Badge
+                                position="absolute"
+                                top="-2"
+                                right="-2"
+                                colorScheme="blue"
+                                fontSize="xs"
+                              >
+                                {img.urutan}
+                              </Badge>
+                            </Box>
+                          ))}
+                        </HStack>
+                      ) : (
+                        <Text color="gray.500">No images</Text>
+                      )}
+                    </Td>
                     <Td>
                       <Button size="sm" mr={2} onClick={() => handleEdit(question)}>
                         Edit
@@ -345,6 +432,84 @@ export default function QuestionsPage() {
                   <option value="D">D</option>
                 </Select>
               </FormControl>
+              <FormControl>
+                <FormLabel>Images (Optional)</FormLabel>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => handleAddImages(e.target.files)}
+                />
+                <Text fontSize="sm" color="gray.600" mt={1}>
+                  Select multiple images to add to this question
+                </Text>
+              </FormControl>
+
+              {/* Display existing images */}
+              {formData.existingImages.length > 0 && (
+                <FormControl>
+                  <FormLabel>Current Images</FormLabel>
+                  <HStack spacing={3} wrap="wrap">
+                    {formData.existingImages.map((img) => (
+                      <Box key={img.id} position="relative" border="1px solid" borderColor="gray.200" borderRadius="md" p={2}>
+                        <Image
+                          src={`http://localhost:8080/${img.file_path}`}
+                          alt="Existing"
+                          boxSize="80px"
+                          objectFit="cover"
+                          borderRadius="md"
+                        />
+                        <Badge position="absolute" top="1" right="1" colorScheme="blue" fontSize="xs">
+                          {img.urutan}
+                        </Badge>
+                        <IconButton
+                          aria-label="Remove image"
+                          icon={<CloseIcon />}
+                          size="xs"
+                          colorScheme="red"
+                          position="absolute"
+                          top="1"
+                          left="1"
+                          onClick={() => handleRemoveExistingImage(img.id)}
+                        />
+                      </Box>
+                    ))}
+                  </HStack>
+                </FormControl>
+              )}
+
+              {/* Display new images to be added */}
+              {formData.images.length > 0 && (
+                <FormControl>
+                  <FormLabel>New Images to Add</FormLabel>
+                  <HStack spacing={3} wrap="wrap">
+                    {formData.images.map((file, index) => (
+                      <Box key={index} position="relative" border="1px solid" borderColor="green.200" borderRadius="md" p={2}>
+                        <Image
+                          src={URL.createObjectURL(file)}
+                          alt={`New ${index + 1}`}
+                          boxSize="80px"
+                          objectFit="cover"
+                          borderRadius="md"
+                        />
+                        <Badge position="absolute" top="1" right="1" colorScheme="green" fontSize="xs">
+                          New
+                        </Badge>
+                        <IconButton
+                          aria-label="Remove new image"
+                          icon={<CloseIcon />}
+                          size="xs"
+                          colorScheme="red"
+                          position="absolute"
+                          top="1"
+                          left="1"
+                          onClick={() => handleRemoveNewImage(index)}
+                        />
+                      </Box>
+                    ))}
+                  </HStack>
+                </FormControl>
+              )}
             </VStack>
           </ModalBody>
           <ModalFooter>

@@ -38,6 +38,7 @@ interface Question {
       nama: string;
     };
   };
+  image_path?: string;
 }
 
 interface TestSessionData {
@@ -177,6 +178,16 @@ export default function TestPage() {
                   <Text fontSize="lg" fontWeight="medium">
                     {question.pertanyaan}
                   </Text>
+
+                  {question.image_path && (
+                    <Box>
+                      <img
+                        src={`http://localhost:8080/${question.image_path}`}
+                        alt="Question"
+                        style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain' }}
+                      />
+                    </Box>
+                  )}
 
                   <RadioGroup
                     value={answers[question.nomorUrut] || ''}
