@@ -191,6 +191,7 @@ func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTes
 			JawabanDipilih: jawabanDipilih,
 			JawabanBenar:   base.JawabanOption(base.JawabanOption_value[string(d.JawabanBenar)]),
 			IsCorrect:      d.IsCorrect,
+			IsAnswered:     d.IsAnswered,
 			Pembahasan:     pembahasan,
 			Gambar:         convertSoalGambarToProto(d.Gambar),
 		})

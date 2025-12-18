@@ -27,6 +27,7 @@ type JawabanDetail struct {
 	JawabanDipilih *JawabanOption `json:"jawaban_dipilih"`
 	JawabanBenar   JawabanOption  `json:"jawaban_benar"`
 	IsCorrect      bool           `json:"is_correct"`
+	IsAnswered     bool           `json:"is_answered"`
 	Pembahasan     *string        `json:"pembahasan,omitempty"`
 	Gambar         []SoalGambar   `json:"gambar"`
 }

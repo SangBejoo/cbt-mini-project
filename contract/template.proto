@@ -483,8 +483,9 @@ message JawabanDetail {
     JawabanOption jawaban_dipilih = 7;
     JawabanOption jawaban_benar = 8;
     bool is_correct = 9;
-    string pembahasan = 10;
-    repeated SoalGambar gambar = 11;
+    bool is_answered = 10;
+    string pembahasan = 11;
+    repeated SoalGambar gambar = 12;
 }
 
 message TestResultResponse {
@@ -507,15 +508,16 @@ message StudentHistoryRequest {
 message HistorySummary {
     int32 id = 1;
     string session_token = 2;
-    MataPelajaran mata_pelajaran = 3;
-    Tingkat tingkat = 4;
-    google.protobuf.Timestamp waktu_mulai = 5;
-    google.protobuf.Timestamp waktu_selesai = 6;
-    int32 durasi_pengerjaan_detik = 7;  // Actual time spent
-    double nilai_akhir = 8;
-    int32 jumlah_benar = 9;
-    int32 total_soal = 10;
-    TestStatus status = 11;
+    string nama_peserta = 3;
+    MataPelajaran mata_pelajaran = 4;
+    Tingkat tingkat = 5;
+    google.protobuf.Timestamp waktu_mulai = 6;
+    google.protobuf.Timestamp waktu_selesai = 7;
+    int32 durasi_pengerjaan_detik = 8;  // Actual time spent
+    double nilai_akhir = 9;
+    int32 jumlah_benar = 10;
+    int32 total_soal = 11;
+    TestStatus status = 12;
 }
 
 message StudentHistoryResponse {

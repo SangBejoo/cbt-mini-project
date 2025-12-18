@@ -11,4 +11,7 @@ type HistoryRepository interface {
 
 	// Get history detail by session token
 	GetHistoryDetail(sessionToken string) (*entity.TestSession, []entity.JawabanDetail, []entity.MateriBreakdown, error)
+
+	// Get nama peserta from session token
+	GetSessionNameByToken(sessionToken string) (string, error)
 }

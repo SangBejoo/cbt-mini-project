@@ -1506,6 +1506,9 @@
         "sessionToken": {
           "type": "string"
         },
+        "namaPeserta": {
+          "type": "string"
+        },
         "mataPelajaran": {
           "$ref": "#/definitions/baseMataPelajaran"
         },
@@ -1571,6 +1574,9 @@
           "$ref": "#/definitions/baseJawabanOption"
         },
         "isCorrect": {
+          "type": "boolean"
+        },
+        "isAnswered": {
           "type": "boolean"
         },
         "pembahasan": {

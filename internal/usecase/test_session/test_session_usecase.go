@@ -204,11 +204,43 @@ func (u *testSessionUsecaseImpl) CompleteSession(sessionToken string) (*entity.T
 		return nil, errors.New("session is already completed")
 	}
 
+	// Get all assigned questions
+	allQuestions, err := u.repo.GetAllQuestionsForSession(sessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get all answers
 	answers, err := u.repo.GetSessionAnswers(sessionToken)
 	if err != nil {
 		return nil, err
 	}
 
+	// Create a map of answered question numbers
+	answeredMap := make(map[int]bool)
+	for _, ans := range answers {
+		answeredMap[ans.TestSessionSoal.NomorUrut] = true
+	}
+
+	// For each unanswered question, create an entry directly in repository with nil answer
+	for _, question := range allQuestions {
+		if !answeredMap[question.NomorUrut] {
+			// Create unanswered record with NULL jawaban_dipilih
+			err := u.repo.CreateUnansweredRecord(question.ID, question.IDTestSession)
+			if err != nil {
+				// Log error but continue
+				continue
+			}
+		}
+	}
+
+	// Get updated answers after filling in unanswered questions
+	answers, err = u.repo.GetSessionAnswers(sessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate score
 	jumlahBenar := 0
 	for _, ans := range answers {
 		if ans.IsCorrect {
@@ -216,8 +248,11 @@ func (u *testSessionUsecaseImpl) CompleteSession(sessionToken string) (*entity.T
 		}
 	}
 
-	nilaiAkhir := float64(jumlahBenar) / float64(len(answers)) * 100
-	totalSoal := len(answers)
+	totalSoal := len(allQuestions)
+	var nilaiAkhir float64
+	if totalSoal > 0 {
+		nilaiAkhir = float64(jumlahBenar) / float64(totalSoal) * 100
+	}
 
 	err = u.repo.CompleteSession(sessionToken, time.Now(), &nilaiAkhir, &jumlahBenar, &totalSoal)
 	if err != nil {
@@ -238,6 +273,12 @@ func (u *testSessionUsecaseImpl) GetTestResult(sessionToken string) (*entity.Tes
 		return nil, nil, errors.New("session is not completed")
 	}
 
+	// Get all assigned questions (for proper ordering)
+	allQuestions, err := u.repo.GetAllQuestionsForSession(sessionToken)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// Get detailed answers
 	var details []entity.JawabanDetail
 	answers, err := u.repo.GetSessionAnswers(sessionToken)
@@ -245,20 +286,36 @@ func (u *testSessionUsecaseImpl) GetTestResult(sessionToken string) (*entity.Tes
 		return nil, nil, err
 	}
 
-	for _, ans := range answers {
-		detail := entity.JawabanDetail{
-			NomorUrut:      ans.TestSessionSoal.NomorUrut,
-			Pertanyaan:     ans.TestSessionSoal.Soal.Pertanyaan,
-			OpsiA:          ans.TestSessionSoal.Soal.OpsiA,
-			OpsiB:          ans.TestSessionSoal.Soal.OpsiB,
-			OpsiC:          ans.TestSessionSoal.Soal.OpsiC,
-			OpsiD:          ans.TestSessionSoal.Soal.OpsiD,
-			JawabanDipilih: ans.JawabanDipilih,
-			JawabanBenar:   ans.TestSessionSoal.Soal.JawabanBenar,
-			IsCorrect:      ans.IsCorrect,
-			Pembahasan:     ans.TestSessionSoal.Soal.Pembahasan,
-			Gambar:         ans.TestSessionSoal.Soal.Gambar,
+	// Create a map of answers for quick lookup
+	answersMap := make(map[int]*entity.JawabanSiswa)
+	for i, ans := range answers {
+		answersMap[ans.TestSessionSoal.NomorUrut] = &answers[i]
+	}
+
+	// Process all questions in order
+	for _, question := range allQuestions {
+		var detail entity.JawabanDetail
+		detail.NomorUrut = question.NomorUrut
+		detail.Pertanyaan = question.Soal.Pertanyaan
+		detail.OpsiA = question.Soal.OpsiA
+		detail.OpsiB = question.Soal.OpsiB
+		detail.OpsiC = question.Soal.OpsiC
+		detail.OpsiD = question.Soal.OpsiD
+		detail.JawabanBenar = question.Soal.JawabanBenar
+		detail.Pembahasan = question.Soal.Pembahasan
+		detail.Gambar = question.Soal.Gambar
+
+		// Add answer details if exists
+		if ans, exists := answersMap[question.NomorUrut]; exists {
+			detail.JawabanDipilih = ans.JawabanDipilih
+			detail.IsCorrect = ans.IsCorrect
+			detail.IsAnswered = ans.JawabanDipilih != nil
+		} else {
+			// No answer provided
+			detail.IsCorrect = false
+			detail.IsAnswered = false
 		}
+
 		details = append(details, detail)
 	}
 

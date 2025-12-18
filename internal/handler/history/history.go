@@ -59,6 +59,7 @@ func (h *historyHandler) GetStudentHistory(ctx context.Context, req *base.Studen
 		histories = append(histories, &base.HistorySummary{
 			Id:                    int32(h.ID),
 			SessionToken:          h.SessionToken,
+			NamaPeserta:           h.NamaPeserta,
 			MataPelajaran:         &base.MataPelajaran{Id: int32(h.MataPelajaran.ID), Nama: h.MataPelajaran.Nama},
 			Tingkat:               &base.Tingkat{Id: int32(h.Tingkat.ID), Nama: h.Tingkat.Nama},
 			WaktuMulai:            timestamppb.New(h.WaktuMulai),

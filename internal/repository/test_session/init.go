@@ -45,4 +45,7 @@ type TestSessionRepository interface {
 
 	// Get answers for session
 	GetSessionAnswers(token string) ([]entity.JawabanSiswa, error)
+
+	// Create unanswered record with NULL jawaban_dipilih
+	CreateUnansweredRecord(sessionSoalID, testSessionID int) error
 }

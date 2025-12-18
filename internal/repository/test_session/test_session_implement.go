@@ -211,3 +211,13 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 
 	return nil
 }
+
+// CreateUnansweredRecord creates a record for unanswered question with NULL jawaban_dipilih
+func (r *testSessionRepositoryImpl) CreateUnansweredRecord(sessionSoalID, testSessionID int) error {
+	newAnswer := entity.JawabanSiswa{
+		IDTestSessionSoal: sessionSoalID,
+		JawabanDipilih:    nil, // NULL - no answer provided
+		IsCorrect:         false,
+	}
+	return r.db.Create(&newAnswer).Error
+}

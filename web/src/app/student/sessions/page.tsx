@@ -28,7 +28,6 @@ import {
   ModalFooter,
   ModalCloseButton,
 } from '@chakra-ui/react';
-import { BookOpen } from 'lucide-react';
 import axios from 'axios';
 
 interface Topic {

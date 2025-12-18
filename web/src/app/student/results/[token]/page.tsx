@@ -63,9 +63,10 @@ interface TestResultResponse {
     opsiB: string;
     opsiC: string;
     opsiD: string;
-    jawabanDipilih: string;
+    jawabanDipilih: string | null;
     jawabanBenar: string;
     isCorrect: boolean;
+    isAnswered: boolean;
     pembahasan?: string;
     gambar?: Array<{
       id: number;
@@ -308,16 +309,22 @@ export default function ResultsPage() {
                   {/* Left Column: Daftar Soal */}
                   <Box bg="white" p={6} borderRadius="md" height="fit-content" position="sticky" top="20px">
                     <Heading size="sm" mb={4}>Daftar Soal</Heading>
-                    <SimpleGrid columns={5} spacing={2}>
-                      {result.detailJawaban.map((jawaban) => {
-                        let colorScheme = 'red';
-                        if (jawaban.isCorrect) {
-                          colorScheme = 'green';
-                        } else if (!jawaban.jawabanDipilih) {
-                          colorScheme = 'gray';
-                        }
+                    {result.detailJawaban && result.detailJawaban.length > 0 ? (
+                      <>
+                        <SimpleGrid columns={5} spacing={2}>
+                          {result.detailJawaban.map((jawaban) => {
+                            let colorScheme = 'gray'; // Default: tidak dijawab
+                            
+                            if (jawaban.isAnswered) {
+                              // Question was answered
+                              if (jawaban.isCorrect) {
+                                colorScheme = 'green';
+                              } else {
+                                colorScheme = 'red';
+                              }
+                            }
 
-                        const isSelected = currentQuestionIndex === result.detailJawaban.findIndex(j => j.nomorUrut === jawaban.nomorUrut);
+                            const isSelected = currentQuestionIndex === result.detailJawaban.findIndex(j => j.nomorUrut === jawaban.nomorUrut);
 
                         return (
                           <Button
@@ -353,11 +360,30 @@ export default function ResultsPage() {
                         <Text>Tidak Menjawab</Text>
                       </HStack>
                     </VStack>
+                      </>
+                    ) : (
+                      <Text fontSize="sm" color="gray.500" textAlign="center" py={4}>
+                        Tidak ada soal untuk ditampilkan
+                      </Text>
+                    )}
                   </Box>
 
                   {/* Right Column: Question Detail */}
-                  {(() => {
+                  {result.detailJawaban && result.detailJawaban.length > 0 ? (() => {
                     const currentJawaban = result.detailJawaban[currentQuestionIndex];
+                    if (!currentJawaban) {
+                      return (
+                        <Card bg="white" borderRadius="md">
+                          <CardBody>
+                            <VStack spacing={6} align="stretch" py={8}>
+                              <Text fontSize="lg" color="gray.600" textAlign="center">
+                                Tidak ada data soal untuk ditampilkan
+                              </Text>
+                            </VStack>
+                          </CardBody>
+                        </Card>
+                      );
+                    }
                     return (
                       <Card bg="white" borderRadius="md">
                         <CardBody>
@@ -368,7 +394,7 @@ export default function ResultsPage() {
                               </Badge>
                               <Badge
                                 colorScheme={
-                                  !currentJawaban.jawabanDipilih
+                                  !currentJawaban.isAnswered
                                     ? 'gray'
                                     : currentJawaban.isCorrect
                                     ? 'green'
@@ -378,11 +404,11 @@ export default function ResultsPage() {
                                 px={3}
                                 py={1}
                               >
-                                {!currentJawaban.jawabanDipilih
+                                {!currentJawaban.isAnswered
                                   ? 'Tidak Menjawab'
                                   : currentJawaban.isCorrect
                                   ? 'Benar'
-                                  : 'Jawaban kamu salah'}
+                                  : 'Salah'}
                               </Badge>
                             </HStack>
 
@@ -422,25 +448,39 @@ export default function ResultsPage() {
                             {/* Options */}
                             <VStack spacing={3} align="stretch">
                               <Text fontSize="sm" color="gray.600" mb={-2}>
-                                Salah satu manfaat dari gunung bagi manusia adalah ....
+                                {currentJawaban.pertanyaan}
                               </Text>
                               {['A', 'B', 'C', 'D'].map((option) => {
                                 const isCorrectAnswer = currentJawaban.jawabanBenar === option;
                                 const isUserAnswer = currentJawaban.jawabanDipilih === option;
+                                const isAnswered = currentJawaban.isAnswered;
                                 const optionText = currentJawaban[`opsi${option}` as keyof typeof currentJawaban];
 
                                 let bgColor = 'white';
                                 let borderColor = 'gray.200';
                                 let borderWidth = '1px';
 
-                                if (isCorrectAnswer) {
-                                  bgColor = 'green.50';
-                                  borderColor = 'green.400';
-                                  borderWidth = '2px';
-                                } else if (isUserAnswer && !isCorrectAnswer) {
-                                  bgColor = 'red.50';
-                                  borderColor = 'red.400';
-                                  borderWidth = '2px';
+                                // If question was not answered at all
+                                if (!isAnswered) {
+                                  if (isCorrectAnswer) {
+                                    bgColor = 'green.50';
+                                    borderColor = 'green.400';
+                                    borderWidth = '2px';
+                                  } else {
+                                    bgColor = 'gray.50';
+                                    borderColor = 'gray.300';
+                                  }
+                                } else {
+                                  // Question was answered
+                                  if (isCorrectAnswer) {
+                                    bgColor = 'green.50';
+                                    borderColor = 'green.400';
+                                    borderWidth = '2px';
+                                  } else if (isUserAnswer && !isCorrectAnswer) {
+                                    bgColor = 'red.50';
+                                    borderColor = 'red.400';
+                                    borderWidth = '2px';
+                                  }
                                 }
 
                                 return (
@@ -456,8 +496,11 @@ export default function ResultsPage() {
                                       <Text fontWeight={isCorrectAnswer || isUserAnswer ? 'semibold' : 'normal'} flex="1">
                                         {option}. {optionText}
                                       </Text>
+                                      {isCorrectAnswer && (
+                                        <Badge colorScheme="green" ml={2}>Jawaban Benar</Badge>
+                                      )}
                                       {isUserAnswer && !isCorrectAnswer && (
-                                        <Badge colorScheme="red" ml={2}>Jawaban kamu salah</Badge>
+                                        <Badge colorScheme="red" ml={2}>Jawaban Anda</Badge>
                                       )}
                                     </HStack>
                                   </Box>
@@ -466,25 +509,34 @@ export default function ResultsPage() {
                             </VStack>
 
                             {/* Kunci Jawaban Label */}
-                            <Box>
+                            <Box p={3} bg="green.50" borderRadius="md" borderLeft="4px solid" borderLeftColor="green.500">
                               <Text fontSize="sm" fontWeight="bold" color="green.700">
                                 Kunci Jawaban: {currentJawaban.jawabanBenar}
                               </Text>
                             </Box>
 
                             {/* Pembahasan */}
-                            {currentJawaban.pembahasan && currentJawaban.pembahasan.trim() ? (
-                              <Box p={4} bg="gray.50" borderRadius="md" borderLeft="4px solid" borderLeftColor="blue.400">
-                                <Text fontWeight="bold" mb={2} color="gray.700">Pembahasan :</Text>
-                                <Text color="gray.700" whiteSpace="pre-wrap" lineHeight="1.6">
-                                  {currentJawaban.pembahasan}
-                                </Text>
-                              </Box>
+                            {currentJawaban.isAnswered ? (
+                              currentJawaban.pembahasan && currentJawaban.pembahasan.trim() ? (
+                                <Box p={4} bg="blue.50" borderRadius="md" borderLeft="4px solid" borderLeftColor="blue.400">
+                                  <Text fontWeight="bold" mb={2} color="blue.700">Pembahasan :</Text>
+                                  <Text color="blue.800" whiteSpace="pre-wrap" lineHeight="1.6">
+                                    {currentJawaban.pembahasan}
+                                  </Text>
+                                </Box>
+                              ) : (
+                                <Box p={4} bg="gray.50" borderRadius="md" borderLeft="4px solid" borderLeftColor="gray.400">
+                                  <Text fontWeight="bold" mb={2} color="gray.600">Pembahasan :</Text>
+                                  <Text color="gray.500" fontStyle="italic">
+                                    Pembahasan tidak tersedia untuk soal ini.
+                                  </Text>
+                                </Box>
+                              )
                             ) : (
-                              <Box p={4} bg="gray.50" borderRadius="md" borderLeft="4px solid" borderLeftColor="gray.400">
-                                <Text fontWeight="bold" mb={2} color="gray.600">Pembahasan :</Text>
-                                <Text color="gray.500" fontStyle="italic">
-                                  Pembahasan tidak tersedia untuk soal ini.
+                              <Box p={4} bg="orange.50" borderRadius="md" borderLeft="4px solid" borderLeftColor="orange.400">
+                                <Text fontWeight="bold" mb={2} color="orange.700">Soal Tidak Dijawab</Text>
+                                <Text color="orange.800" fontSize="sm">
+                                  Anda tidak menjawab soal ini. Kunci jawaban yang benar adalah {currentJawaban.jawabanBenar}.
                                 </Text>
                               </Box>
                             )}
@@ -492,7 +544,20 @@ export default function ResultsPage() {
                         </CardBody>
                       </Card>
                     );
-                  })()}
+                  })() : (
+                    <Card bg="white" borderRadius="md">
+                      <CardBody>
+                        <VStack spacing={6} align="stretch" py={8}>
+                          <Text fontSize="lg" color="gray.600" textAlign="center">
+                            Tidak ada soal yang tersedia untuk ditampilkan
+                          </Text>
+                          <Text fontSize="sm" color="gray.500" textAlign="center">
+                            Sepertinya tidak ada data jawaban untuk sesi tes ini
+                          </Text>
+                        </VStack>
+                      </CardBody>
+                    </Card>
+                  )}
                 </SimpleGrid>
               </VStack>
             </CardBody>

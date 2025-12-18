@@ -30,6 +30,15 @@ func (u *historyUsecaseImpl) GetStudentHistory(namaPeserta string, tingkatan, id
 		return nil, err
 	}
 
+	// Get nama peserta from first completed test if not provided
+	actualNamaPeserta := namaPeserta
+	if actualNamaPeserta == "" && len(histories) > 0 {
+		// Fetch the actual nama peserta from the database
+		if name, err := u.repo.GetSessionNameByToken(histories[0].SessionToken); err == nil && name != "" {
+			actualNamaPeserta = name
+		}
+	}
+
 	// Calculate aggregates
 	totalCompleted := 0
 	totalNilai := 0.0
@@ -53,7 +62,7 @@ func (u *historyUsecaseImpl) GetStudentHistory(namaPeserta string, tingkatan, id
 	}
 
 	response := &entity.StudentHistoryResponse{
-		NamaPeserta:       namaPeserta,
+		NamaPeserta:       actualNamaPeserta,
 		Tingkatan:         tingkatan,
 		History:           histories,
 		RataRataNilai:     rataRataNilai,

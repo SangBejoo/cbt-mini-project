@@ -66,6 +66,7 @@ func (r *historyRepositoryImpl) GetStudentHistory(namaPeserta string, tingkatan,
 		histories[i] = entity.HistorySummary{
 			ID:                    s.ID,
 			SessionToken:          s.SessionToken,
+			NamaPeserta:           s.NamaPeserta,
 			MataPelajaran:         s.MataPelajaran,
 			Tingkat:               s.Tingkat,
 			WaktuMulai:            s.WaktuMulai,
@@ -117,13 +118,26 @@ func (r *historyRepositoryImpl) getAnswersBySessionToken(token string) ([]entity
 	var details []entity.JawabanDetail
 
 	err := r.db.Table("jawaban_siswa").
-		Select("test_session_soal.nomor_urut, soal.pertanyaan, soal.opsi_a, soal.opsi_b, soal.opsi_c, soal.opsi_d, jawaban_siswa.jawaban_dipilih, soal.jawaban_benar, jawaban_siswa.is_correct").
+		Select("test_session_soal.nomor_urut, soal.pertanyaan, soal.opsi_a, soal.opsi_b, soal.opsi_c, soal.opsi_d, jawaban_siswa.jawaban_dipilih, soal.jawaban_benar, jawaban_siswa.is_correct, soal.pembahasan, CASE WHEN jawaban_siswa.id IS NOT NULL THEN true ELSE false END as is_answered").
 		Joins("JOIN test_session_soal ON jawaban_siswa.id_test_session_soal = test_session_soal.id").
 		Joins("JOIN test_session ON test_session_soal.id_test_session = test_session.id").
 		Joins("JOIN soal ON test_session_soal.id_soal = soal.id").
 		Where("test_session.session_token = ?", token).
 		Order("test_session_soal.nomor_urut").
 		Scan(&details).Error
+
+	if err != nil {
+		return details, err
+	}
+
+	// Load gambar for each detail
+	for i := range details {
+		var gambar []entity.SoalGambar
+		r.db.Table("soal_gambar").
+			Where("id_soal = (SELECT soal.id FROM soal JOIN test_session_soal ON test_session_soal.id_soal = soal.id JOIN test_session ON test_session_soal.id_test_session = test_session.id WHERE test_session.session_token = ? AND test_session_soal.nomor_urut = ?)", token, details[i].NomorUrut).
+			Find(&gambar)
+		details[i].Gambar = gambar
+	}
 
 	return details, err
 }
@@ -148,4 +162,14 @@ func (r *historyRepositoryImpl) getMateriBreakdown(token string) ([]entity.Mater
 	`, token).Scan(&breakdowns).Error
 
 	return breakdowns, err
+}
+
+// Get session nama peserta by token
+func (r *historyRepositoryImpl) GetSessionNameByToken(sessionToken string) (string, error) {
+	var session entity.TestSession
+	err := r.db.Where("session_token = ?", sessionToken).First(&session).Error
+	if err != nil {
+		return "", err
+	}
+	return session.NamaPeserta, nil
 }
