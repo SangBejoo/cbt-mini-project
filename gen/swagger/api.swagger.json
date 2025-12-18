@@ -755,6 +755,44 @@
         ]
       }
     },
+    "/v1/sessions/{sessionToken}/clear-answer": {
+      "post": {
+        "operationId": "TestSessionService_ClearAnswer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseClearAnswerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionToken",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TestSessionServiceClearAnswerBody"
+            }
+          }
+        ],
+        "tags": [
+          "TestSessionService"
+        ]
+      }
+    },
     "/v1/sessions/{sessionToken}/complete": {
       "post": {
         "operationId": "TestSessionService_CompleteSession",
@@ -1286,6 +1324,15 @@
         }
       }
     },
+    "TestSessionServiceClearAnswerBody": {
+      "type": "object",
+      "properties": {
+        "nomorUrut": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
     "TestSessionServiceCompleteSessionBody": {
       "type": "object"
     },
@@ -1306,6 +1353,22 @@
       "properties": {
         "nama": {
           "type": "string"
+        }
+      }
+    },
+    "baseClearAnswerResponse": {
+      "type": "object",
+      "properties": {
+        "sessionToken": {
+          "type": "string"
+        },
+        "nomorUrut": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "dibatalkanPada": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },

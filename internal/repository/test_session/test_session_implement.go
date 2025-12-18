@@ -147,6 +147,20 @@ func (r *testSessionRepositoryImpl) SubmitAnswer(token string, nomorUrut int, ja
 	return err
 }
 
+// Clear answer
+func (r *testSessionRepositoryImpl) ClearAnswer(token string, nomorUrut int) error {
+	// Find the TestSessionSoal
+	var tss entity.TestSessionSoal
+	err := r.db.Joins("JOIN test_session ON test_session_soal.id_test_session = test_session.id").
+		Where("test_session.session_token = ? AND test_session_soal.nomor_urut = ?", token, nomorUrut).First(&tss).Error
+	if err != nil {
+		return err
+	}
+
+	// Delete the answer if exists
+	return r.db.Where("id_test_session_soal = ?", tss.ID).Delete(&entity.JawabanSiswa{}).Error
+}
+
 // Get answers for session
 func (r *testSessionRepositoryImpl) GetSessionAnswers(token string) ([]entity.JawabanSiswa, error) {
 	var answers []entity.JawabanSiswa
@@ -169,13 +183,19 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 		return err
 	}
 
+	if len(soalIDs) == 0 {
+		return errors.New("tidak ada soal yang tersedia untuk mata pelajaran ini")
+	}
+
+	// Ambil jumlah soal yang tersedia atau yang diminta (mana yang lebih kecil)
+	actualJumlahSoal := jumlahSoal
 	if len(soalIDs) < jumlahSoal {
-		return errors.New("not enough questions available")
+		actualJumlahSoal = len(soalIDs)
 	}
 
 	// Shuffle and select
 	rand.Shuffle(len(soalIDs), func(i, j int) { soalIDs[i], soalIDs[j] = soalIDs[j], soalIDs[i] })
-	selectedIDs := soalIDs[:jumlahSoal]
+	selectedIDs := soalIDs[:actualJumlahSoal]
 
 	// Create TestSessionSoal entries
 	for i, soalID := range selectedIDs {

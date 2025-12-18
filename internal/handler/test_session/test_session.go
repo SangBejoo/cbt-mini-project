@@ -130,6 +130,20 @@ func (h *testSessionHandler) SubmitAnswer(ctx context.Context, req *base.SubmitA
 	}, nil
 }
 
+// ClearAnswer clears an answer
+func (h *testSessionHandler) ClearAnswer(ctx context.Context, req *base.ClearAnswerRequest) (*base.ClearAnswerResponse, error) {
+	err := h.usecase.ClearAnswer(req.SessionToken, int(req.NomorUrut))
+	if err != nil {
+		return nil, err
+	}
+
+	return &base.ClearAnswerResponse{
+		SessionToken:   req.SessionToken,
+		NomorUrut:      req.NomorUrut,
+		DibatalkanPada: timestamppb.Now(),
+	}, nil
+}
+
 // CompleteSession completes the session
 func (h *testSessionHandler) CompleteSession(ctx context.Context, req *base.CompleteSessionRequest) (*base.TestSessionResponse, error) {
 	session, err := h.usecase.CompleteSession(req.SessionToken)

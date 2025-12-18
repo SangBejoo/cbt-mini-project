@@ -40,6 +40,9 @@ type TestSessionRepository interface {
 	// Submit answer
 	SubmitAnswer(token string, nomorUrut int, jawaban entity.JawabanOption) error
 
+	// Clear answer
+	ClearAnswer(token string, nomorUrut int) error
+
 	// Get answers for session
 	GetSessionAnswers(token string) ([]entity.JawabanSiswa, error)
 }

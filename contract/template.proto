@@ -96,6 +96,7 @@ service TestSessionService {
     // Test execution (NEW - critical!)
     rpc GetTestQuestions(GetTestQuestionsRequest) returns (TestQuestionsResponse) {};
     rpc SubmitAnswer(SubmitAnswerRequest) returns (SubmitAnswerResponse) {};
+    rpc ClearAnswer(ClearAnswerRequest) returns (ClearAnswerResponse) {};
     rpc CompleteSession(CompleteSessionRequest) returns (TestSessionResponse) {};
 
     // Results & review
@@ -444,6 +445,17 @@ message SubmitAnswerResponse {
     JawabanOption jawaban_dipilih = 3;
     bool is_correct = 4;  // Immediate feedback
     google.protobuf.Timestamp dijawab_pada = 5;
+}
+
+message ClearAnswerRequest {
+    string session_token = 1;
+    int32 nomor_urut = 2;
+}
+
+message ClearAnswerResponse {
+    string session_token = 1;
+    int32 nomor_urut = 2;
+    google.protobuf.Timestamp dibatalkan_pada = 3;
 }
 
 message CompleteSessionRequest {

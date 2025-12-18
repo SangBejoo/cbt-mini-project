@@ -183,6 +183,16 @@ func (u *testSessionUsecaseImpl) SubmitAnswer(sessionToken string, nomorUrut int
 	return u.repo.SubmitAnswer(sessionToken, nomorUrut, jawaban)
 }
 
+// ClearAnswer clears an answer
+func (u *testSessionUsecaseImpl) ClearAnswer(sessionToken string, nomorUrut int) error {
+	_, err := u.GetTestSession(sessionToken)
+	if err != nil {
+		return err
+	}
+
+	return u.repo.ClearAnswer(sessionToken, nomorUrut)
+}
+
 // CompleteSession completes the session and calculates score
 func (u *testSessionUsecaseImpl) CompleteSession(sessionToken string) (*entity.TestSession, error) {
 	session, err := u.repo.GetByToken(sessionToken)

@@ -125,6 +125,11 @@ http:
       post: /v1/sessions/{session_token}/answers
       body: "*"
 
+    # 4.5. Clear Answer (Batalkan Jawaban)
+    - selector: base.TestSessionService.ClearAnswer
+      post: /v1/sessions/{session_token}/clear-answer
+      body: "*"
+
     # 5. Finish Exam
     - selector: base.TestSessionService.CompleteSession
       post: /v1/sessions/{session_token}/complete

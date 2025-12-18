@@ -1256,6 +1256,7 @@ const (
 	TestSessionService_GetTestSession_FullMethodName    = "/base.TestSessionService/GetTestSession"
 	TestSessionService_GetTestQuestions_FullMethodName  = "/base.TestSessionService/GetTestQuestions"
 	TestSessionService_SubmitAnswer_FullMethodName      = "/base.TestSessionService/SubmitAnswer"
+	TestSessionService_ClearAnswer_FullMethodName       = "/base.TestSessionService/ClearAnswer"
 	TestSessionService_CompleteSession_FullMethodName   = "/base.TestSessionService/CompleteSession"
 	TestSessionService_GetTestResult_FullMethodName     = "/base.TestSessionService/GetTestResult"
 	TestSessionService_ListTestSessions_FullMethodName  = "/base.TestSessionService/ListTestSessions"
@@ -1271,6 +1272,7 @@ type TestSessionServiceClient interface {
 	// Test execution (NEW - critical!)
 	GetTestQuestions(ctx context.Context, in *GetTestQuestionsRequest, opts ...grpc.CallOption) (*TestQuestionsResponse, error)
 	SubmitAnswer(ctx context.Context, in *SubmitAnswerRequest, opts ...grpc.CallOption) (*SubmitAnswerResponse, error)
+	ClearAnswer(ctx context.Context, in *ClearAnswerRequest, opts ...grpc.CallOption) (*ClearAnswerResponse, error)
 	CompleteSession(ctx context.Context, in *CompleteSessionRequest, opts ...grpc.CallOption) (*TestSessionResponse, error)
 	// Results & review
 	GetTestResult(ctx context.Context, in *GetTestResultRequest, opts ...grpc.CallOption) (*TestResultResponse, error)
@@ -1326,6 +1328,16 @@ func (c *testSessionServiceClient) SubmitAnswer(ctx context.Context, in *SubmitA
 	return out, nil
 }
 
+func (c *testSessionServiceClient) ClearAnswer(ctx context.Context, in *ClearAnswerRequest, opts ...grpc.CallOption) (*ClearAnswerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ClearAnswerResponse)
+	err := c.cc.Invoke(ctx, TestSessionService_ClearAnswer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *testSessionServiceClient) CompleteSession(ctx context.Context, in *CompleteSessionRequest, opts ...grpc.CallOption) (*TestSessionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(TestSessionResponse)
@@ -1366,6 +1378,7 @@ type TestSessionServiceServer interface {
 	// Test execution (NEW - critical!)
 	GetTestQuestions(context.Context, *GetTestQuestionsRequest) (*TestQuestionsResponse, error)
 	SubmitAnswer(context.Context, *SubmitAnswerRequest) (*SubmitAnswerResponse, error)
+	ClearAnswer(context.Context, *ClearAnswerRequest) (*ClearAnswerResponse, error)
 	CompleteSession(context.Context, *CompleteSessionRequest) (*TestSessionResponse, error)
 	// Results & review
 	GetTestResult(context.Context, *GetTestResultRequest) (*TestResultResponse, error)
@@ -1392,6 +1405,9 @@ func (UnimplementedTestSessionServiceServer) GetTestQuestions(context.Context, *
 }
 func (UnimplementedTestSessionServiceServer) SubmitAnswer(context.Context, *SubmitAnswerRequest) (*SubmitAnswerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitAnswer not implemented")
+}
+func (UnimplementedTestSessionServiceServer) ClearAnswer(context.Context, *ClearAnswerRequest) (*ClearAnswerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClearAnswer not implemented")
 }
 func (UnimplementedTestSessionServiceServer) CompleteSession(context.Context, *CompleteSessionRequest) (*TestSessionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CompleteSession not implemented")
@@ -1495,6 +1511,24 @@ func _TestSessionService_SubmitAnswer_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestSessionService_ClearAnswer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClearAnswerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestSessionServiceServer).ClearAnswer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TestSessionService_ClearAnswer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestSessionServiceServer).ClearAnswer(ctx, req.(*ClearAnswerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TestSessionService_CompleteSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CompleteSessionRequest)
 	if err := dec(in); err != nil {
@@ -1571,6 +1605,10 @@ var TestSessionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SubmitAnswer",
 			Handler:    _TestSessionService_SubmitAnswer_Handler,
+		},
+		{
+			MethodName: "ClearAnswer",
+			Handler:    _TestSessionService_ClearAnswer_Handler,
 		},
 		{
 			MethodName: "CompleteSession",
