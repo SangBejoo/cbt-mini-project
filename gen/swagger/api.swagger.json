@@ -450,6 +450,113 @@
         ]
       }
     },
+    "/v1/questions/images/{idGambar}": {
+      "delete": {
+        "operationId": "SoalService_DeleteImageFromSoal",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseMessageStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "idGambar",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "SoalService"
+        ]
+      },
+      "put": {
+        "operationId": "SoalService_UpdateImageInSoal",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseMessageStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "idGambar",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SoalServiceUpdateImageInSoalBody"
+            }
+          }
+        ],
+        "tags": [
+          "SoalService"
+        ]
+      }
+    },
+    "/v1/questions/{idSoal}/images": {
+      "post": {
+        "operationId": "SoalService_UploadImageToSoal",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseUploadImageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "idSoal",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SoalServiceUploadImageToSoalBody"
+            }
+          }
+        ],
+        "tags": [
+          "SoalService"
+        ]
+      }
+    },
     "/v1/questions/{id}": {
       "get": {
         "operationId": "SoalService_GetSoal",
@@ -1110,6 +1217,18 @@
         }
       }
     },
+    "SoalServiceUpdateImageInSoalBody": {
+      "type": "object",
+      "properties": {
+        "urutan": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "keterangan": {
+          "type": "string"
+        }
+      }
+    },
     "SoalServiceUpdateSoalBody": {
       "type": "object",
       "properties": {
@@ -1145,6 +1264,25 @@
             "type": "string",
             "format": "byte"
           }
+        }
+      }
+    },
+    "SoalServiceUploadImageToSoalBody": {
+      "type": "object",
+      "properties": {
+        "imageBytes": {
+          "type": "string",
+          "format": "byte"
+        },
+        "namaFile": {
+          "type": "string"
+        },
+        "urutan": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "keterangan": {
+          "type": "string"
         }
       }
     },
@@ -1652,7 +1790,17 @@
           "type": "integer",
           "format": "int32"
         },
+        "namaFile": {
+          "type": "string"
+        },
         "filePath": {
+          "type": "string"
+        },
+        "fileSize": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "mimeType": {
           "type": "string"
         },
         "urutan": {
@@ -1661,6 +1809,10 @@
         },
         "keterangan": {
           "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
         }
       },
       "title": "Image metadata for soal"
@@ -1877,6 +2029,14 @@
       "properties": {
         "tingkat": {
           "$ref": "#/definitions/baseTingkat"
+        }
+      }
+    },
+    "baseUploadImageResponse": {
+      "type": "object",
+      "properties": {
+        "gambar": {
+          "$ref": "#/definitions/baseSoalGambar"
         }
       }
     },

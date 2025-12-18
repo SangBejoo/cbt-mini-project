@@ -38,7 +38,16 @@ interface Question {
       nama: string;
     };
   };
-  image_path?: string;
+  gambar?: Array<{
+    id: number;
+    nama_file: string;
+    file_path: string;
+    file_size: number;
+    mime_type: string;
+    urutan: number;
+    keterangan?: string;
+    created_at: string;
+  }>;
 }
 
 interface TestSessionData {
@@ -179,14 +188,25 @@ export default function TestPage() {
                     {question.pertanyaan}
                   </Text>
 
-                  {question.image_path && (
-                    <Box>
-                      <img
-                        src={`http://localhost:8080/${question.image_path}`}
-                        alt="Question"
-                        style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain' }}
-                      />
-                    </Box>
+                  {question.gambar && question.gambar.length > 0 && (
+                    <VStack spacing={2} align="stretch">
+                      {question.gambar
+                        .sort((a, b) => a.urutan - b.urutan)
+                        .map((img) => (
+                          <Box key={img.id}>
+                            <img
+                              src={`http://localhost:8080/${img.file_path}`}
+                              alt={img.keterangan || 'Question image'}
+                              style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain' }}
+                            />
+                            {img.keterangan && (
+                              <Text fontSize="sm" color="gray.600" mt={1}>
+                                {img.keterangan}
+                              </Text>
+                            )}
+                          </Box>
+                        ))}
+                    </VStack>
                   )}
 
                   <RadioGroup

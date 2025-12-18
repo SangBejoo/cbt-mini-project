@@ -89,6 +89,17 @@ http:
     - selector: base.SoalService.DeleteSoal
       delete: /v1/questions/{id}
 
+    - selector: base.SoalService.UploadImageToSoal
+      post: /v1/questions/{id_soal}/images
+      body: "*"
+
+    - selector: base.SoalService.DeleteImageFromSoal
+      delete: /v1/questions/images/{id_gambar}
+
+    - selector: base.SoalService.UpdateImageInSoal
+      put: /v1/questions/images/{id_gambar}
+      body: "*"
+
     # ==================================================
     # TEST SESSION SERVICE (Student Flow - The Core)
     # ==================================================

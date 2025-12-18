@@ -24,7 +24,7 @@ func (r *soalRepositoryImpl) Create(soal *entity.Soal) error {
 // Get soal by ID
 func (r *soalRepositoryImpl) GetByID(id int) (*entity.Soal, error) {
 	var soal entity.Soal
-	err := r.db.Preload("Materi").Preload("Materi.MataPelajaran").Preload("Materi.Tingkat").Preload("Gambar").First(&soal, id).Error
+	err := r.db.Preload("Materi").Preload("Materi.MataPelajaran").Preload("Materi.Tingkat").Preload("Gambar", func(db *gorm.DB) *gorm.DB { return db.Order("urutan ASC") }).First(&soal, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (r *soalRepositoryImpl) List(idMateri, tingkatan, idMataPelajaran *int, lim
 	var soals []entity.Soal
 	var total int64
 
-	query := r.db.Model(&entity.Soal{}).Preload("Materi").Preload("Materi.MataPelajaran").Preload("Materi.Tingkat").Preload("Gambar")
+	query := r.db.Model(&entity.Soal{}).Preload("Materi").Preload("Materi.MataPelajaran").Preload("Materi.Tingkat").Preload("Gambar", func(db *gorm.DB) *gorm.DB { return db.Order("urutan ASC") })
 
 	if idMateri != nil {
 		query = query.Where("id_materi = ?", *idMateri)
@@ -76,6 +76,34 @@ func (r *soalRepositoryImpl) List(idMateri, tingkatan, idMataPelajaran *int, lim
 // Get soal by materi ID
 func (r *soalRepositoryImpl) GetByMateriID(idMateri int) ([]entity.Soal, error) {
 	var soals []entity.Soal
-	err := r.db.Preload("Materi").Preload("Materi.MataPelajaran").Preload("Materi.Tingkat").Preload("Gambar").Where("id_materi = ?", idMateri).Find(&soals).Error
+	err := r.db.Preload("Materi").Preload("Materi.MataPelajaran").Preload("Materi.Tingkat").Preload("Gambar", func(db *gorm.DB) *gorm.DB { return db.Order("urutan ASC") }).Where("id_materi = ?", idMateri).Find(&soals).Error
 	return soals, err
+}
+
+// CreateGambar creates a new soal gambar
+func (r *soalRepositoryImpl) CreateGambar(gambar *entity.SoalGambar) error {
+	return r.db.Create(gambar).Error
+}
+
+// GetGambarByID gets gambar by ID
+func (r *soalRepositoryImpl) GetGambarByID(id int) (*entity.SoalGambar, error) {
+	var gambar entity.SoalGambar
+	err := r.db.First(&gambar, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &gambar, nil
+}
+
+// UpdateGambar updates gambar urutan and keterangan
+func (r *soalRepositoryImpl) UpdateGambar(id int, urutan int, keterangan *string) error {
+	return r.db.Model(&entity.SoalGambar{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"urutan":     urutan,
+		"keterangan": keterangan,
+	}).Error
+}
+
+// DeleteGambar deletes gambar by ID
+func (r *soalRepositoryImpl) DeleteGambar(id int) error {
+	return r.db.Delete(&entity.SoalGambar{}, id).Error
 }

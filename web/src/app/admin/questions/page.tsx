@@ -53,9 +53,13 @@ interface Question {
   jawabanBenar: string;
   gambar?: Array<{
     id: number;
+    nama_file: string;
     file_path: string;
+    file_size: number;
+    mime_type: string;
     urutan: number;
     keterangan?: string;
+    created_at: string;
   }>;
 }
 
@@ -90,9 +94,13 @@ export default function QuestionsPage() {
     images: [] as File[],
     existingImages: [] as Array<{
       id: number;
+      nama_file: string;
       file_path: string;
+      file_size: number;
+      mime_type: string;
       urutan: number;
       keterangan?: string;
+      created_at: string;
     }>,
   });
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -147,6 +155,45 @@ export default function QuestionsPage() {
       toast({ title: 'Error fetching levels', status: 'error' });
       setLevels([]);
     }
+  };
+
+  const uploadImageToQuestion = async (questionId: number, file: File, urutan: number, keterangan?: string) => {
+    const formDataUpload = new FormData();
+    formDataUpload.append('image_bytes', file);
+    formDataUpload.append('nama_file', file.name);
+    formDataUpload.append('urutan', urutan.toString());
+    if (keterangan) formDataUpload.append('keterangan', keterangan);
+
+    try {
+      const response = await axios.post(`http://localhost:8080/v1/questions/${questionId}/images`, formDataUpload, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      toast({ title: 'Image uploaded', status: 'success' });
+      return response.data.gambar;
+    } catch (error) {
+      toast({ title: 'Error uploading image', status: 'error' });
+      throw error;
+    }
+  };
+
+  const deleteImageFromQuestion = async (imageId: number) => {
+    try {
+      await axios.delete(`http://localhost:8080/v1/questions/images/${imageId}`);
+      toast({ title: 'Image deleted', status: 'success' });
+    } catch (error) {
+      toast({ title: 'Error deleting image', status: 'error' });
+      throw error;
+    }
+  };
+
+  const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
   };
 
   const handleCreate = () => {
@@ -208,8 +255,8 @@ export default function QuestionsPage() {
     if (formData.images.length > 0) {
       const imageBytesArray = await Promise.all(
         formData.images.map(async (file) => {
-          const imageBytes = await file.arrayBuffer();
-          return btoa(String.fromCharCode(...new Uint8Array(imageBytes)));
+          const buffer = await file.arrayBuffer();
+          return arrayBufferToBase64(buffer);
         })
       );
       data.image_bytes = imageBytesArray;
@@ -250,12 +297,63 @@ export default function QuestionsPage() {
     }));
   };
 
-  const handleRemoveExistingImage = (imageId: number) => {
-    setFormData(prev => ({
-      ...prev,
-      existingImages: prev.existingImages.filter(img => img.id !== imageId)
-    }));
+  const handleRemoveExistingImage = async (imageId: number) => {
+    try {
+      await deleteImageFromQuestion(imageId);
+      setFormData(prev => ({
+        ...prev,
+        existingImages: prev.existingImages.filter(img => img.id !== imageId)
+      }));
+      // Also update the questions list
+      setQuestions(prev => prev.map(q => 
+        q.id === editingQuestion?.id 
+          ? { ...q, gambar: q.gambar?.filter(img => img.id !== imageId) }
+          : q
+      ));
+    } catch (error) {
+      // Error already shown in toast
+    }
   };
+
+  const handleUploadImage = async (file: File | null) => {
+    if (!file || !editingQuestion) return;
+    try {
+      const nextUrutan = (formData.existingImages.length > 0 ? Math.max(...formData.existingImages.map(img => img.urutan)) : 0) + 1;
+      const uploadedImage = await uploadImageToQuestion(editingQuestion.id, file, nextUrutan);
+      setFormData(prev => ({
+        ...prev,
+        existingImages: [...prev.existingImages, uploadedImage]
+      }));
+      // Update questions list
+      setQuestions(prev => prev.map(q => 
+        q.id === editingQuestion.id 
+          ? { ...q, gambar: [...(q.gambar || []), uploadedImage] }
+          : q
+      ));
+    } catch (error) {
+      // Error already shown
+    }
+  };
+
+  // Image viewer state and helpers
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [viewerImages, setViewerImages] = useState<string[]>([]);
+
+  const openImageViewer = (images: any[], index: number) => {
+    const urls = images.map((img) => {
+      const path = img.file_path || img.filePath || '';
+      return `http://localhost:8080/${path.replace(/\\/g, '/')}`;
+    });
+    setViewerImages(urls);
+    setViewerIndex(index);
+    setViewerOpen(true);
+  };
+
+  const closeImageViewer = () => setViewerOpen(false);
+
+  const prevImage = () => setViewerIndex((i) => (i - 1 + viewerImages.length) % viewerImages.length);
+  const nextImage = () => setViewerIndex((i) => (i + 1) % viewerImages.length);
 
   const groupedQuestions = questions.reduce((acc, q) => {
     const key = `${q.materi.id}-${q.materi.tingkat.id}`;
@@ -308,26 +406,30 @@ export default function QuestionsPage() {
                     <Td>
                       {question.gambar && question.gambar.length > 0 ? (
                         <HStack spacing={2}>
-                          {question.gambar.map((img, index) => (
-                            <Box key={img.id} position="relative">
-                              <Image
-                                src={`http://localhost:8080/${img.file_path}`}
-                                alt={`Question ${index + 1}`}
-                                boxSize="50px"
-                                objectFit="cover"
-                                borderRadius="md"
-                              />
-                              <Badge
-                                position="absolute"
-                                top="-2"
-                                right="-2"
-                                colorScheme="blue"
-                                fontSize="xs"
-                              >
-                                {img.urutan}
-                              </Badge>
-                            </Box>
-                          ))}
+                          {question.gambar.map((img, index) => {
+                            const path = (img as any).file_path || (img as any).filePath || '';
+                            const src = `http://localhost:8080/${path.replace(/\\/g, '/')}`;
+                            return (
+                              <Box key={img.id} position="relative" cursor="pointer" onClick={() => openImageViewer(question.gambar, index)}>
+                                <Image
+                                  src={src}
+                                  alt={`Question ${index + 1}`}
+                                  boxSize="50px"
+                                  objectFit="cover"
+                                  borderRadius="md"
+                                />
+                                <Badge
+                                  position="absolute"
+                                  top="-2"
+                                  right="-2"
+                                  colorScheme="blue"
+                                  fontSize="xs"
+                                >
+                                  {img.urutan}
+                                </Badge>
+                              </Box>
+                            )
+                          })}
                         </HStack>
                       ) : (
                         <Text color="gray.500">No images</Text>
@@ -478,6 +580,20 @@ export default function QuestionsPage() {
                 </FormControl>
               )}
 
+              {editingQuestion && (
+                <FormControl>
+                  <FormLabel>Upload Additional Image</FormLabel>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleUploadImage(e.target.files?.[0] || null)}
+                  />
+                  <Text fontSize="sm" color="gray.600" mt={1}>
+                    Upload a new image to this question
+                  </Text>
+                </FormControl>
+              )}
+
               {/* Display new images to be added */}
               {formData.images.length > 0 && (
                 <FormControl>
@@ -491,6 +607,7 @@ export default function QuestionsPage() {
                           boxSize="80px"
                           objectFit="cover"
                           borderRadius="md"
+                          onClick={() => openImageViewer(formData.images.map(f => ({ filePath: URL.createObjectURL(f) })), index)}
                         />
                         <Badge position="absolute" top="1" right="1" colorScheme="green" fontSize="xs">
                           New
@@ -519,6 +636,25 @@ export default function QuestionsPage() {
             <Button variant="ghost" onClick={onClose}>
               Cancel
             </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Image Viewer Modal */}
+      <Modal isOpen={viewerOpen} onClose={closeImageViewer} size="xl" isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Image Viewer</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody display="flex" alignItems="center" justifyContent="center">
+            {viewerImages.length > 0 && (
+              <Image src={viewerImages[viewerIndex]} alt={`Image ${viewerIndex + 1}`} maxH="70vh" />
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button mr={3} onClick={prevImage} disabled={viewerImages.length <= 1}>Prev</Button>
+            <Button mr={3} onClick={nextImage} disabled={viewerImages.length <= 1}>Next</Button>
+            <Button variant="ghost" onClick={closeImageViewer}>Close</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

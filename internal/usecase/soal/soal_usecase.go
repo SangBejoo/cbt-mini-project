@@ -5,8 +5,10 @@ import (
 	"cbt-test-mini-project/internal/repository/test_soal"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -38,7 +40,21 @@ func (u *soalUsecaseImpl) saveImages(imageFilesBytes [][]byte) ([]entity.SoalGam
 			continue
 		}
 
-		filename := fmt.Sprintf("%d_%d_%d.jpg", time.Now().Unix(), time.Now().Nanosecond(), i)
+		// Validate image type
+		mimeType := http.DetectContentType(imageBytes)
+		if mimeType != "image/jpeg" && mimeType != "image/png" {
+			return nil, fmt.Errorf("invalid image type: %s, only JPG and PNG are allowed", mimeType)
+		}
+
+		// Determine extension
+		var ext string
+		if mimeType == "image/jpeg" {
+			ext = ".jpg"
+		} else {
+			ext = ".png"
+		}
+
+		filename := fmt.Sprintf("%d_%d_%d%s", time.Now().Unix(), time.Now().Nanosecond(), i, ext)
 		filePath := filepath.Join(dir, filename)
 
 		if err := os.WriteFile(filePath, imageBytes, 0644); err != nil {
@@ -50,7 +66,7 @@ func (u *soalUsecaseImpl) saveImages(imageFilesBytes [][]byte) ([]entity.SoalGam
 			NamaFile: filename,
 			FilePath: filePath,
 			FileSize: len(imageBytes),
-			MimeType: "image/jpeg",
+			MimeType: mimeType,
 			Urutan:   urutan,
 		})
 	}
@@ -175,4 +191,86 @@ func (u *soalUsecaseImpl) ListSoal(idMateri, tingkatan, idMataPelajaran int, pag
 	}
 
 	return soals, pagination, nil
+}
+
+// UploadImageToSoal uploads an image to a soal
+func (u *soalUsecaseImpl) UploadImageToSoal(idSoal int, imageBytes []byte, namaFile string, urutan int, keterangan *string) (*entity.SoalGambar, error) {
+	if len(imageBytes) == 0 {
+		return nil, errors.New("image bytes cannot be empty")
+	}
+
+	// Validate image type
+	mimeType := http.DetectContentType(imageBytes)
+	if mimeType != "image/jpeg" && mimeType != "image/png" {
+		return nil, fmt.Errorf("invalid image type: %s, only JPG and PNG are allowed", mimeType)
+	}
+
+	dir := "uploads/images"
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return nil, err
+	}
+
+	// Determine extension
+	var ext string
+	if mimeType == "image/jpeg" {
+		ext = ".jpg"
+	} else {
+		ext = ".png"
+	}
+
+	// Generate filename if not provided or ensure it has correct extension
+	if namaFile == "" {
+		namaFile = fmt.Sprintf("%d_%d%s", time.Now().Unix(), time.Now().Nanosecond(), ext)
+	} else {
+		// Ensure extension matches
+		if !strings.HasSuffix(strings.ToLower(namaFile), ext) {
+			namaFile = strings.TrimSuffix(namaFile, filepath.Ext(namaFile)) + ext
+		}
+	}
+
+	filePath := filepath.Join(dir, namaFile)
+
+	if err := os.WriteFile(filePath, imageBytes, 0644); err != nil {
+		return nil, err
+	}
+
+	gambar := &entity.SoalGambar{
+		IDSoal:     idSoal,
+		NamaFile:   namaFile,
+		FilePath:   filePath,
+		FileSize:   len(imageBytes),
+		MimeType:   mimeType,
+		Urutan:     urutan,
+		Keterangan: keterangan,
+	}
+
+	err := u.repo.CreateGambar(gambar)
+	if err != nil {
+		// Clean up file if DB insert fails
+		os.Remove(filePath)
+		return nil, err
+	}
+
+	return gambar, nil
+}
+
+// DeleteImageFromSoal deletes an image from a soal
+func (u *soalUsecaseImpl) DeleteImageFromSoal(idGambar int) error {
+	gambar, err := u.repo.GetGambarByID(idGambar)
+	if err != nil {
+		return err
+	}
+
+	// Delete file
+	if err := os.Remove(gambar.FilePath); err != nil {
+		// Log error but continue to delete DB record
+		fmt.Printf("Warning: failed to delete file %s: %v\n", gambar.FilePath, err)
+	}
+
+	return u.repo.DeleteGambar(idGambar)
+}
+
+// UpdateImageInSoal updates an image in a soal
+func (u *soalUsecaseImpl) UpdateImageInSoal(idGambar int, urutan int, keterangan *string) error {
+	return u.repo.UpdateGambar(idGambar, urutan, keterangan)
 }

@@ -23,4 +23,10 @@ type SoalRepository interface {
 
 	// Get soal by materi ID
 	GetByMateriID(idMateri int) ([]entity.Soal, error)
+
+	// Image operations
+	CreateGambar(gambar *entity.SoalGambar) error
+	GetGambarByID(id int) (*entity.SoalGambar, error)
+	UpdateGambar(id int, urutan int, keterangan *string) error
+	DeleteGambar(id int) error
 }

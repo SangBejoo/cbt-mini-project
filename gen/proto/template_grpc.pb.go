@@ -884,11 +884,14 @@ var TingkatService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	SoalService_CreateSoal_FullMethodName = "/base.SoalService/CreateSoal"
-	SoalService_GetSoal_FullMethodName    = "/base.SoalService/GetSoal"
-	SoalService_UpdateSoal_FullMethodName = "/base.SoalService/UpdateSoal"
-	SoalService_DeleteSoal_FullMethodName = "/base.SoalService/DeleteSoal"
-	SoalService_ListSoal_FullMethodName   = "/base.SoalService/ListSoal"
+	SoalService_CreateSoal_FullMethodName          = "/base.SoalService/CreateSoal"
+	SoalService_GetSoal_FullMethodName             = "/base.SoalService/GetSoal"
+	SoalService_UpdateSoal_FullMethodName          = "/base.SoalService/UpdateSoal"
+	SoalService_DeleteSoal_FullMethodName          = "/base.SoalService/DeleteSoal"
+	SoalService_ListSoal_FullMethodName            = "/base.SoalService/ListSoal"
+	SoalService_UploadImageToSoal_FullMethodName   = "/base.SoalService/UploadImageToSoal"
+	SoalService_DeleteImageFromSoal_FullMethodName = "/base.SoalService/DeleteImageFromSoal"
+	SoalService_UpdateImageInSoal_FullMethodName   = "/base.SoalService/UpdateImageInSoal"
 )
 
 // SoalServiceClient is the client API for SoalService service.
@@ -900,6 +903,9 @@ type SoalServiceClient interface {
 	UpdateSoal(ctx context.Context, in *UpdateSoalRequest, opts ...grpc.CallOption) (*SoalResponse, error)
 	DeleteSoal(ctx context.Context, in *DeleteSoalRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error)
 	ListSoal(ctx context.Context, in *ListSoalRequest, opts ...grpc.CallOption) (*ListSoalResponse, error)
+	UploadImageToSoal(ctx context.Context, in *UploadImageToSoalRequest, opts ...grpc.CallOption) (*UploadImageResponse, error)
+	DeleteImageFromSoal(ctx context.Context, in *DeleteImageFromSoalRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error)
+	UpdateImageInSoal(ctx context.Context, in *UpdateImageInSoalRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error)
 }
 
 type soalServiceClient struct {
@@ -960,6 +966,36 @@ func (c *soalServiceClient) ListSoal(ctx context.Context, in *ListSoalRequest, o
 	return out, nil
 }
 
+func (c *soalServiceClient) UploadImageToSoal(ctx context.Context, in *UploadImageToSoalRequest, opts ...grpc.CallOption) (*UploadImageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UploadImageResponse)
+	err := c.cc.Invoke(ctx, SoalService_UploadImageToSoal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *soalServiceClient) DeleteImageFromSoal(ctx context.Context, in *DeleteImageFromSoalRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MessageStatusResponse)
+	err := c.cc.Invoke(ctx, SoalService_DeleteImageFromSoal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *soalServiceClient) UpdateImageInSoal(ctx context.Context, in *UpdateImageInSoalRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MessageStatusResponse)
+	err := c.cc.Invoke(ctx, SoalService_UpdateImageInSoal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SoalServiceServer is the server API for SoalService service.
 // All implementations must embed UnimplementedSoalServiceServer
 // for forward compatibility.
@@ -969,6 +1005,9 @@ type SoalServiceServer interface {
 	UpdateSoal(context.Context, *UpdateSoalRequest) (*SoalResponse, error)
 	DeleteSoal(context.Context, *DeleteSoalRequest) (*MessageStatusResponse, error)
 	ListSoal(context.Context, *ListSoalRequest) (*ListSoalResponse, error)
+	UploadImageToSoal(context.Context, *UploadImageToSoalRequest) (*UploadImageResponse, error)
+	DeleteImageFromSoal(context.Context, *DeleteImageFromSoalRequest) (*MessageStatusResponse, error)
+	UpdateImageInSoal(context.Context, *UpdateImageInSoalRequest) (*MessageStatusResponse, error)
 	mustEmbedUnimplementedSoalServiceServer()
 }
 
@@ -993,6 +1032,15 @@ func (UnimplementedSoalServiceServer) DeleteSoal(context.Context, *DeleteSoalReq
 }
 func (UnimplementedSoalServiceServer) ListSoal(context.Context, *ListSoalRequest) (*ListSoalResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListSoal not implemented")
+}
+func (UnimplementedSoalServiceServer) UploadImageToSoal(context.Context, *UploadImageToSoalRequest) (*UploadImageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UploadImageToSoal not implemented")
+}
+func (UnimplementedSoalServiceServer) DeleteImageFromSoal(context.Context, *DeleteImageFromSoalRequest) (*MessageStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteImageFromSoal not implemented")
+}
+func (UnimplementedSoalServiceServer) UpdateImageInSoal(context.Context, *UpdateImageInSoalRequest) (*MessageStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateImageInSoal not implemented")
 }
 func (UnimplementedSoalServiceServer) mustEmbedUnimplementedSoalServiceServer() {}
 func (UnimplementedSoalServiceServer) testEmbeddedByValue()                     {}
@@ -1105,6 +1153,60 @@ func _SoalService_ListSoal_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SoalService_UploadImageToSoal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UploadImageToSoalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SoalServiceServer).UploadImageToSoal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SoalService_UploadImageToSoal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SoalServiceServer).UploadImageToSoal(ctx, req.(*UploadImageToSoalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SoalService_DeleteImageFromSoal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteImageFromSoalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SoalServiceServer).DeleteImageFromSoal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SoalService_DeleteImageFromSoal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SoalServiceServer).DeleteImageFromSoal(ctx, req.(*DeleteImageFromSoalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SoalService_UpdateImageInSoal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateImageInSoalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SoalServiceServer).UpdateImageInSoal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SoalService_UpdateImageInSoal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SoalServiceServer).UpdateImageInSoal(ctx, req.(*UpdateImageInSoalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SoalService_ServiceDesc is the grpc.ServiceDesc for SoalService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1131,6 +1233,18 @@ var SoalService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListSoal",
 			Handler:    _SoalService_ListSoal_Handler,
+		},
+		{
+			MethodName: "UploadImageToSoal",
+			Handler:    _SoalService_UploadImageToSoal_Handler,
+		},
+		{
+			MethodName: "DeleteImageFromSoal",
+			Handler:    _SoalService_DeleteImageFromSoal_Handler,
+		},
+		{
+			MethodName: "UpdateImageInSoal",
+			Handler:    _SoalService_UpdateImageInSoal_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

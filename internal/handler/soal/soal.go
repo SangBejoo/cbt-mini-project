@@ -5,6 +5,8 @@ import (
 	"cbt-test-mini-project/internal/entity"
 	"cbt-test-mini-project/internal/usecase/soal"
 	"context"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // soalHandler implements base.SoalServiceServer
@@ -87,6 +89,68 @@ func (h *soalHandler) GetSoal(ctx context.Context, req *base.GetSoalRequest) (*b
 			JawabanBenar:  base.JawabanOption(base.JawabanOption_value[string(s.JawabanBenar)]),
 			Gambar:        convertSoalGambarToProto(s.Gambar),
 		},
+	}, nil
+}
+
+// UploadImageToSoal uploads an image to a soal
+func (h *soalHandler) UploadImageToSoal(ctx context.Context, req *base.UploadImageToSoalRequest) (*base.UploadImageResponse, error) {
+	var keterangan *string
+	if req.Keterangan != "" {
+		keterangan = &req.Keterangan
+	}
+	
+	gambar, err := h.usecase.UploadImageToSoal(int(req.IdSoal), req.ImageBytes, req.NamaFile, int(req.Urutan), keterangan)
+	if err != nil {
+		return nil, err
+	}
+
+	keteranganStr := ""
+	if gambar.Keterangan != nil {
+		keteranganStr = *gambar.Keterangan
+	}
+
+	return &base.UploadImageResponse{
+		Gambar: &base.SoalGambar{
+			Id:         int32(gambar.ID),
+			NamaFile:   gambar.NamaFile,
+			FilePath:   gambar.FilePath,
+			FileSize:   int32(gambar.FileSize),
+			MimeType:   gambar.MimeType,
+			Urutan:     int32(gambar.Urutan),
+			Keterangan: keteranganStr,
+			CreatedAt:  timestamppb.New(gambar.CreatedAt),
+		},
+	}, nil
+}
+
+// DeleteImageFromSoal deletes an image from a soal
+func (h *soalHandler) DeleteImageFromSoal(ctx context.Context, req *base.DeleteImageFromSoalRequest) (*base.MessageStatusResponse, error) {
+	err := h.usecase.DeleteImageFromSoal(int(req.IdGambar))
+	if err != nil {
+		return nil, err
+	}
+
+	return &base.MessageStatusResponse{
+		Message: "Image deleted successfully",
+		Status:  "success",
+	}, nil
+}
+
+// UpdateImageInSoal updates an image in a soal
+func (h *soalHandler) UpdateImageInSoal(ctx context.Context, req *base.UpdateImageInSoalRequest) (*base.MessageStatusResponse, error) {
+	var keterangan *string
+	if req.Keterangan != "" {
+		keterangan = &req.Keterangan
+	}
+	
+	err := h.usecase.UpdateImageInSoal(int(req.IdGambar), int(req.Urutan), keterangan)
+	if err != nil {
+		return nil, err
+	}
+
+	return &base.MessageStatusResponse{
+		Message: "Image updated successfully",
+		Status:  "success",
 	}, nil
 }
 
@@ -184,6 +248,7 @@ func (h *soalHandler) ListSoal(ctx context.Context, req *base.ListSoalRequest) (
 			OpsiC:         s.OpsiC,
 			OpsiD:         s.OpsiD,
 			JawabanBenar:  base.JawabanOption(base.JawabanOption_value[string(s.JawabanBenar)]),
+			Gambar:         convertSoalGambarToProto(s.Gambar),
 		})
 	}
 
@@ -206,10 +271,20 @@ func convertSoalGambarToProto(gambar []entity.SoalGambar) []*base.SoalGambar {
 	
 	var protoGambar []*base.SoalGambar
 	for _, g := range gambar {
+		keteranganStr := ""
+		if g.Keterangan != nil {
+			keteranganStr = *g.Keterangan
+		}
+		
 		protoGambar = append(protoGambar, &base.SoalGambar{
-			Id:       int32(g.ID),
-			FilePath: g.FilePath,
-			Urutan:   int32(g.Urutan),
+			Id:        int32(g.ID),
+			NamaFile:  g.NamaFile,
+			FilePath:  g.FilePath,
+			FileSize:  int32(g.FileSize),
+			MimeType:  g.MimeType,
+			Urutan:    int32(g.Urutan),
+			Keterangan: keteranganStr,
+			CreatedAt: timestamppb.New(g.CreatedAt),
 		})
 	}
 	return protoGambar
