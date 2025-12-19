@@ -88,7 +88,7 @@ interface TestResultResponse {
   }>;
 }
 
-const API_BASE = 'http://localhost:8080/v1/sessions';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1/sessions';
 
 export default function ResultsPage() {
   const params = useParams();
@@ -135,7 +135,7 @@ export default function ResultsPage() {
 
   const fetchMateri = async (mataPelajaranId: number, tingkatId: number) => {
     try {
-      const response = await axios.get('http://localhost:8080/v1/topics');
+      const response = await axios.get(process.env.NEXT_PUBLIC_API_BASE + '/v1/topics');
       const materiList = response.data.materi || [];
       
       // Find materi that matches the session's mataPelajaran and tingkat
@@ -280,7 +280,7 @@ export default function ResultsPage() {
 
       // Send to backend
       const response = await axios.post(
-        'http://localhost:8080/v1/sessions/share-email',
+        process.env.NEXT_PUBLIC_API_BASE + '/v1/sessions/share-email',
         emailPayload,
         {
           headers: {
@@ -599,7 +599,7 @@ export default function ResultsPage() {
                                     .map((img) => (
                                       <Box key={img.id} borderWidth="1px" borderRadius="md" p={2} bg="gray.50">
                                         <Image
-                                          src={img.filePath ? `http://localhost:8080/${img.filePath.replace(/\\/g, '/')}` : ''}
+                                          src={img.filePath ? `${process.env.NEXT_PUBLIC_API_BASE}/${img.filePath.replace(/\\/g, '/')}` : ''}
                                           alt={img.keterangan || 'Gambar soal'}
                                           maxH="300px"
                                           objectFit="contain"
@@ -664,9 +664,29 @@ export default function ResultsPage() {
                                     bg={bgColor}
                                   >
                                     <HStack justify="space-between" align="start">
-                                      <Text fontWeight={isCorrectAnswer || isUserAnswer ? 'semibold' : 'normal'} flex="1">
-                                        {option}. {optionText}
-                                      </Text>
+                                      <Box flex="1">
+                                        <Text fontWeight={isCorrectAnswer || isUserAnswer ? 'semibold' : 'normal'}>
+                                          {option}.
+                                        </Text>
+                                        {Array.isArray(optionText) ? (
+                                          <VStack spacing={2} mt={2}>
+                                            {optionText.map((img: any) => (
+                                              <Image
+                                                key={img.id}
+                                                src={img.filePath ? `${process.env.NEXT_PUBLIC_API_BASE}/${img.filePath.replace(/\\/g, '/')}` : ''}
+                                                alt={img.keterangan || 'Gambar opsi'}
+                                                maxH="200px"
+                                                objectFit="contain"
+                                                mx="auto"
+                                              />
+                                            ))}
+                                          </VStack>
+                                        ) : (
+                                          <Text fontWeight={isCorrectAnswer || isUserAnswer ? 'semibold' : 'normal'} mt={1}>
+                                            {String(optionText)}
+                                          </Text>
+                                        )}
+                                      </Box>
                                       {isCorrectAnswer && (
                                         <Badge colorScheme="green" ml={2}>Jawaban Benar</Badge>
                                       )}

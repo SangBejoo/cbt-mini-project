@@ -30,7 +30,7 @@ interface Subject {
   nama: string;
 }
 
-const API_BASE = 'http://localhost:8080/v1/subjects';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1/subjects';
 
 export default function SubjectsTab() {
   const [subjects, setSubjects] = useState<Subject[]>([]);

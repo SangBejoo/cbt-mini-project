@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -32,7 +32,6 @@ import {
   Spinner,
 } from '@chakra-ui/react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@chakra-ui/icons';
-import { FixedSizeList as List } from 'react-window';
 import axios from 'axios';
 
 interface Topic {
@@ -42,14 +41,13 @@ interface Topic {
   nama: string;
 }
 
-const TOPICS_API = 'http://localhost:8080/v1/topics';
-const CREATE_SESSION_API = 'http://localhost:8080/v1/sessions';
+const TOPICS_API = process.env.NEXT_PUBLIC_API_BASE + '/v1/topics';
+const CREATE_SESSION_API = process.env.NEXT_PUBLIC_API_BASE + '/v1/sessions';
 const ITEMS_PER_PAGE = 8; // Maximum 10 items per page
 
 export default function SessionsPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
-  const [namaPeserta, setNamaPeserta] = useState('');
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isLoadingTopics, setIsLoadingTopics] = useState(true);
@@ -63,7 +61,6 @@ export default function SessionsPage() {
   const router = useRouter();
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const listRef = useRef<List>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -140,49 +137,51 @@ export default function SessionsPage() {
     onOpen();
   }, [onOpen]);
 
-  const handleStartTest = async () => {
-    if (!namaPeserta || !selectedTopic) {
-      toast({ title: 'Masukkan nama Anda', status: 'error' });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const payload = {
-        nama_peserta: namaPeserta,
-        id_tingkat: selectedTopic.tingkat.id,
-        id_mata_pelajaran: selectedTopic.mataPelajaran.id,
-        durasi_menit: 60,
-        jumlah_soal: 20,
-      };
-
-      const response = await axios.post(CREATE_SESSION_API, payload);
-      const sessionToken =
-        response.data?.testSession?.sessionToken ||
-        response.data?.test_session?.session_token ||
-        response.data?.session_token ||
-        response.data?.token;
-
-      if (!sessionToken) {
-        toast({ title: 'Token sesi tidak ditemukan', status: 'error' });
+  const handleStartTest = useCallback(
+    async (namaPeserta: string) => {
+      if (!namaPeserta || !selectedTopic) {
+        toast({ title: 'Masukkan nama Anda', status: 'error' });
         return;
       }
 
-      toast({ title: 'Sesi tes berhasil dibuat!', status: 'success' });
-      router.push(`/student/test/${sessionToken}`);
-    } catch (error: any) {
-      console.error('Error creating session:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Error membuat sesi tes';
-      toast({ title: errorMessage, status: 'error', duration: 5000 });
-    } finally {
-      setLoading(false);
-      onClose();
-      setNamaPeserta('');
-    }
-  };
+      setLoading(true);
+      try {
+        const payload = {
+          nama_peserta: namaPeserta,
+          id_tingkat: selectedTopic.tingkat.id,
+          id_mata_pelajaran: selectedTopic.mataPelajaran.id,
+          durasi_menit: 60,
+          jumlah_soal: 20,
+        };
+
+        const response = await axios.post(CREATE_SESSION_API, payload);
+        const sessionToken =
+          response.data?.testSession?.sessionToken ||
+          response.data?.test_session?.session_token ||
+          response.data?.session_token ||
+          response.data?.token;
+
+        if (!sessionToken) {
+          toast({ title: 'Token sesi tidak ditemukan', status: 'error' });
+          return;
+        }
+
+        toast({ title: 'Sesi tes berhasil dibuat!', status: 'success' });
+        router.push(`/student/test/${sessionToken}`);
+      } catch (error: any) {
+        console.error('Error creating session:', error);
+        const errorMessage = error.response?.data?.message || error.message || 'Error membuat sesi tes';
+        toast({ title: errorMessage, status: 'error', duration: 5000 });
+      } finally {
+        setLoading(false);
+        onClose();
+      }
+    },
+    [selectedTopic, toast, router, onClose]
+  );
 
   // Render a single topic card
-  const TopicCard = ({ topic }: { topic: Topic }) => (
+  const TopicCard = React.memo(({ topic }: { topic: Topic }) => (
     <Card
       cursor="pointer"
       onClick={() => handleTopicClick(topic)}
@@ -230,6 +229,86 @@ export default function SessionsPage() {
         </VStack>
       </CardBody>
     </Card>
+  ));
+
+  // Memoized modal component that manages its own state to prevent parent re-renders on typing
+  const NamaInputModal = React.memo(
+    ({
+      isOpen,
+      onClose,
+      selectedTopic,
+      loading,
+      onStartTest,
+    }: {
+      isOpen: boolean;
+      onClose: () => void;
+      selectedTopic: Topic | null;
+      loading: boolean;
+      onStartTest: (nama: string) => void;
+    }) => {
+      const [namaPeserta, setNamaPeserta] = useState('');
+
+      // Reset state when modal closes
+      useEffect(() => {
+        if (!isOpen) {
+          setNamaPeserta('');
+        }
+      }, [isOpen]);
+
+      const handleSubmit = () => {
+        onStartTest(namaPeserta);
+        setNamaPeserta('');
+      };
+
+      return (
+        <Modal isOpen={isOpen} onClose={onClose}>
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Mulai Tes</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              <VStack spacing={4}>
+                {selectedTopic && (
+                  <>
+                    <Box bg="orange.50" p={4} borderRadius="md" w="full">
+                      <Text fontSize="sm" fontWeight="bold" color="gray.600" mb={2}>
+                        Materi
+                      </Text>
+                      <Text fontSize="lg" fontWeight="bold" color="orange.600">
+                        {selectedTopic.mataPelajaran.nama}
+                      </Text>
+                      <Text fontSize="md" color="gray.700" mt={1}>
+                        {selectedTopic.nama}
+                      </Text>
+                    </Box>
+                  </>
+                )}
+                <FormControl isRequired>
+                  <FormLabel>Nama Anda</FormLabel>
+                  <Input
+                    value={namaPeserta}
+                    onChange={(e) => setNamaPeserta(e.target.value)}
+                    placeholder="Masukkan nama Anda"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') handleSubmit();
+                    }}
+                    autoFocus
+                  />
+                </FormControl>
+              </VStack>
+            </ModalBody>
+            <ModalFooter>
+              <Button colorScheme="orange" mr={3} onClick={handleSubmit} isLoading={loading}>
+                Mulai Tes
+              </Button>
+              <Button variant="ghost" onClick={onClose}>
+                Batal
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      );
+    }
   );
 
   if (!mounted) return null;
@@ -318,7 +397,7 @@ export default function SessionsPage() {
                     leftIcon={<ChevronLeftIcon />}
                     onClick={() => {
                       setCurrentPage(Math.max(1, currentPage - 1));
-                      listRef.current?.scrollToItem(0, 'start');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                     isDisabled={currentPage === 1}
                     colorScheme="orange"
@@ -335,7 +414,7 @@ export default function SessionsPage() {
                             key={page}
                             onClick={() => {
                               setCurrentPage(page);
-                              listRef.current?.scrollToItem(0, 'start');
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
                             }}
                             variant={currentPage === page ? 'solid' : 'outline'}
                             colorScheme="orange"
@@ -365,7 +444,7 @@ export default function SessionsPage() {
                                 key={page}
                                 onClick={() => {
                                   setCurrentPage(page);
-                                  listRef.current?.scrollToItem(0, 'start');
+                                  window.scrollTo({ top: 0, behavior: 'smooth' });
                                 }}
                                 variant={currentPage === page ? 'solid' : 'outline'}
                                 colorScheme="orange"
@@ -382,7 +461,7 @@ export default function SessionsPage() {
                     rightIcon={<ChevronRightIcon />}
                     onClick={() => {
                       setCurrentPage(Math.min(totalPages, currentPage + 1));
-                      listRef.current?.scrollToItem(0, 'start');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                     isDisabled={currentPage === totalPages}
                     colorScheme="orange"
@@ -431,52 +510,13 @@ export default function SessionsPage() {
       </VStack>
 
       {/* Name Input Modal */}
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Mulai Tes</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <VStack spacing={4}>
-              {selectedTopic && (
-                <>
-                  <Box bg="orange.50" p={4} borderRadius="md" w="full">
-                    <Text fontSize="sm" fontWeight="bold" color="gray.600" mb={2}>
-                      Materi
-                    </Text>
-                    <Text fontSize="lg" fontWeight="bold" color="orange.600">
-                      {selectedTopic.mataPelajaran.nama}
-                    </Text>
-                    <Text fontSize="md" color="gray.700" mt={1}>
-                      {selectedTopic.nama}
-                    </Text>
-                  </Box>
-                </>
-              )}
-              <FormControl isRequired>
-                <FormLabel>Nama Anda</FormLabel>
-                <Input
-                  value={namaPeserta}
-                  onChange={(e) => setNamaPeserta(e.target.value)}
-                  placeholder="Masukkan nama Anda"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') handleStartTest();
-                  }}
-                  autoFocus
-                />
-              </FormControl>
-            </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <Button colorScheme="orange" mr={3} onClick={handleStartTest} isLoading={loading}>
-              Mulai Tes
-            </Button>
-            <Button variant="ghost" onClick={onClose}>
-              Batal
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <NamaInputModal
+        isOpen={isOpen}
+        onClose={onClose}
+        selectedTopic={selectedTopic}
+        loading={loading}
+        onStartTest={handleStartTest}
+      />
     </Container>
   );
 }

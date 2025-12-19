@@ -117,7 +117,7 @@ const mapEnumToLetter = (val: string | number) => {
 };
 
 // --- API Helpers ---
-const API_BASE = 'http://localhost:8080/v1';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1';
 
 const steps = [
   { title: 'Pilih', description: 'Materi & Tingkat' },
@@ -851,7 +851,7 @@ export default function QuestionsTab() {
                           bg="gray.50"
                         >
                           <ChakraImage
-                            src={`http://localhost:8080/${img.filePath.replace(/\\/g, '/')}`}
+                            src={`${process.env.NEXT_PUBLIC_API_BASE}/${img.filePath.replace(/\\/g, '/')}`}
                             alt="Question Image"
                             boxSize="100px"
                             objectFit="cover"

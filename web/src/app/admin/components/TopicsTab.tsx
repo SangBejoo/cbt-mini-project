@@ -44,9 +44,9 @@ interface Subject {
   nama: string;
 }
 
-const API_BASE = 'http://localhost:8080/v1/topics';
-const LEVELS_API = 'http://localhost:8080/v1/levels';
-const SUBJECTS_API = 'http://localhost:8080/v1/subjects';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1/topics';
+const LEVELS_API = process.env.NEXT_PUBLIC_API_BASE + '/v1/levels';
+const SUBJECTS_API = process.env.NEXT_PUBLIC_API_BASE + '/v1/subjects';
 
 export default function TopicsTab() {
   const [topics, setTopics] = useState<Topic[]>([]);

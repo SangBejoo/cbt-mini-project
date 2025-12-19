@@ -30,7 +30,7 @@ interface Level {
   nama: string;
 }
 
-const API_BASE = 'http://localhost:8080/v1/levels';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1/levels';
 
 export default function LevelsTab() {
   const [levels, setLevels] = useState<Level[]>([]);

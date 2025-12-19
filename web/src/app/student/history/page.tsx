@@ -48,7 +48,7 @@ interface HistoryItem {
   namaMateri?: string;
 }
 
-const API_BASE = 'http://localhost:8080/v1/history/student';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1/history/student';
 
 export default function HistoryPage() {
   const toast = useToast();
