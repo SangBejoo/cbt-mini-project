@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -31,6 +31,9 @@ import {
   RadioGroup,
   Radio,
   Image,
+  FormControl,
+  FormLabel,
+  Input,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -97,9 +100,18 @@ export default function ResultsPage() {
   const [materi, setMateri] = useState<{id: number; nama: string} | null>(null);
   const [loading, setLoading] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isShareOpen, onOpen: onShareOpen, onClose: onShareClose } = useDisclosure();
   const [selectedQuestion, setSelectedQuestion] = useState<any>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [showReview, setShowReview] = useState(false);
+
+  // Share form state
+  const [shareForm, setShareForm] = useState({
+    namaSekolah: '',
+    kelas: '',
+    email: '',
+  });
+  const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
     fetchResult();
@@ -147,6 +159,165 @@ export default function ResultsPage() {
 
   const goToQuestion = (index: number) => {
     setCurrentQuestionIndex(index);
+  };
+
+  const handleShareClick = () => {
+    onShareOpen();
+  };
+
+  const resultCardRef = useRef<HTMLDivElement>(null);
+
+  const downloadResultAsPDF = async () => {
+    if (!resultCardRef.current) return;
+
+    try {
+      setIsSharing(true);
+      const element = resultCardRef.current;
+      
+      // Import libraries
+      const html2canvas = (await import('html2canvas')).default;
+      const jsPDF = (await import('jspdf')).jsPDF;
+
+      // Create canvas from HTML element
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+      });
+
+      // Create PDF
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const imgWidth = 190; // A4 width - margins
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add image to PDF (handle multiple pages if needed)
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      heightLeft -= pdf.internal.pageSize.getHeight();
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= pdf.internal.pageSize.getHeight();
+      }
+
+      // Save PDF
+      const filename = `Hasil-Tes-${result?.sessionInfo.namaPeserta}-${new Date().toLocaleDateString('id-ID').replace(/\//g, '-')}.pdf`;
+      pdf.save(filename);
+
+      toast({
+        title: '✅ PDF berhasil diunduh',
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast({
+        title: '❌ Gagal mengunduh PDF',
+        description: 'Silakan coba lagi atau hubungi administrator',
+        status: 'error',
+        duration: 4000,
+      });
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const shareViaEmail = async () => {
+    // Validate form
+    if (!shareForm.namaSekolah.trim() || !shareForm.kelas.trim() || !shareForm.email.trim()) {
+      toast({ 
+        title: '⚠️ Validasi Gagal', 
+        description: 'Semua field harus diisi',
+        status: 'warning',
+        duration: 3000,
+      });
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(shareForm.email)) {
+      toast({ 
+        title: '⚠️ Email Tidak Valid', 
+        description: 'Format email tidak sesuai',
+        status: 'warning',
+        duration: 3000,
+      });
+      return;
+    }
+
+    setIsSharing(true);
+    try {
+      // Prepare email payload
+      const emailPayload = {
+        to: shareForm.email,
+        subject: `Hasil Tes CBT - ${result?.sessionInfo.namaPeserta}`,
+        namaSekolah: shareForm.namaSekolah,
+        kelas: shareForm.kelas,
+        studentName: result?.sessionInfo.namaPeserta,
+        subject_name: result?.sessionInfo.mataPelajaran.nama,
+        level_name: result?.sessionInfo.tingkat.nama,
+        score: result?.sessionInfo.nilaiAkhir,
+        correctAnswers: result?.sessionInfo.jumlahBenar,
+        totalQuestions: result?.sessionInfo.totalSoal,
+        startTime: result?.sessionInfo.waktuMulai,
+        endTime: result?.sessionInfo.waktuSelesai,
+        duration: actualDurationMinutes,
+        status: result?.sessionInfo.status,
+        sessionToken: token,
+      };
+
+      // Send to backend
+      const response = await axios.post(
+        'http://localhost:8080/v1/sessions/share-email',
+        emailPayload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        toast({
+          title: '✅ Email Berhasil Dikirim',
+          description: `Hasil tes telah dikirim ke ${shareForm.email}`,
+          status: 'success',
+          duration: 4000,
+        });
+
+        // Reset form and close after a delay
+        setTimeout(() => {
+          setShareForm({ namaSekolah: '', kelas: '', email: '' });
+          onShareClose();
+        }, 2000);
+      }
+    } catch (error: any) {
+      console.error('Error sharing via email:', error);
+      
+      const errorMessage = error?.response?.data?.message || 
+                          'Silakan coba lagi atau hubungi administrator';
+      
+      toast({
+        title: '❌ Gagal Mengirim Email',
+        description: errorMessage,
+        status: 'error',
+        duration: 4000,
+      });
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   const goToNextQuestion = () => {
@@ -250,9 +421,9 @@ export default function ResultsPage() {
                   variant="outline"
                   colorScheme="orange"
                   size="md"
-                  onClick={() => setShowReview(!showReview)}
+                  onClick={handleShareClick}
                 >
-                  Bagikan Ulang
+                  Bagikan Nilai
                 </Button>
                 <Button
                   colorScheme="orange"
@@ -567,7 +738,7 @@ export default function ResultsPage() {
         <VStack spacing={4}>
           <Link href="/student/history">
             <Button colorScheme="orange" size="lg" variant="outline">
-              Lihat Riwayat Saya
+              Lihat Riwayat Seluruh Siswa
             </Button>
           </Link>
           <Link href="/student">
@@ -577,6 +748,191 @@ export default function ResultsPage() {
           </Link>
         </VStack>
       </VStack>
+
+      {/* Share Modal - Preview & Download */}
+      <Modal isOpen={isShareOpen} onClose={onShareClose} size="xl" closeOnEsc={false} closeOnOverlayClick={false}>
+        <ModalOverlay />
+        <ModalContent borderRadius="xl" boxShadow="xl" maxH="90vh" overflowY="auto">
+          <ModalHeader textAlign="center" fontSize="xl" fontWeight="bold" color="orange.600" pb={2}>
+            Bagikan Hasil Tes
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <VStack spacing={6}>
+              {/* Result Card Preview */}
+              <Box
+                ref={resultCardRef}
+                w="full"
+                bg="white"
+                p={6}
+                borderRadius="lg"
+                border="2px"
+                borderColor="orange.200"
+                boxShadow="md"
+              >
+                <VStack spacing={4} align="stretch">
+                  {/* Header */}
+                  <Box textAlign="center" pb={4} borderBottom="2px" borderColor="orange.100">
+                    <Heading size="lg" color="orange.600" mb={2}>
+                      Hasil Tes CBT
+                    </Heading>
+                    <Text fontSize="sm" color="gray.500">
+                      {new Date().toLocaleDateString('id-ID', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </Text>
+                  </Box>
+
+                  {/* Student Info */}
+                  <VStack spacing={2} align="stretch" bg="gray.50" p={4} borderRadius="md">
+                    <HStack justify="space-between">
+                      <Text fontWeight="semibold" color="gray.700">Nama Siswa:</Text>
+                      <Text color="gray.800" fontWeight="bold">{result?.sessionInfo.namaPeserta}</Text>
+                    </HStack>
+                    <HStack justify="space-between">
+                      <Text fontWeight="semibold" color="gray.700">Sekolah:</Text>
+                      <Text color="gray.800">{shareForm.namaSekolah || '-'}</Text>
+                    </HStack>
+                    <HStack justify="space-between">
+                      <Text fontWeight="semibold" color="gray.700">Kelas:</Text>
+                      <Text color="gray.800">{shareForm.kelas || '-'}</Text>
+                    </HStack>
+                  </VStack>
+
+                  {/* Subject Info */}
+                  <VStack spacing={2} align="stretch" bg="blue.50" p={4} borderRadius="md">
+                    <HStack justify="space-between">
+                      <Text fontWeight="semibold" color="blue.700">Mata Pelajaran:</Text>
+                      <Text color="blue.800" fontWeight="bold">{result?.sessionInfo.mataPelajaran.nama}</Text>
+                    </HStack>
+                    <HStack justify="space-between">
+                      <Text fontWeight="semibold" color="blue.700">Kelas/Tingkat:</Text>
+                      <Text color="blue.800">{result?.sessionInfo.tingkat.nama}</Text>
+                    </HStack>
+                  </VStack>
+
+                  {/* Score */}
+                  <VStack spacing={2} align="stretch" bg="orange.50" p={4} borderRadius="md">
+                    <HStack justify="space-between">
+                      <Text fontWeight="semibold" color="orange.700">Nilai Akhir:</Text>
+                      <Text fontSize="xl" color="orange.600" fontWeight="bold">{result?.sessionInfo.nilaiAkhir}%</Text>
+                    </HStack>
+                    <HStack justify="space-between">
+                      <Text fontWeight="semibold" color="orange.700">Jumlah Benar:</Text>
+                      <Text color="orange.800" fontWeight="bold">{result?.sessionInfo.jumlahBenar}/{result?.sessionInfo.totalSoal}</Text>
+                    </HStack>
+                    <HStack justify="space-between">
+                      <Text fontWeight="semibold" color="orange.700">Durasi:</Text>
+                      <Text color="orange.800">{actualDurationMinutes} menit</Text>
+                    </HStack>
+                  </VStack>
+
+                  {/* Test Time */}
+                  <VStack spacing={2} align="stretch" bg="green.50" p={4} borderRadius="md">
+                    <HStack justify="space-between">
+                      <Text fontWeight="semibold" color="green.700">Waktu Mulai:</Text>
+                      <Text color="green.800" fontSize="sm">{result?.sessionInfo.waktuMulai}</Text>
+                    </HStack>
+                    <HStack justify="space-between">
+                      <Text fontWeight="semibold" color="green.700">Waktu Selesai:</Text>
+                      <Text color="green.800" fontSize="sm">{result?.sessionInfo.waktuSelesai}</Text>
+                    </HStack>
+                  </VStack>
+
+                  {/* Status */}
+                  <HStack justify="center" pt={2}>
+                    <Badge
+                      colorScheme={result?.sessionInfo.status === 'selesai' ? 'green' : 'yellow'}
+                      fontSize="md"
+                      px={3}
+                      py={1}
+                    >
+                      {result?.sessionInfo.status?.toUpperCase()}
+                    </Badge>
+                  </HStack>
+                </VStack>
+              </Box>
+
+              {/* Form Fields */}
+              <FormControl>
+                <FormLabel fontSize="sm" fontWeight="semibold" color="gray.700">
+                  Nama Sekolah
+                </FormLabel>
+                <Input
+                  placeholder="Masukkan nama sekolah"
+                  value={shareForm.namaSekolah}
+                  onChange={(e) => setShareForm({ ...shareForm, namaSekolah: e.target.value })}
+                  borderRadius="md"
+                  borderColor="gray.300"
+                  _focus={{ borderColor: 'orange.500', boxShadow: '0 0 0 1px orange.500' }}
+                />
+              </FormControl>
+
+              <FormControl>
+                <FormLabel fontSize="sm" fontWeight="semibold" color="gray.700">
+                  Kelas
+                </FormLabel>
+                <Input
+                  placeholder="Masukkan kelas"
+                  value={shareForm.kelas}
+                  onChange={(e) => setShareForm({ ...shareForm, kelas: e.target.value })}
+                  borderRadius="md"
+                  borderColor="gray.300"
+                  _focus={{ borderColor: 'orange.500', boxShadow: '0 0 0 1px orange.500' }}
+                />
+              </FormControl>
+
+              <FormControl>
+                <FormLabel fontSize="sm" fontWeight="semibold" color="gray.700">
+                  Email
+                </FormLabel>
+                <Input
+                  type="email"
+                  placeholder="Masukkan email"
+                  value={shareForm.email}
+                  onChange={(e) => setShareForm({ ...shareForm, email: e.target.value })}
+                  borderRadius="md"
+                  borderColor="gray.300"
+                  _focus={{ borderColor: 'orange.500', boxShadow: '0 0 0 1px orange.500' }}
+                />
+              </FormControl>
+            </VStack>
+          </ModalBody>
+
+          <ModalFooter gap={3} pt={4} borderTop="1px" borderColor="gray.200" flexWrap="wrap" justifyContent="flex-end">
+            <Button
+              variant="outline"
+              colorScheme="gray"
+              onClick={onShareClose}
+              isDisabled={isSharing}
+              borderRadius="md"
+            >
+              Batal
+            </Button>
+            <Button
+              colorScheme="blue"
+              onClick={downloadResultAsPDF}
+              isLoading={isSharing}
+              loadingText="Mengunduh..."
+              borderRadius="md"
+            >
+              Unduh PDF
+            </Button>
+            <Button
+              colorScheme="orange"
+              onClick={shareViaEmail}
+              isLoading={isSharing}
+              loadingText="Membuka Email..."
+              borderRadius="md"
+            >
+              Kirim Email
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Container>
   );
 }
