@@ -4,9 +4,12 @@ import (
 	base "cbt-test-mini-project/gen/proto"
 	"cbt-test-mini-project/internal/entity"
 	"cbt-test-mini-project/internal/usecase/history"
+	"cbt-test-mini-project/util/interceptor"
 	"context"
 	"strings"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -23,6 +26,29 @@ func NewHistoryHandler(usecase history.HistoryUsecase) base.HistoryServiceServer
 
 // GetStudentHistory gets student history
 func (h *historyHandler) GetStudentHistory(ctx context.Context, req *base.StudentHistoryRequest) (*base.StudentHistoryResponse, error) {
+	// Try to get user from context first (for gRPC calls)
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		// For REST gateway, extract token from metadata
+		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
+		if extractErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+		}
+		claims, validateErr := interceptor.ValidateToken(token)
+		if validateErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
+		user = &base.User{
+			Id:    claims.UserID,
+			Email: claims.Email,
+			Role:  base.UserRole(claims.Role),
+		}
+		// Add to context for consistency
+		ctx = interceptor.AddUserToContext(ctx, claims)
+	}
+
+	userID := user.Id
+
 	var tingkatan, idMataPelajaran *int
 	if req.Tingkatan != 0 {
 		t := int(req.Tingkatan)
@@ -44,7 +70,7 @@ func (h *historyHandler) GetStudentHistory(ctx context.Context, req *base.Studen
 		}
 	}
 
-	response, err := h.usecase.GetStudentHistory(req.NamaPeserta, tingkatan, idMataPelajaran, page, pageSize)
+	response, err := h.usecase.GetStudentHistory(int(userID), tingkatan, idMataPelajaran, page, pageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +99,7 @@ func (h *historyHandler) GetStudentHistory(ctx context.Context, req *base.Studen
 	}
 
 	return &base.StudentHistoryResponse{
-		NamaPeserta:       response.NamaPeserta,
+		User:              h.convertUserToProto(response.User),
 		Tingkatan:         req.Tingkatan,
 		History:           histories,
 		RataRataNilai:     response.RataRataNilai,
@@ -157,7 +183,7 @@ func (h *historyHandler) convertToProtoTestSession(session *entity.TestSession) 
 	return &base.TestSession{
 		Id:              int32(session.ID),
 		SessionToken:    session.SessionToken,
-		NamaPeserta:     session.NamaPeserta,
+		User:            h.convertUserToProto(session.User),
 		Tingkat:         &base.Tingkat{Id: int32(session.Tingkat.ID), Nama: session.Tingkat.Nama},
 		MataPelajaran:   &base.MataPelajaran{Id: int32(session.MataPelajaran.ID), Nama: session.MataPelajaran.Nama},
 		WaktuMulai:      timestamppb.New(session.WaktuMulai),
@@ -168,5 +194,24 @@ func (h *historyHandler) convertToProtoTestSession(session *entity.TestSession) 
 		JumlahBenar:     jumlahBenar,
 		TotalSoal:       totalSoal,
 		Status:          status,
+	}
+}
+
+// convertUserToProto converts entity.User to proto User
+func (h *historyHandler) convertUserToProto(user *entity.User) *base.User {
+	if user == nil {
+		return nil
+	}
+
+	role := base.UserRole(base.UserRole_value[strings.ToUpper(user.Role)])
+
+	return &base.User{
+		Id:       int32(user.ID),
+		Email:    user.Email,
+		Nama:     user.Nama,
+		Role:     role,
+		IsActive: user.IsActive,
+		CreatedAt: timestamppb.New(user.CreatedAt),
+		UpdatedAt: timestamppb.New(user.UpdatedAt),
 	}
 }

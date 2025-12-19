@@ -17,14 +17,14 @@ func NewHistoryRepository(db *gorm.DB) HistoryRepository {
 }
 
 // Get student history
-func (r *historyRepositoryImpl) GetStudentHistory(namaPeserta string, tingkatan, idMataPelajaran *int, limit, offset int) ([]entity.HistorySummary, int, error) {
+func (r *historyRepositoryImpl) GetStudentHistory(userID int, tingkatan, idMataPelajaran *int, limit, offset int) ([]entity.HistorySummary, int, error) {
 	var sessions []entity.TestSession
 	var total int64
 
-	query := r.db.Model(&entity.TestSession{}).Preload("MataPelajaran").Preload("Tingkat").Where("status = ?", entity.TestStatusCompleted)
+	query := r.db.Model(&entity.TestSession{}).Preload("MataPelajaran").Preload("Tingkat").Preload("User").Where("status = ?", entity.TestStatusCompleted)
 
-	if namaPeserta != "" {
-		query = query.Where("nama_peserta = ?", namaPeserta)
+	if userID > 0 {
+		query = query.Where("user_id = ?", userID)
 	}
 
 	if tingkatan != nil {
@@ -164,12 +164,15 @@ func (r *historyRepositoryImpl) getMateriBreakdown(token string) ([]entity.Mater
 	return breakdowns, err
 }
 
-// Get session nama peserta by token
-func (r *historyRepositoryImpl) GetSessionNameByToken(sessionToken string) (string, error) {
+// Get user from session token
+func (r *historyRepositoryImpl) GetUserFromSessionToken(sessionToken string) (*entity.User, error) {
 	var session entity.TestSession
-	err := r.db.Where("session_token = ?", sessionToken).First(&session).Error
+	err := r.db.Preload("User").Where("session_token = ?", sessionToken).First(&session).Error
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return session.NamaPeserta, nil
+	if session.User == nil {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return session.User, nil
 }

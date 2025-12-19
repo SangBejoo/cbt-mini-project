@@ -33,6 +33,7 @@ import {
 } from '@chakra-ui/react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import axios from 'axios';
+import { useAuth } from '../../auth-context';
 
 interface Topic {
   id: number;
@@ -61,6 +62,7 @@ export default function SessionsPage() {
   const router = useRouter();
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { user } = useAuth();
 
   useEffect(() => {
     setMounted(true);
@@ -138,16 +140,16 @@ export default function SessionsPage() {
   }, [onOpen]);
 
   const handleStartTest = useCallback(
-    async (namaPeserta: string) => {
-      if (!namaPeserta || !selectedTopic) {
-        toast({ title: 'Masukkan nama Anda', status: 'error' });
+    async () => {
+      if (!user || !selectedTopic) {
+        toast({ title: 'User tidak ditemukan atau materi tidak dipilih', status: 'error' });
         return;
       }
 
       setLoading(true);
       try {
         const payload = {
-          nama_peserta: namaPeserta,
+          nama_peserta: user.nama,
           id_tingkat: selectedTopic.tingkat.id,
           id_mata_pelajaran: selectedTopic.mataPelajaran.id,
           durasi_menit: 60,
@@ -231,8 +233,8 @@ export default function SessionsPage() {
     </Card>
   ));
 
-  // Memoized modal component that manages its own state to prevent parent re-renders on typing
-  const NamaInputModal = React.memo(
+  // Memoized modal component for starting test
+  const TestStartModal = React.memo(
     ({
       isOpen,
       onClose,
@@ -244,27 +246,17 @@ export default function SessionsPage() {
       onClose: () => void;
       selectedTopic: Topic | null;
       loading: boolean;
-      onStartTest: (nama: string) => void;
+      onStartTest: () => void;
     }) => {
-      const [namaPeserta, setNamaPeserta] = useState('');
-
-      // Reset state when modal closes
-      useEffect(() => {
-        if (!isOpen) {
-          setNamaPeserta('');
-        }
-      }, [isOpen]);
-
       const handleSubmit = () => {
-        onStartTest(namaPeserta);
-        setNamaPeserta('');
+        onStartTest();
       };
 
       return (
         <Modal isOpen={isOpen} onClose={onClose}>
           <ModalOverlay />
           <ModalContent>
-            <ModalHeader>Mulai Tes</ModalHeader>
+            <ModalHeader>Konfirmasi Mulai Tes</ModalHeader>
             <ModalCloseButton />
             <ModalBody>
               <VStack spacing={4}>
@@ -281,20 +273,16 @@ export default function SessionsPage() {
                         {selectedTopic.nama}
                       </Text>
                     </Box>
+                    <Box bg="blue.50" p={4} borderRadius="md" w="full">
+                      <Text fontSize="sm" fontWeight="bold" color="gray.600" mb={2}>
+                        Nama Peserta
+                      </Text>
+                      <Text fontSize="lg" fontWeight="bold" color="blue.600">
+                        {user?.nama}
+                      </Text>
+                    </Box>
                   </>
                 )}
-                <FormControl isRequired>
-                  <FormLabel>Nama Anda</FormLabel>
-                  <Input
-                    value={namaPeserta}
-                    onChange={(e) => setNamaPeserta(e.target.value)}
-                    placeholder="Masukkan nama Anda"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') handleSubmit();
-                    }}
-                    autoFocus
-                  />
-                </FormControl>
               </VStack>
             </ModalBody>
             <ModalFooter>
@@ -509,8 +497,8 @@ export default function SessionsPage() {
         </Link>
       </VStack>
 
-      {/* Name Input Modal */}
-      <NamaInputModal
+      {/* Test Start Modal */}
+      <TestStartModal
         isOpen={isOpen}
         onClose={onClose}
         selectedTopic={selectedTopic}

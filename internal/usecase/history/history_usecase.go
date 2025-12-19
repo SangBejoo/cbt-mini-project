@@ -17,7 +17,7 @@ func NewHistoryUsecase(repo history.HistoryRepository) HistoryUsecase {
 }
 
 // GetStudentHistory gets student history with aggregates
-func (u *historyUsecaseImpl) GetStudentHistory(namaPeserta string, tingkatan, idMataPelajaran *int, page, pageSize int) (*entity.StudentHistoryResponse, error) {
+func (u *historyUsecaseImpl) GetStudentHistory(userID int, tingkatan, idMataPelajaran *int, page, pageSize int) (*entity.StudentHistoryResponse, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -25,17 +25,16 @@ func (u *historyUsecaseImpl) GetStudentHistory(namaPeserta string, tingkatan, id
 		pageSize = 10
 	}
 
-	histories, total, err := u.repo.GetStudentHistory(namaPeserta, tingkatan, idMataPelajaran, pageSize, (page-1)*pageSize)
+	histories, total, err := u.repo.GetStudentHistory(userID, tingkatan, idMataPelajaran, pageSize, (page-1)*pageSize)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get nama peserta from first completed test if not provided
-	actualNamaPeserta := namaPeserta
-	if actualNamaPeserta == "" && len(histories) > 0 {
-		// Fetch the actual nama peserta from the database
-		if name, err := u.repo.GetSessionNameByToken(histories[0].SessionToken); err == nil && name != "" {
-			actualNamaPeserta = name
+	// Get user from first completed test
+	var user *entity.User
+	if len(histories) > 0 {
+		if u, err := u.repo.GetUserFromSessionToken(histories[0].SessionToken); err == nil {
+			user = u
 		}
 	}
 
@@ -62,7 +61,7 @@ func (u *historyUsecaseImpl) GetStudentHistory(namaPeserta string, tingkatan, id
 	}
 
 	response := &entity.StudentHistoryResponse{
-		NamaPeserta:       actualNamaPeserta,
+		User:              user,
 		Tingkatan:         tingkatan,
 		History:           histories,
 		RataRataNilai:     rataRataNilai,

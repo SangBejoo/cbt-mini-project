@@ -9,6 +9,9 @@
       "name": "Base"
     },
     {
+      "name": "AuthService"
+    },
+    {
       "name": "MataPelajaranService"
     },
     {
@@ -34,6 +37,69 @@
     "application/json"
   ],
   "paths": {
+    "/v1/admin/history/students": {
+      "get": {
+        "summary": "Admin: List all students' histories with filters",
+        "operationId": "HistoryService_ListStudentHistories",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseListStudentHistoriesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "Optional: filter by specific student",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "tingkatan",
+            "description": "Optional filter",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "idMataPelajaran",
+            "description": "Optional filter",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "HistoryService"
+        ]
+      }
+    },
     "/v1/admin/sessions": {
       "get": {
         "summary": "Admin queries",
@@ -100,6 +166,279 @@
         ]
       }
     },
+    "/v1/auth/login": {
+      "post": {
+        "operationId": "AuthService_Login",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseLoginResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/baseLoginRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/profile": {
+      "get": {
+        "operationId": "AuthService_GetProfile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "operationId": "AuthService_RefreshToken",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseRefreshTokenResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/baseRefreshTokenRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/users": {
+      "get": {
+        "summary": "User Management (Admin Only)",
+        "operationId": "AuthService_ListUsers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseListUsersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "role",
+            "description": "Optional filter",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ROLE_INVALID",
+              "SISWA",
+              "ADMIN"
+            ],
+            "default": "ROLE_INVALID"
+          },
+          {
+            "name": "statusFilter",
+            "description": "0=all, 1=active only, 2=inactive only",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      },
+      "post": {
+        "operationId": "AuthService_CreateUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/baseCreateUserRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/users/{id}": {
+      "get": {
+        "operationId": "AuthService_GetUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      },
+      "delete": {
+        "operationId": "AuthService_DeleteUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseMessageStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      },
+      "put": {
+        "operationId": "AuthService_UpdateUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AuthServiceUpdateUserBody"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
     "/v1/health": {
       "get": {
         "operationId": "Base_HealthCheck",
@@ -141,10 +480,12 @@
         },
         "parameters": [
           {
-            "name": "namaPeserta",
+            "name": "userId",
+            "description": "From JWT, not input",
             "in": "query",
             "required": false,
-            "type": "string"
+            "type": "integer",
+            "format": "int32"
           },
           {
             "name": "tingkatan",
@@ -1231,6 +1572,23 @@
     }
   },
   "definitions": {
+    "AuthServiceUpdateUserBody": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "nama": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/baseUserRole"
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      }
+    },
     "MataPelajaranServiceUpdateMataPelajaranBody": {
       "type": "object",
       "properties": {
@@ -1443,9 +1801,6 @@
     "baseCreateTestSessionRequest": {
       "type": "object",
       "properties": {
-        "namaPeserta": {
-          "type": "string"
-        },
         "idTingkat": {
           "type": "integer",
           "format": "int32"
@@ -1470,6 +1825,23 @@
       "properties": {
         "nama": {
           "type": "string"
+        }
+      }
+    },
+    "baseCreateUserRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "nama": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/baseUserRole"
         }
       }
     },
@@ -1506,9 +1878,6 @@
         "sessionToken": {
           "type": "string"
         },
-        "namaPeserta": {
-          "type": "string"
-        },
         "mataPelajaran": {
           "$ref": "#/definitions/baseMataPelajaran"
         },
@@ -1542,6 +1911,9 @@
         },
         "status": {
           "$ref": "#/definitions/baseTestStatus"
+        },
+        "namaPeserta": {
+          "type": "string"
         }
       }
     },
@@ -1644,6 +2016,21 @@
         }
       }
     },
+    "baseListStudentHistoriesResponse": {
+      "type": "object",
+      "properties": {
+        "historyPerStudent": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseStudentHistoryWithUser"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/basePaginationResponse"
+        }
+      }
+    },
     "baseListTestSessionsResponse": {
       "type": "object",
       "properties": {
@@ -1668,6 +2055,66 @@
             "type": "object",
             "$ref": "#/definitions/baseTingkat"
           }
+        }
+      }
+    },
+    "baseListUsersResponse": {
+      "type": "object",
+      "properties": {
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseUser"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/basePaginationResponse"
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "baseLoginRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      }
+    },
+    "baseLoginResponse": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string"
+        },
+        "refreshToken": {
+          "type": "string"
+        },
+        "user": {
+          "$ref": "#/definitions/baseUser"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
         }
       }
     },
@@ -1780,6 +2227,35 @@
         "pageSize": {
           "type": "integer",
           "format": "int32"
+        }
+      }
+    },
+    "baseRefreshTokenRequest": {
+      "type": "object",
+      "properties": {
+        "refreshToken": {
+          "type": "string"
+        }
+      }
+    },
+    "baseRefreshTokenResponse": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string"
+        },
+        "refreshToken": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
         }
       }
     },
@@ -1916,13 +2392,6 @@
     "baseStudentHistoryResponse": {
       "type": "object",
       "properties": {
-        "namaPeserta": {
-          "type": "string"
-        },
-        "tingkatan": {
-          "type": "integer",
-          "format": "int32"
-        },
         "history": {
           "type": "array",
           "items": {
@@ -1937,6 +2406,36 @@
           "type": "number",
           "format": "double",
           "title": "Aggregate stats"
+        },
+        "totalTestCompleted": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "user": {
+          "$ref": "#/definitions/baseUser"
+        },
+        "tingkatan": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "baseStudentHistoryWithUser": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/baseUser"
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseHistorySummary"
+          }
+        },
+        "rataRataNilai": {
+          "type": "number",
+          "format": "double"
         },
         "totalTestCompleted": {
           "type": "integer",
@@ -2038,8 +2537,9 @@
         "sessionToken": {
           "type": "string"
         },
-        "namaPeserta": {
-          "type": "string"
+        "user": {
+          "$ref": "#/definitions/baseUser",
+          "title": "From JWT, not input"
         },
         "tingkat": {
           "$ref": "#/definitions/baseTingkat"
@@ -2127,6 +2627,61 @@
           "$ref": "#/definitions/baseSoalGambar"
         }
       }
+    },
+    "baseUser": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "email": {
+          "type": "string"
+        },
+        "nama": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/baseUserRole"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "passwordHash": {
+          "type": "string"
+        }
+      }
+    },
+    "baseUserResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/baseUser"
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "baseUserRole": {
+      "type": "string",
+      "enum": [
+        "ROLE_INVALID",
+        "SISWA",
+        "ADMIN"
+      ],
+      "default": "ROLE_INVALID"
     },
     "protobufAny": {
       "type": "object",

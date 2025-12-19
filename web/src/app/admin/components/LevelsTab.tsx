@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -22,6 +22,7 @@ import {
   Input,
   useDisclosure,
   useToast,
+  Text,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -36,12 +37,21 @@ export default function LevelsTab() {
   const [levels, setLevels] = useState<Level[]>([]);
   const [editingLevel, setEditingLevel] = useState<Level | null>(null);
   const [formData, setFormData] = useState({ nama: '' });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
 
   useEffect(() => {
     fetchLevels();
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const fetchLevels = async () => {
     try {
@@ -57,6 +67,13 @@ export default function LevelsTab() {
       setLevels([]);
     }
   };
+
+  const filteredLevels = useMemo(() => {
+    return levels.filter(level => level.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase()));
+  }, [levels, debouncedSearchQuery]);
+
+  const totalPages = Math.ceil(filteredLevels.length / itemsPerPage);
+  const paginatedLevels = filteredLevels.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleCreate = () => {
     setEditingLevel(null);
@@ -96,23 +113,34 @@ export default function LevelsTab() {
     }
   };
 
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      setDebouncedSearchQuery(searchQuery);
+    }
+  };
+
   return (
     <Box>
       <Button colorScheme="blue" onClick={handleCreate} mb={4}>
         Tambah Tingkat
       </Button>
+      <Input
+        placeholder="Cari tingkat..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        onKeyDown={handleSearchKeyDown}
+        mb={4}
+      />
       <Table variant="simple">
         <Thead>
           <Tr>
-            <Th>ID</Th>
-            <Th>Nama</Th>
+            <Th>Tingkat</Th>
             <Th>Aksi</Th>
           </Tr>
         </Thead>
         <Tbody>
-          {levels.map((level) => (
+          {paginatedLevels.map((level) => (
             <Tr key={level.id}>
-              <Td>{level.id}</Td>
               <Td>{level.nama}</Td>
               <Td>
                 <Button size="sm" mr={2} onClick={() => handleEdit(level)}>
@@ -126,6 +154,15 @@ export default function LevelsTab() {
           ))}
         </Tbody>
       </Table>
+      <Box mt={4} display="flex" justifyContent="space-between" alignItems="center">
+        <Button isDisabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
+          Prev
+        </Button>
+        <Text>Halaman {currentPage} dari {totalPages}</Text>
+        <Button isDisabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>
+          Next
+        </Button>
+      </Box>
 
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
@@ -134,7 +171,7 @@ export default function LevelsTab() {
           <ModalCloseButton />
           <ModalBody>
             <FormControl>
-              <FormLabel>Nama</FormLabel>
+              <FormLabel>Nama Tingkatan</FormLabel>
               <Input
                 value={formData.nama}
                 onChange={(e) => setFormData({ nama: e.target.value })}

@@ -11,6 +11,7 @@ type Main struct {
 	Log        log
 	RestServer restServer
 	GrpcServer grpcServer
+	JWT        jwt
 }
 
 type database struct {
@@ -31,6 +32,12 @@ type grpcServer struct {
 	Port int
 }
 
+type jwt struct {
+	Secret           string
+	AccessTokenTTL   int // in minutes
+	RefreshTokenTTL  int // in days
+}
+
 func Load() *Main {
 	godotenv.Load()
 	return &Main{
@@ -47,6 +54,11 @@ func Load() *Main {
 		},
 		GrpcServer: grpcServer{
 			Port: util.GetEnv("GRPC_PORT", 6000),
+		},
+		JWT: jwt{
+			Secret:          util.GetEnv("JWT_SECRET", "your-super-secret-jwt-key-change-this-in-production"),
+			AccessTokenTTL:  util.GetEnv("JWT_ACCESS_TTL_MINUTES", 1440), // 24 hours default
+			RefreshTokenTTL: util.GetEnv("JWT_REFRESH_TTL_DAYS", 7),     // 7 days default
 		},
 	}
 }

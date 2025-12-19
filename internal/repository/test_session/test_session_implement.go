@@ -173,18 +173,18 @@ func (r *testSessionRepositoryImpl) GetSessionAnswers(token string) ([]entity.Ja
 
 // Assign random questions to session
 func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelajaran, tingkatan, jumlahSoal int) error {
-	// Get random soal IDs for the criteria - get questions for the mata_pelajaran regardless of tingkat
+	// Get random soal IDs for the criteria - get questions for the mata_pelajaran and tingkat
 	var soalIDs []int
 	err := r.db.Model(&entity.Soal{}).
 		Joins("JOIN materi ON soal.id_materi = materi.id").
-		Where("materi.id_mata_pelajaran = ?", idMataPelajaran).
+		Where("materi.id_mata_pelajaran = ? AND materi.id_tingkat = ?", idMataPelajaran, tingkatan). // ini disesuai dengan tingkatan kalau mau random tingkatan tinggal hapus saja kondisi ini
 		Pluck("soal.id", &soalIDs).Error
 	if err != nil {
 		return err
 	}
 
 	if len(soalIDs) == 0 {
-		return errors.New("tidak ada soal yang tersedia untuk mata pelajaran ini")
+		return errors.New("tidak ada soal yang tersedia untuk mata pelajaran dan tingkatan ini")
 	}
 
 	// Ambil jumlah soal yang tersedia atau yang diminta (mana yang lebih kecil)

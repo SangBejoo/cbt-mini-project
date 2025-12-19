@@ -1,46 +1,40 @@
 'use client';
 
-import Link from 'next/link';
-import { Box, Button, VStack, Heading, Container, Text } from '@chakra-ui/react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Box, Spinner, Text } from '@chakra-ui/react';
+import { useAuth } from './auth-context';
 
 export default function Home() {
-  const [mounted, setMounted] = useState(false);
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <Box py={10}>
-        <Heading as="h1" size="xl" textAlign="center" mb={8}>
-          CBT System
-        </Heading>
-      </Box>
-    );
-  }
+    if (!isLoading) {
+      if (user) {
+        // User is authenticated, redirect based on role
+        if (user.role === 'ADMIN') {
+          router.push('/admin');
+        } else {
+          router.push('/student');
+        }
+      } else {
+        // User is not authenticated, redirect to login
+        router.push('/login');
+      }
+    }
+  }, [user, isLoading, router]);
 
   return (
-    <Container maxW="container.md" py={10}>
-      <Heading as="h1" size="xl" textAlign="center" mb={8}>
-        CBT System
-      </Heading>
-      <Text textAlign="center" mb={8} fontSize="lg">
-        Computer-Based Test Management System
-      </Text>
-      <VStack spacing={6}>
-        <Link href="/admin">
-          <Button colorScheme="blue" size="lg" width="full">
-            Admin Panel
-          </Button>
-        </Link>
-        <Link href="/student">
-          <Button colorScheme="green" size="lg" width="full">
-            Student Portal
-          </Button>
-        </Link>
-      </VStack>
-    </Container>
+    <Box
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      minHeight="100vh"
+      flexDirection="column"
+    >
+      <Spinner size="xl" color="blue.500" mb={4} />
+      <Text>Loading CBT System...</Text>
+    </Box>
   );
 }

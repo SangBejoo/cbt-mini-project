@@ -140,3 +140,35 @@ ALTER TABLE `jawaban_siswa` ADD FOREIGN KEY (`id_test_session_soal`) REFERENCES 
 -- Add image_path column to soal table (for optional images)
 ALTER TABLE `soal` ADD COLUMN `image_path` varchar(255) NULL COMMENT 'Path gambar opsional (filesystem)';
 
+-- =============================================
+-- USER AUTHENTICATION TABLES (Added for Login System)
+-- =============================================
+
+-- Table: Users (for authentication and roles)
+CREATE TABLE `users` (
+    `id` int PRIMARY KEY AUTO_INCREMENT,
+    `email` varchar(100) UNIQUE NOT NULL,
+    `password_hash` varchar(255) NOT NULL COMMENT 'Hashed password using bcrypt',
+    `nama` varchar(100) NOT NULL,
+    `role` enum('siswa','admin') NOT NULL DEFAULT 'siswa',
+    `is_active` boolean NOT NULL DEFAULT TRUE,
+    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) COMMENT='User accounts for login system with roles';
+
+-- Add user_id to test_session to link sessions to logged-in users
+ALTER TABLE `test_session` ADD COLUMN `user_id` int NULL COMMENT 'ID of the user who started the session (NULL for anonymous)';
+ALTER TABLE `test_session` ADD FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+-- =============================================
+-- INDEXES for Users
+-- =============================================
+CREATE UNIQUE INDEX `users_index_0` ON `users` (`email`);
+CREATE INDEX `users_index_1` ON `users` (`role`);
+CREATE INDEX `users_index_2` ON `users` (`is_active`);
+
+-- =============================================
+-- INDEXES for Updated test_session
+-- =============================================
+CREATE INDEX `test_session_index_6` ON `test_session` (`user_id`);
+

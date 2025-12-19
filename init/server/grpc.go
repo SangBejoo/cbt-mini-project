@@ -22,6 +22,7 @@ import (
 	"cbt-test-mini-project/init/config"
 	"cbt-test-mini-project/init/infra"
 	"cbt-test-mini-project/internal/dependency"
+	"cbt-test-mini-project/util/interceptor"
 )
 
 func RunGRPCServer(ctx context.Context, cfg config.Main, repo infra.Repository) (*grpc.Server, error) {
@@ -30,10 +31,15 @@ func RunGRPCServer(ctx context.Context, cfg config.Main, repo infra.Repository) 
 	if err != nil {
 		log.Fatalf("failed to listen port: %v", err)
 	}
+
+	// Initialize JWT middleware
+	jwtMiddleware := interceptor.NewJWTMiddleware(&cfg)
+
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(metadataInterceptor),
 		grpc.ChainUnaryInterceptor(
 			apmgrpc.NewUnaryServerInterceptor(),
+			jwtMiddleware.UnaryServerInterceptor(),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandlerContext(grpcRecoveryHandler)),
 		),
 		grpc.ChainStreamInterceptor(
@@ -42,7 +48,7 @@ func RunGRPCServer(ctx context.Context, cfg config.Main, repo infra.Repository) 
 		),
 	)
 
-	dependency.InitGrpcDependency(grpcServer, repo)
+	dependency.InitGrpcDependency(grpcServer, repo, &cfg)
 	reflection.Register(grpcServer)
 
 	healthServer := health.NewServer()

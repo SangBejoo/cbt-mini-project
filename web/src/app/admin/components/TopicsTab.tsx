@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -24,6 +24,7 @@ import {
   useDisclosure,
   VStack,
   useToast,
+  Text,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -54,6 +55,10 @@ export default function TopicsTab() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
   const [formData, setFormData] = useState({ idMataPelajaran: '', idTingkat: '', nama: '' });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
 
@@ -62,6 +67,11 @@ export default function TopicsTab() {
     fetchLevels();
     fetchSubjects();
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const fetchTopics = async () => {
     try {
@@ -107,6 +117,17 @@ export default function TopicsTab() {
       setSubjects([]);
     }
   };
+
+  const filteredTopics = useMemo(() => {
+    return topics.filter(topic =>
+      topic.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      topic.mataPelajaran.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      topic.tingkat.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    );
+  }, [topics, debouncedSearchQuery]);
+
+  const totalPages = Math.ceil(filteredTopics.length / itemsPerPage);
+  const paginatedTopics = filteredTopics.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleCreate = () => {
     setEditingTopic(null);
@@ -155,25 +176,36 @@ export default function TopicsTab() {
     }
   };
 
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      setDebouncedSearchQuery(searchQuery);
+    }
+  };
+
   return (
     <Box>
       <Button colorScheme="purple" onClick={handleCreate} mb={4}>
         Tambah Materi
       </Button>
+      <Input
+        placeholder="Cari materi, mata pelajaran, atau tingkat..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        onKeyDown={handleSearchKeyDown}
+        mb={4}
+      />
       <Table variant="simple">
         <Thead>
           <Tr>
-            <Th>ID</Th>
             <Th>Mata Pelajaran</Th>
             <Th>Tingkat</Th>
-            <Th>Nama</Th>
+            <Th>Nama Materi</Th>
             <Th>Aksi</Th>
           </Tr>
         </Thead>
         <Tbody>
-          {topics.map((topic) => (
+          {paginatedTopics.map((topic) => (
             <Tr key={topic.id}>
-              <Td>{topic.id}</Td>
               <Td>{topic.mataPelajaran.nama}</Td>
               <Td>{topic.tingkat.nama}</Td>
               <Td>{topic.nama}</Td>
@@ -189,6 +221,15 @@ export default function TopicsTab() {
           ))}
         </Tbody>
       </Table>
+      <Box mt={4} display="flex" justifyContent="space-between" alignItems="center">
+        <Button isDisabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
+          Prev
+        </Button>
+        <Text>Halaman {currentPage} dari {totalPages}</Text>
+        <Button isDisabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>
+          Next
+        </Button>
+      </Box>
 
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />

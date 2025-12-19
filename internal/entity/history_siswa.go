@@ -42,7 +42,7 @@ type PaginationResponse struct {
 
 // StudentHistoryResponse for student history
 type StudentHistoryResponse struct {
-	NamaPeserta       string            `json:"nama_peserta"`
+	User              *User             `json:"user"`
 	Tingkatan         *int              `json:"tingkatan"`
 	History           []HistorySummary  `json:"history"`
 	RataRataNilai     float64           `json:"rata_rata_nilai"`

@@ -306,10 +306,7 @@ export default function TestPage() {
                   </Box>
                 )}
 
-                <RadioGroup
-                  value={answers[currentQuestion.nomorUrut] || ''}
-                  onChange={(value) => handleAnswerChange(currentQuestion.nomorUrut, value)}
-                >
+                <RadioGroup value={answers[currentQuestion.nomorUrut] || ''}>
                   <VStack spacing={3} align="stretch">
                     <Box
                       p={3}
@@ -318,6 +315,7 @@ export default function TestPage() {
                       cursor="pointer"
                       _hover={{ bg: 'gray.50' }}
                       bg={answers[currentQuestion.nomorUrut] === 'A' ? 'orange.50' : 'white'}
+                      onClick={() => handleAnswerChange(currentQuestion.nomorUrut, 'A')}
                     >
                       <Radio value="A">A. {currentQuestion.opsiA}</Radio>
                     </Box>
@@ -328,6 +326,7 @@ export default function TestPage() {
                       cursor="pointer"
                       _hover={{ bg: 'gray.50' }}
                       bg={answers[currentQuestion.nomorUrut] === 'B' ? 'orange.50' : 'white'}
+                      onClick={() => handleAnswerChange(currentQuestion.nomorUrut, 'B')}
                     >
                       <Radio value="B">B. {currentQuestion.opsiB}</Radio>
                     </Box>
@@ -338,6 +337,7 @@ export default function TestPage() {
                       cursor="pointer"
                       _hover={{ bg: 'gray.50' }}
                       bg={answers[currentQuestion.nomorUrut] === 'C' ? 'orange.50' : 'white'}
+                      onClick={() => handleAnswerChange(currentQuestion.nomorUrut, 'C')}
                     >
                       <Radio value="C">C. {currentQuestion.opsiC}</Radio>
                     </Box>
@@ -348,6 +348,7 @@ export default function TestPage() {
                       cursor="pointer"
                       _hover={{ bg: 'gray.50' }}
                       bg={answers[currentQuestion.nomorUrut] === 'D' ? 'orange.50' : 'white'}
+                      onClick={() => handleAnswerChange(currentQuestion.nomorUrut, 'D')}
                     >
                       <Radio value="D">D. {currentQuestion.opsiD}</Radio>
                     </Box>

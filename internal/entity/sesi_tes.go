@@ -15,7 +15,9 @@ const (
 type TestSession struct {
 	ID              int           `json:"id" gorm:"primaryKey;autoIncrement"`
 	SessionToken    string        `json:"session_token" gorm:"unique;not null;size:64"`
-	NamaPeserta     string        `json:"nama_peserta" gorm:"not null;size:100"`
+	UserID          *int          `json:"user_id" gorm:"column:user_id"` // Nullable for backward compatibility
+	User            *User         `json:"user,omitempty" gorm:"foreignKey:UserID"`
+	NamaPeserta     string        `json:"nama_peserta" gorm:"not null;size:100"` // Keep for backward compatibility
 	IDTingkat       int           `json:"id_tingkat" gorm:"not null"`
 	Tingkat         Tingkat       `json:"tingkat" gorm:"foreignKey:IDTingkat"`
 	IDMataPelajaran int           `json:"id_mata_pelajaran" gorm:"not null"`

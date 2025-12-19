@@ -5,10 +5,13 @@ import (
 	"cbt-test-mini-project/internal/entity"
 	"cbt-test-mini-project/internal/usecase/test_session"
 	tingkatUsecase "cbt-test-mini-project/internal/usecase/tingkat"
+	"cbt-test-mini-project/util/interceptor"
 	"context"
 	"errors"
 	"strings"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -26,7 +29,30 @@ func NewTestSessionHandler(usecase test_session.TestSessionUsecase, tingkatUseca
 
 // CreateTestSession creates a new test session
 func (h *testSessionHandler) CreateTestSession(ctx context.Context, req *base.CreateTestSessionRequest) (*base.TestSessionResponse, error) {
-	session, err := h.usecase.CreateTestSession(req.NamaPeserta, int(req.IdTingkat), int(req.IdMataPelajaran), int(req.DurasiMenit), int(req.JumlahSoal))
+	// Get user_id from JWT context
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		// For REST gateway, extract token from metadata
+		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
+		if extractErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+		}
+		claims, validateErr := interceptor.ValidateToken(token)
+		if validateErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
+		user = &base.User{
+			Id:    claims.UserID,
+			Email: claims.Email,
+			Role:  base.UserRole(claims.Role),
+		}
+		// Add to context for consistency
+		ctx = interceptor.AddUserToContext(ctx, claims)
+	}
+
+	userID := user.Id
+
+	session, err := h.usecase.CreateTestSession(int(userID), int(req.IdTingkat), int(req.IdMataPelajaran), int(req.DurasiMenit), int(req.JumlahSoal))
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +314,7 @@ func (h *testSessionHandler) convertToProtoTestSession(session *entity.TestSessi
 	return &base.TestSession{
 		Id:              int32(session.ID),
 		SessionToken:    session.SessionToken,
-		NamaPeserta:     session.NamaPeserta,
+		User:            h.convertUserToProto(session.User),
 		Tingkat:         &base.Tingkat{Id: int32(session.Tingkat.ID), Nama: session.Tingkat.Nama},
 		MataPelajaran:   &base.MataPelajaran{Id: int32(session.MataPelajaran.ID), Nama: session.MataPelajaran.Nama},
 		WaktuMulai:      timestamppb.New(session.WaktuMulai),
@@ -302,7 +328,24 @@ func (h *testSessionHandler) convertToProtoTestSession(session *entity.TestSessi
 	}
 }
 
-// convertSoalGambarToProto converts entity.SoalGambar slice to proto SoalGambar slice
+// convertUserToProto converts entity.User to proto User
+func (h *testSessionHandler) convertUserToProto(user *entity.User) *base.User {
+	if user == nil {
+		return nil
+	}
+
+	role := base.UserRole(base.UserRole_value[strings.ToUpper(user.Role)])
+
+	return &base.User{
+		Id:       int32(user.ID),
+		Email:    user.Email,
+		Nama:     user.Nama,
+		Role:     role,
+		IsActive: user.IsActive,
+		CreatedAt: timestamppb.New(user.CreatedAt),
+		UpdatedAt: timestamppb.New(user.UpdatedAt),
+	}
+}
 func convertSoalGambarToProto(gambar []entity.SoalGambar) []*base.SoalGambar {
 	if len(gambar) == 0 {
 		return nil

@@ -14,6 +14,7 @@ import (
 func InitRestGatewayDependency(mux *runtime.ServeMux, opts []grpc.DialOption, ctx context.Context, cfg config.Main) {
 	port := fmt.Sprintf(":%d", cfg.GrpcServer.Port)
 	base.RegisterBaseHandlerFromEndpoint(ctx, mux, port, opts)
+	base.RegisterAuthServiceHandlerFromEndpoint(ctx, mux, port, opts)
 	base.RegisterMataPelajaranServiceHandlerFromEndpoint(ctx, mux, port, opts)
 	base.RegisterMateriServiceHandlerFromEndpoint(ctx, mux, port, opts)
 	base.RegisterTingkatServiceHandlerFromEndpoint(ctx, mux, port, opts)

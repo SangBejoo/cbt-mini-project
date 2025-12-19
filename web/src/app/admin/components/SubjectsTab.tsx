@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -22,6 +22,7 @@ import {
   Input,
   useDisclosure,
   useToast,
+  Text,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -36,12 +37,21 @@ export default function SubjectsTab() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [formData, setFormData] = useState({ nama: '' });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
 
   useEffect(() => {
     fetchSubjects();
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const fetchSubjects = async () => {
     try {
@@ -57,6 +67,13 @@ export default function SubjectsTab() {
       setSubjects([]);
     }
   };
+
+  const filteredSubjects = useMemo(() => {
+    return subjects.filter(subject => subject.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase()));
+  }, [subjects, debouncedSearchQuery]);
+
+  const totalPages = Math.ceil(filteredSubjects.length / itemsPerPage);
+  const paginatedSubjects = filteredSubjects.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleCreate = () => {
     setEditingSubject(null);
@@ -96,23 +113,34 @@ export default function SubjectsTab() {
     }
   };
 
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      setDebouncedSearchQuery(searchQuery);
+    }
+  };
+
   return (
     <Box>
       <Button colorScheme="green" onClick={handleCreate} mb={4}>
         Tambah Mata Pelajaran
       </Button>
+      <Input
+        placeholder="Cari mata pelajaran..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        onKeyDown={handleSearchKeyDown}
+        mb={4}
+      />
       <Table variant="simple">
         <Thead>
           <Tr>
-            <Th>ID</Th>
-            <Th>Nama</Th>
+            <Th>Nama Mata Pelajaran</Th>
             <Th>Aksi</Th>
           </Tr>
         </Thead>
         <Tbody>
-          {subjects.map((subject) => (
+          {paginatedSubjects.map((subject) => (
             <Tr key={subject.id}>
-              <Td>{subject.id}</Td>
               <Td>{subject.nama}</Td>
               <Td>
                 <Button size="sm" mr={2} onClick={() => handleEdit(subject)}>
@@ -126,6 +154,15 @@ export default function SubjectsTab() {
           ))}
         </Tbody>
       </Table>
+      <Box mt={4} display="flex" justifyContent="space-between" alignItems="center">
+        <Button isDisabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
+          Prev
+        </Button>
+        <Text>Halaman {currentPage} dari {totalPages}</Text>
+        <Button isDisabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>
+          Next
+        </Button>
+      </Box>
 
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />

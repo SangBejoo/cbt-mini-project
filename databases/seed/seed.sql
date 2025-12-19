@@ -1,4 +1,10 @@
--- Seed data for CBT Mini Project
+-- Insert Users (for authentication)
+-- Passwords are hashed with bcrypt, these are 'password123' for all
+INSERT INTO users (email, password_hash, nama, role, is_active) VALUES
+('admin@example.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Administrator', 'admin', TRUE),
+('siswa1@example.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Siswa Satu', 'siswa', TRUE),
+('siswa2@example.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Siswa Dua', 'siswa', TRUE),
+('siswa3@example.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Siswa Tiga', 'siswa', TRUE);
 
 -- Insert Mata Pelajaran
 INSERT INTO mata_pelajaran (nama) VALUES

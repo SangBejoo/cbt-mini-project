@@ -47,6 +47,7 @@ import {
   AccordionIcon,
 } from '@chakra-ui/react';
 import { EditIcon, DeleteIcon, AddIcon } from '@chakra-ui/icons';
+import { useAuth } from '../../auth-context';
 
 // --- Interfaces ---
 interface Level {
@@ -127,6 +128,19 @@ const steps = [
 
 export default function QuestionsTab() {
   const toast = useToast();
+  const { token } = useAuth();
+
+  // --- API Helpers ---
+  const authFetch = (url: string, options: RequestInit = {}) => {
+    return fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+  };
 
   // --- State ---
   const [levels, setLevels] = useState<Level[]>([]);
@@ -185,7 +199,7 @@ export default function QuestionsTab() {
   // --- Fetch Data ---
   const fetchLevels = async () => {
     try {
-      const res = await fetch(`${API_BASE}/levels`);
+      const res = await authFetch(`${API_BASE}/levels`);
       if (res.ok) {
         const data = await res.json();
         setLevels(data.tingkat || []);
@@ -198,7 +212,7 @@ export default function QuestionsTab() {
 
   const fetchSubjects = async () => {
     try {
-      const res = await fetch(`${API_BASE}/subjects`);
+      const res = await authFetch(`${API_BASE}/subjects`);
       if (res.ok) {
         const data = await res.json();
         setSubjects(data.mataPelajaran || []);
@@ -210,7 +224,7 @@ export default function QuestionsTab() {
 
   const fetchTopics = async () => {
     try {
-      const res = await fetch(`${API_BASE}/topics`);
+      const res = await authFetch(`${API_BASE}/topics`);
       if (res.ok) {
         const data = await res.json();
         setTopics(data.materi || []);
@@ -222,7 +236,7 @@ export default function QuestionsTab() {
 
   const fetchQuestions = async () => {
     try {
-      const res = await fetch(`${API_BASE}/questions`);
+      const res = await authFetch(`${API_BASE}/questions`);
       if (res.ok) {
         const data = await res.json();
         const normalized = (data.soal || []).map((q: Question) => ({
@@ -295,12 +309,12 @@ export default function QuestionsTab() {
       }
     } else if (currentStep === 1) {
       if (
-        !currentQuestion.pertanyaan ||
-        !currentQuestion.opsiA ||
-        !currentQuestion.opsiB ||
-        !currentQuestion.opsiC ||
-        !currentQuestion.opsiD ||
-        !currentQuestion.jawabanBenar
+        !formValues.pertanyaan ||
+        !formValues.opsiA ||
+        !formValues.opsiB ||
+        !formValues.opsiC ||
+        !formValues.opsiD ||
+        !formValues.jawabanBenar
       ) {
         toast({ title: 'Semua field harus diisi', status: 'error' });
         return;
@@ -355,9 +369,8 @@ export default function QuestionsTab() {
     const url = mergedQuestion.id ? `${API_BASE}/questions/${mergedQuestion.id}` : `${API_BASE}/questions`;
 
     try {
-      const res = await fetch(url, {
+      const res = await authFetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
 
@@ -388,7 +401,7 @@ export default function QuestionsTab() {
   const handleDeleteQuestion = async () => {
     if (!currentDeleteId) return;
     try {
-      const res = await fetch(`${API_BASE}/questions/${currentDeleteId}`, { method: 'DELETE' });
+      const res = await authFetch(`${API_BASE}/questions/${currentDeleteId}`, { method: 'DELETE' });
       if (res.ok) {
         toast({ title: 'Soal berhasil dihapus', status: 'success' });
         fetchQuestions();
@@ -405,7 +418,7 @@ export default function QuestionsTab() {
   const handleDeleteImage = async (questionId: number, imageId: number) => {
     if (!confirm('Hapus gambar ini?')) return;
     try {
-      const res = await fetch(`${API_BASE}/questions/${questionId}/images/${imageId}`, {
+      const res = await authFetch(`${API_BASE}/questions/${questionId}/images/${imageId}`, {
         method: 'DELETE',
       });
       if (res.ok) {

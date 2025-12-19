@@ -10,6 +10,37 @@ http:
       get: /v1/health
 
     # ==================================================
+    # AUTH SERVICE (Added for JWT Authentication)
+    # ==================================================
+    - selector: base.AuthService.Login
+      post: /v1/auth/login
+      body: "*"
+
+    - selector: base.AuthService.RefreshToken
+      post: /v1/auth/refresh
+      body: "*"
+
+    - selector: base.AuthService.GetProfile
+      get: /v1/auth/profile
+
+    - selector: base.AuthService.ListUsers
+      get: /v1/auth/users
+
+    - selector: base.AuthService.GetUser
+      get: /v1/auth/users/{id}
+
+    - selector: base.AuthService.CreateUser
+      post: /v1/auth/users
+      body: "*"
+
+    - selector: base.AuthService.UpdateUser
+      put: /v1/auth/users/{id}
+      body: "*"
+
+    - selector: base.AuthService.DeleteUser
+      delete: /v1/auth/users/{id}
+
+    # ==================================================
     # MATA PELAJARAN SERVICE (Master Data)
     # ==================================================
     - selector: base.MataPelajaranService.ListMataPelajaran
@@ -151,3 +182,6 @@ http:
 
     - selector: base.HistoryService.GetHistoryDetail
       get: /v1/history/{session_token}/detail
+
+    - selector: base.HistoryService.ListStudentHistories
+      get: /v1/admin/history/students

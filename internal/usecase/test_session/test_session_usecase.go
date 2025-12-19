@@ -2,7 +2,9 @@ package test_session
 
 import (
 	"cbt-test-mini-project/internal/entity"
+	"cbt-test-mini-project/internal/repository/auth"
 	"cbt-test-mini-project/internal/repository/test_session"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -11,18 +13,25 @@ import (
 
 // testSessionUsecaseImpl implements TestSessionUsecase
 type testSessionUsecaseImpl struct {
-	repo test_session.TestSessionRepository
+	repo     test_session.TestSessionRepository
+	userRepo auth.AuthRepository
 }
 
 // NewTestSessionUsecase creates a new TestSessionUsecase instance
-func NewTestSessionUsecase(repo test_session.TestSessionRepository) TestSessionUsecase {
-	return &testSessionUsecaseImpl{repo: repo}
+func NewTestSessionUsecase(repo test_session.TestSessionRepository, userRepo auth.AuthRepository) TestSessionUsecase {
+	return &testSessionUsecaseImpl{repo: repo, userRepo: userRepo}
 }
 
 // CreateTestSession creates a new test session with random questions
-func (u *testSessionUsecaseImpl) CreateTestSession(namaPeserta string, tingkatan, idMataPelajaran, durasiMenit, jumlahSoal int) (*entity.TestSession, error) {
-	if namaPeserta == "" || tingkatan < 1 || idMataPelajaran < 1 || durasiMenit < 1 || jumlahSoal < 1 {
+func (u *testSessionUsecaseImpl) CreateTestSession(userID, tingkatan, idMataPelajaran, durasiMenit, jumlahSoal int) (*entity.TestSession, error) {
+	if userID < 1 || tingkatan < 1 || idMataPelajaran < 1 || durasiMenit < 1 || jumlahSoal < 1 {
 		return nil, errors.New("invalid input parameters")
+	}
+
+	// Get user to set nama peserta
+	user, err := u.userRepo.GetUserByID(context.Background(), int32(userID))
+	if err != nil {
+		return nil, err
 	}
 
 	// Generate unique session token
@@ -33,7 +42,8 @@ func (u *testSessionUsecaseImpl) CreateTestSession(namaPeserta string, tingkatan
 
 	session := &entity.TestSession{
 		SessionToken:    token,
-		NamaPeserta:     namaPeserta,
+		UserID:          &userID,
+		NamaPeserta:     user.Nama,
 		IDTingkat:       tingkatan,
 		IDMataPelajaran: idMataPelajaran,
 		DurasiMenit:     durasiMenit,
