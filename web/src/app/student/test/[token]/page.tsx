@@ -356,7 +356,6 @@ export default function TestPage() {
 
                 <HStack justify="space-between" pt={4}>
                   <Button
-                    leftIcon={<Text>◀</Text>}
                     onClick={goToPreviousQuestion}
                     isDisabled={currentQuestionIndex === 0}
                     colorScheme="orange"
@@ -384,7 +383,6 @@ export default function TestPage() {
                     </Button>
                   ) : (
                     <Button
-                      rightIcon={<Text>▶</Text>}
                       onClick={goToNextQuestion}
                       colorScheme="orange"
                     >

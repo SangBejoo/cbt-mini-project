@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { debounce } from 'lodash';
 import {
   Box,
   Button,
@@ -138,6 +139,9 @@ export default function QuestionsTab() {
   const [selectedLevel, setSelectedLevel] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  
+  // Debounced filter values to prevent excessive re-renders
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>('');
 
   // Pagination for levels (if >5 levels)
   const levelsPerPage = 5;
@@ -149,10 +153,34 @@ export default function QuestionsTab() {
   const [currentQuestion, setCurrentQuestion] = useState<Partial<Question>>({});
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Local form state to avoid re-render on every keystroke
+  const [formValues, setFormValues] = useState({
+    pertanyaan: '',
+    opsiA: '',
+    opsiB: '',
+    opsiC: '',
+    opsiD: '',
+    jawabanBenar: 'A',
+    pembahasan: '',
+  });
 
   // Delete confirmation
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
   const [currentDeleteId, setCurrentDeleteId] = useState<number | null>(null);
+
+  // --- Debounced Search Query Update ---
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // --- Direct Update for Form Inputs (No Debounce on State, Debounce on Save) ---
+  const updateFormValue = useCallback((field: string, value: string) => {
+    setFormValues(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   // --- Fetch Data ---
   const fetchLevels = async () => {
@@ -228,6 +256,15 @@ export default function QuestionsTab() {
       jawabanBenar: 'A',
       pembahasan: '',
     });
+    setFormValues({
+      pertanyaan: '',
+      opsiA: '',
+      opsiB: '',
+      opsiC: '',
+      opsiD: '',
+      jawabanBenar: 'A',
+      pembahasan: '',
+    });
     setSelectedFiles(null);
     setCurrentStep(0);
     onQuestionOpen();
@@ -235,6 +272,15 @@ export default function QuestionsTab() {
 
   const handleEditQuestion = (question: Question) => {
     setCurrentQuestion(question);
+    setFormValues({
+      pertanyaan: question.pertanyaan || '',
+      opsiA: question.opsiA || '',
+      opsiB: question.opsiB || '',
+      opsiC: question.opsiC || '',
+      opsiD: question.opsiD || '',
+      jawabanBenar: question.jawabanBenar || 'A',
+      pembahasan: question.pembahasan || '',
+    });
     setSelectedFiles(null);
     setCurrentStep(0);
     onQuestionOpen();
@@ -269,21 +315,27 @@ export default function QuestionsTab() {
   };
 
   const handleSaveQuestion = async () => {
-    if (!currentQuestion.pertanyaan || !currentQuestion.opsiA || !currentQuestion.opsiB || !currentQuestion.opsiC || !currentQuestion.opsiD || !currentQuestion.jawabanBenar || !currentQuestion.materi?.id) {
+    // Merge form values into current question
+    const mergedQuestion = {
+      ...currentQuestion,
+      ...formValues,
+    };
+
+    if (!mergedQuestion.pertanyaan || !mergedQuestion.opsiA || !mergedQuestion.opsiB || !mergedQuestion.opsiC || !mergedQuestion.opsiD || !mergedQuestion.jawabanBenar || !mergedQuestion.materi?.id) {
       toast({ title: 'Semua field harus diisi', status: 'error' });
       return;
     }
 
     const data: any = {
-      idMateri: currentQuestion.materi?.id,
-      idTingkat: currentQuestion.materi?.tingkat?.id,
-      pertanyaan: currentQuestion.pertanyaan,
-      opsiA: currentQuestion.opsiA,
-      opsiB: currentQuestion.opsiB,
-      opsiC: currentQuestion.opsiC,
-      opsiD: currentQuestion.opsiD,
-      jawabanBenar: mapLetterToEnum(currentQuestion.jawabanBenar || 'A'),
-      pembahasan: currentQuestion.pembahasan || '',
+      idMateri: mergedQuestion.materi?.id,
+      idTingkat: mergedQuestion.materi?.tingkat?.id,
+      pertanyaan: mergedQuestion.pertanyaan,
+      opsiA: mergedQuestion.opsiA,
+      opsiB: mergedQuestion.opsiB,
+      opsiC: mergedQuestion.opsiC,
+      opsiD: mergedQuestion.opsiD,
+      jawabanBenar: mapLetterToEnum(mergedQuestion.jawabanBenar || 'A'),
+      pembahasan: mergedQuestion.pembahasan || '',
       imageBytes: [],
     };
 
@@ -299,8 +351,8 @@ export default function QuestionsTab() {
       }
     }
 
-    const method = currentQuestion.id ? 'PUT' : 'POST';
-    const url = currentQuestion.id ? `${API_BASE}/questions/${currentQuestion.id}` : `${API_BASE}/questions`;
+    const method = mergedQuestion.id ? 'PUT' : 'POST';
+    const url = mergedQuestion.id ? `${API_BASE}/questions/${mergedQuestion.id}` : `${API_BASE}/questions`;
 
     try {
       const res = await fetch(url, {
@@ -315,6 +367,15 @@ export default function QuestionsTab() {
         onQuestionClose();
         setCurrentStep(0);
         setSelectedFiles(null);
+        setFormValues({
+          pertanyaan: '',
+          opsiA: '',
+          opsiB: '',
+          opsiC: '',
+          opsiD: '',
+          jawabanBenar: 'A',
+          pembahasan: '',
+        });
       } else {
         const errorText = await res.text();
         toast({ title: `Gagal menyimpan soal: ${errorText}`, status: 'error' });
@@ -364,58 +425,62 @@ export default function QuestionsTab() {
 
   // --- Render Helpers ---
 
-  const filteredQuestions = questions.filter((q) => {
-    const matchesLevel = selectedLevel === '' || q.materi.tingkat.id.toString() === selectedLevel;
-    const matchesSubject = selectedSubject === '' || q.materi.mataPelajaran.id.toString() === selectedSubject;
-    const matchesSearch = searchQuery === '' ||
-      q.materi.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      q.materi.mataPelajaran.nama.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesLevel && matchesSubject && matchesSearch;
-  });
+  const filteredQuestions = useMemo(() => {
+    return questions.filter((q) => {
+      const matchesLevel = selectedLevel === '' || q.materi.tingkat.id.toString() === selectedLevel;
+      const matchesSubject = selectedSubject === '' || q.materi.mataPelajaran.id.toString() === selectedSubject;
+      const matchesSearch = debouncedSearchQuery === '' ||
+        q.materi.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        q.materi.mataPelajaran.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+      return matchesLevel && matchesSubject && matchesSearch;
+    });
+  }, [questions, selectedLevel, selectedSubject, debouncedSearchQuery]);
 
-  const nestedData = filteredQuestions.reduce(
-    (acc, q) => {
-      const levelId = q.materi.tingkat.id;
-      const subjectId = q.materi.mataPelajaran.id;
-      const topicId = q.materi.id;
+  const nestedData = useMemo(() => {
+    return filteredQuestions.reduce(
+      (acc, q) => {
+        const levelId = q.materi.tingkat.id;
+        const subjectId = q.materi.mataPelajaran.id;
+        const topicId = q.materi.id;
 
-      if (!acc[levelId]) {
-        acc[levelId] = {
-          level: q.materi.tingkat,
-          subjects: {},
-        };
-      }
+        if (!acc[levelId]) {
+          acc[levelId] = {
+            level: q.materi.tingkat,
+            subjects: {},
+          };
+        }
 
-      if (!acc[levelId].subjects[subjectId]) {
-        acc[levelId].subjects[subjectId] = {
-          subject: q.materi.mataPelajaran,
-          topics: {},
-        };
-      }
+        if (!acc[levelId].subjects[subjectId]) {
+          acc[levelId].subjects[subjectId] = {
+            subject: q.materi.mataPelajaran,
+            topics: {},
+          };
+        }
 
-      if (!acc[levelId].subjects[subjectId].topics[topicId]) {
-        acc[levelId].subjects[subjectId].topics[topicId] = {
-          topic: q.materi,
-          questions: [],
-        };
-      }
+        if (!acc[levelId].subjects[subjectId].topics[topicId]) {
+          acc[levelId].subjects[subjectId].topics[topicId] = {
+            topic: q.materi,
+            questions: [],
+          };
+        }
 
-      acc[levelId].subjects[subjectId].topics[topicId].questions.push(q);
-      return acc;
-    },
-    {} as Record<number, {
-      level: { id: number; nama: string };
-      subjects: Record<number, {
-        subject: { id: number; nama: string };
-        topics: Record<number, {
-          topic: { id: number; nama: string; mataPelajaran: { id: number; nama: string }; tingkat: { id: number; nama: string } };
-          questions: Question[];
+        acc[levelId].subjects[subjectId].topics[topicId].questions.push(q);
+        return acc;
+      },
+      {} as Record<number, {
+        level: { id: number; nama: string };
+        subjects: Record<number, {
+          subject: { id: number; nama: string };
+          topics: Record<number, {
+            topic: { id: number; nama: string; mataPelajaran: { id: number; nama: string }; tingkat: { id: number; nama: string } };
+            questions: Question[];
+          }>;
         }>;
-      }>;
-    }>
-  );
+      }>
+    );
+  }, [filteredQuestions]);
 
-  const renderContent = () => {
+  const renderContent = useMemo(() => {
     if (isLoading) return <Text>Loading...</Text>;
 
     const totalLevelPages = Math.ceil(levels.length / levelsPerPage);
@@ -533,7 +598,7 @@ export default function QuestionsTab() {
         ))}
       </>
     );
-  };
+  }, [nestedData, levels, currentLevelPage, isLoading]);
 
   return (
     <Box>
@@ -581,7 +646,7 @@ export default function QuestionsTab() {
         </FormControl>
       </HStack>
 
-      {renderContent()}
+      {renderContent}
 
       {/* Multi-Step Question Modal */}
       <Modal isOpen={isQuestionOpen} onClose={onQuestionClose} size="2xl" closeOnEsc={false} closeOnOverlayClick={false}>
@@ -668,8 +733,8 @@ export default function QuestionsTab() {
                 <FormControl isRequired>
                   <FormLabel fontWeight="bold">Soal/Pertanyaan</FormLabel>
                   <Textarea
-                    value={currentQuestion.pertanyaan || ''}
-                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, pertanyaan: e.target.value })}
+                    value={formValues.pertanyaan}
+                    onChange={(e) => updateFormValue('pertanyaan', e.target.value)}
                     placeholder="Masukkan pertanyaan soal di sini..."
                     rows={4}
                     size="lg"
@@ -682,8 +747,8 @@ export default function QuestionsTab() {
                 <FormControl isRequired>
                   <FormLabel fontWeight="bold">A. Opsi A</FormLabel>
                   <Input
-                    value={currentQuestion.opsiA || ''}
-                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, opsiA: e.target.value })}
+                    value={formValues.opsiA}
+                    onChange={(e) => updateFormValue('opsiA', e.target.value)}
                     placeholder="Masukkan pilihan A..."
                     size="lg"
                     focusBorderColor="blue.400"
@@ -693,8 +758,8 @@ export default function QuestionsTab() {
                 <FormControl isRequired>
                   <FormLabel fontWeight="bold">B. Opsi B</FormLabel>
                   <Input
-                    value={currentQuestion.opsiB || ''}
-                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, opsiB: e.target.value })}
+                    value={formValues.opsiB}
+                    onChange={(e) => updateFormValue('opsiB', e.target.value)}
                     placeholder="Masukkan pilihan B..."
                     size="lg"
                     focusBorderColor="blue.400"
@@ -704,8 +769,8 @@ export default function QuestionsTab() {
                 <FormControl isRequired>
                   <FormLabel fontWeight="bold">C. Opsi C</FormLabel>
                   <Input
-                    value={currentQuestion.opsiC || ''}
-                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, opsiC: e.target.value })}
+                    value={formValues.opsiC}
+                    onChange={(e) => updateFormValue('opsiC', e.target.value)}
                     placeholder="Masukkan pilihan C..."
                     size="lg"
                     focusBorderColor="blue.400"
@@ -715,8 +780,8 @@ export default function QuestionsTab() {
                 <FormControl isRequired>
                   <FormLabel fontWeight="bold">D. Opsi D</FormLabel>
                   <Input
-                    value={currentQuestion.opsiD || ''}
-                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, opsiD: e.target.value })}
+                    value={formValues.opsiD}
+                    onChange={(e) => updateFormValue('opsiD', e.target.value)}
                     placeholder="Masukkan pilihan D..."
                     size="lg"
                     focusBorderColor="blue.400"
@@ -728,8 +793,8 @@ export default function QuestionsTab() {
                 <FormControl isRequired>
                   <FormLabel fontWeight="bold">Jawaban Benar</FormLabel>
                   <Select
-                    value={currentQuestion.jawabanBenar || 'A'}
-                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, jawabanBenar: e.target.value })}
+                    value={formValues.jawabanBenar || 'A'}
+                    onChange={(e) => updateFormValue('jawabanBenar', e.target.value)}
                     size="lg"
                     focusBorderColor="green.400"
                     bg="green.50"
@@ -744,8 +809,8 @@ export default function QuestionsTab() {
                 <FormControl>
                   <FormLabel fontWeight="bold">Pembahasan (Opsional)</FormLabel>
                   <Textarea
-                    value={currentQuestion.pembahasan || ''}
-                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, pembahasan: e.target.value })}
+                    value={formValues.pembahasan || ''}
+                    onChange={(e) => updateFormValue('pembahasan', e.target.value)}
                     placeholder="Masukkan penjelasan untuk membantu siswa memahami jawaban yang benar..."
                     rows={3}
                     size="lg"

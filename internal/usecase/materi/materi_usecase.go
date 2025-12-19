@@ -81,7 +81,11 @@ func (u *materiUsecaseImpl) ListMateri(idMataPelajaran, idTingkat int, page, pag
 		page = 1
 	}
 	if pageSize < 1 {
-		pageSize = 10
+		pageSize = 100 // Default to larger page size for dynamic loading
+	}
+	// Allow large page sizes for virtual scrolling (cap at 1000 to prevent abuse)
+	if pageSize > 1000 {
+		pageSize = 1000
 	}
 
 	offset := (page - 1) * pageSize

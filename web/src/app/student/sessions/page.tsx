@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -17,7 +17,6 @@ import {
   CardBody,
   Text,
   SimpleGrid,
-  Icon,
   HStack,
   useDisclosure,
   Modal,
@@ -27,7 +26,13 @@ import {
   ModalBody,
   ModalFooter,
   ModalCloseButton,
+  Select,
+  Flex,
+  Center,
+  Spinner,
 } from '@chakra-ui/react';
+import { ChevronLeftIcon, ChevronRightIcon } from '@chakra-ui/icons';
+import { FixedSizeList as List } from 'react-window';
 import axios from 'axios';
 
 interface Topic {
@@ -39,6 +44,7 @@ interface Topic {
 
 const TOPICS_API = 'http://localhost:8080/v1/topics';
 const CREATE_SESSION_API = 'http://localhost:8080/v1/sessions';
+const ITEMS_PER_PAGE = 8; // Maximum 10 items per page
 
 export default function SessionsPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -46,13 +52,31 @@ export default function SessionsPage() {
   const [namaPeserta, setNamaPeserta] = useState('');
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isLoadingTopics, setIsLoadingTopics] = useState(true);
+
+  // Pagination and filter states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTingkat, setSelectedTingkat] = useState<string>('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
   const router = useRouter();
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const listRef = useRef<List>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setCurrentPage(1); // Reset to page 1 on search
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (mounted) {
@@ -62,18 +86,59 @@ export default function SessionsPage() {
 
   const fetchTopics = async () => {
     try {
-      const response = await axios.get(TOPICS_API);
+      setIsLoadingTopics(true);
+      // Request all topics at once (backend now supports large page sizes)
+      const response = await axios.get(TOPICS_API, {
+        params: {
+          page: 1,
+          pageSize: 1000, // Get all topics in one request
+        },
+      });
       const data = response.data;
       setTopics(Array.isArray(data) ? data : Array.isArray(data.materi) ? data.materi : []);
     } catch (error) {
       console.error('Error fetching topics:', error);
+      toast({ title: 'Error mengambil data materi', status: 'error' });
+    } finally {
+      setIsLoadingTopics(false);
     }
   };
 
-  const handleTopicClick = (topic: Topic) => {
+  // Get unique tingkat levels
+  const tingkatOptions = useMemo(() => {
+    const unique = Array.from(
+      new Map(
+        topics.map((t) => [t.tingkat.id, { id: t.tingkat.id, nama: t.tingkat.nama }])
+      ).values()
+    ).sort((a, b) => a.id - b.id);
+    return unique;
+  }, [topics]);
+
+  // Filter and search logic - memoized to prevent unnecessary recalculations
+  const filteredTopics = useMemo(() => {
+    return topics.filter((topic) => {
+      const matchesSearch =
+        debouncedSearchQuery === '' ||
+        topic.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        topic.mataPelajaran.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+
+      const matchesTingkat = selectedTingkat === '' || topic.tingkat.id.toString() === selectedTingkat;
+
+      return matchesSearch && matchesTingkat;
+    });
+  }, [topics, debouncedSearchQuery, selectedTingkat]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredTopics.length / ITEMS_PER_PAGE);
+  const paginatedTopics = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredTopics.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredTopics, currentPage]);
+
+  const handleTopicClick = useCallback((topic: Topic) => {
     setSelectedTopic(topic);
     onOpen();
-  };
+  }, [onOpen]);
 
   const handleStartTest = async () => {
     if (!namaPeserta || !selectedTopic) {
@@ -112,78 +177,251 @@ export default function SessionsPage() {
     } finally {
       setLoading(false);
       onClose();
+      setNamaPeserta('');
     }
   };
+
+  // Render a single topic card
+  const TopicCard = ({ topic }: { topic: Topic }) => (
+    <Card
+      cursor="pointer"
+      onClick={() => handleTopicClick(topic)}
+      _hover={{ transform: 'translateY(-4px)', shadow: 'xl' }}
+      transition="all 0.3s"
+      bg="orange.50"
+      borderWidth="2px"
+      borderColor="orange.200"
+      h="full"
+    >
+      <CardBody>
+        <VStack spacing={4} align="center" h="full" justify="space-between">
+          <Box
+            bg="orange.500"
+            p={4}
+            borderRadius="md"
+            color="white"
+            fontWeight="bold"
+            fontSize="xl"
+            minW="60px"
+            textAlign="center"
+          >
+            CBT
+          </Box>
+          <VStack spacing={2} flex={1} justify="center">
+            <Text fontWeight="bold" fontSize="md" textAlign="center" color="orange.700" noOfLines={2}>
+              {topic.mataPelajaran.nama.toUpperCase()} {topic.tingkat.nama}
+            </Text>
+            <Text fontSize="sm" color="gray.600" textAlign="center" noOfLines={2}>
+              {topic.nama}
+            </Text>
+          </VStack>
+          <HStack spacing={2} width="full" justify="center">
+            <Button
+              size="xs"
+              colorScheme="orange"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTopicClick(topic);
+              }}
+            >
+              Mulai
+            </Button>
+          </HStack>
+        </VStack>
+      </CardBody>
+    </Card>
+  );
 
   if (!mounted) return null;
 
   return (
     <Container maxW="container.xl" py={10}>
-      <VStack spacing={6}>
+      <VStack spacing={8}>
         <Heading as="h1" size="xl" textAlign="center" mb={4} color="orange.600">
           Pilih Materi Tes
         </Heading>
 
-        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6} width="full">
-          {topics.map((topic) => (
-            <Card
-              key={topic.id}
-              cursor="pointer"
-              onClick={() => handleTopicClick(topic)}
-              _hover={{ transform: 'translateY(-4px)', shadow: 'xl' }}
-              transition="all 0.3s"
-              bg="orange.50"
-              borderWidth="2px"
-              borderColor="orange.200"
-            >
-              <CardBody>
-                <VStack spacing={4} align="center">
-                  <Box
-                    bg="orange.500"
-                    p={4}
-                    borderRadius="md"
-                    color="white"
-                    fontWeight="bold"
-                    fontSize="xl"
+        {/* Filter and Search Section */}
+        <Box bg="white" p={6} borderRadius="lg" shadow="md" w="full">
+          <VStack spacing={4} align="stretch">
+            <Heading size="sm" color="gray.700">
+              Cari & Filter Materi
+            </Heading>
+
+            <HStack spacing={4} align="flex-end" flexWrap={{ base: 'wrap', md: 'nowrap' }}>
+              <FormControl flex={1} minW={{ base: '100%', md: 'auto' }}>
+                <FormLabel fontSize="sm">Cari Materi atau Mata Pelajaran</FormLabel>
+                <Input
+                  placeholder="Ketik nama materi atau mata pelajaran..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  size="md"
+                />
+              </FormControl>
+
+              <FormControl w={{ base: '100%', md: 'auto' }} minW={{ base: '100%', md: '200px' }}>
+                <FormLabel fontSize="sm">Filter Tingkat</FormLabel>
+                <Select
+                  placeholder="Semua Tingkat"
+                  value={selectedTingkat}
+                  onChange={(e) => {
+                    setSelectedTingkat(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  size="md"
+                >
+                  {tingkatOptions.map((tingkat) => (
+                    <option key={tingkat.id} value={tingkat.id.toString()}>
+                      Tingkat {tingkat.nama}
+                    </option>
+                  ))}
+                </Select>
+              </FormControl>
+            </HStack>
+
+            {isLoadingTopics ? (
+              <HStack justify="center" py={4}>
+                <Spinner color="orange.500" />
+                <Text color="gray.500">Memuat materi...</Text>
+              </HStack>
+            ) : filteredTopics.length > 0 ? (
+              <Text fontSize="sm" color="gray.500" fontWeight="500">
+                Menampilkan {paginatedTopics.length} dari {filteredTopics.length} materi{' '}
+                {totalPages > 1 && `(Halaman ${currentPage} dari ${totalPages})`}
+              </Text>
+            ) : (
+              <Text fontSize="sm" color="gray.500">
+                Tidak ada materi ditemukan
+              </Text>
+            )}
+          </VStack>
+        </Box>
+
+        {/* Topics Grid with Dynamic Rendering */}
+        {isLoadingTopics ? (
+          <Center w="full" py={12}>
+            <Spinner size="lg" color="orange.500" />
+          </Center>
+        ) : filteredTopics.length > 0 ? (
+          <>
+            <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={4} width="full" autoRows="minmax(240px, auto)">
+              {paginatedTopics.map((topic) => (
+                <TopicCard key={topic.id} topic={topic} />
+              ))}
+            </SimpleGrid>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <Box w="full" mt={8}>
+                <Flex justify="center" align="center" gap={3} flexWrap="wrap" mb={4}>
+                  <Button
+                    leftIcon={<ChevronLeftIcon />}
+                    onClick={() => {
+                      setCurrentPage(Math.max(1, currentPage - 1));
+                      listRef.current?.scrollToItem(0, 'start');
+                    }}
+                    isDisabled={currentPage === 1}
+                    colorScheme="orange"
+                    variant="outline"
+                    size="sm"
                   >
-                    CBT
-                  </Box>
-                  <VStack spacing={1}>
-                    <Text fontWeight="bold" fontSize="lg" textAlign="center" color="orange.700">
-                      {topic.mataPelajaran.nama.toUpperCase()} {topic.tingkat.nama} SD KELAS {topic.tingkat.nama === '1' ? 'I' : topic.tingkat.nama === '2' ? 'II' : topic.tingkat.nama === '3' ? 'III' : 'IV'}
-                    </Text>
-                    <Text fontSize="sm" color="gray.600" textAlign="center">
-                      {topic.nama}
-                    </Text>
-                  </VStack>
-                  <HStack spacing={3} width="full" justify="center">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      colorScheme="orange"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push('/student/history');
-                      }}
-                    >
-                      Riwayat Nilai Tes
-                    </Button>
-                    <Button
-                      size="sm"
-                      colorScheme="orange"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleTopicClick(topic);
-                      }}
-                    >
-                      Mulai CBT
-                    </Button>
+                    Sebelumnya
+                  </Button>
+
+                  <HStack spacing={1} justify="center" flexWrap="wrap">
+                    {totalPages <= 7
+                      ? Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <Button
+                            key={page}
+                            onClick={() => {
+                              setCurrentPage(page);
+                              listRef.current?.scrollToItem(0, 'start');
+                            }}
+                            variant={currentPage === page ? 'solid' : 'outline'}
+                            colorScheme="orange"
+                            size="sm"
+                            minW="40px"
+                          >
+                            {page}
+                          </Button>
+                        ))
+                      : [
+                          1,
+                          ...(currentPage > 3 ? [0] : []),
+                          ...(currentPage > 2 ? [currentPage - 1] : []),
+                          currentPage,
+                          ...(currentPage < totalPages - 1 ? [currentPage + 1] : []),
+                          ...(currentPage < totalPages - 2 ? [0] : []),
+                          totalPages,
+                        ]
+                          .filter((p, i, arr) => p !== 0 || i === 0 || i === arr.length - 1)
+                          .map((page, i) =>
+                            page === 0 ? (
+                              <Text key={`dots-${i}`} px={2}>
+                                ...
+                              </Text>
+                            ) : (
+                              <Button
+                                key={page}
+                                onClick={() => {
+                                  setCurrentPage(page);
+                                  listRef.current?.scrollToItem(0, 'start');
+                                }}
+                                variant={currentPage === page ? 'solid' : 'outline'}
+                                colorScheme="orange"
+                                size="sm"
+                                minW="40px"
+                              >
+                                {page}
+                              </Button>
+                            )
+                          )}
                   </HStack>
-                </VStack>
-              </CardBody>
-            </Card>
-          ))}
-        </SimpleGrid>
+
+                  <Button
+                    rightIcon={<ChevronRightIcon />}
+                    onClick={() => {
+                      setCurrentPage(Math.min(totalPages, currentPage + 1));
+                      listRef.current?.scrollToItem(0, 'start');
+                    }}
+                    isDisabled={currentPage === totalPages}
+                    colorScheme="orange"
+                    variant="outline"
+                    size="sm"
+                  >
+                    Selanjutnya
+                  </Button>
+                </Flex>
+                <Center>
+                  <Text fontSize="sm" color="gray.600" fontWeight="500">
+                    Halaman {currentPage} dari {totalPages}
+                  </Text>
+                </Center>
+              </Box>
+            )}
+          </>
+        ) : (
+          <Box w="full" py={12}>
+            <Center>
+              <VStack spacing={4}>
+                <Text fontSize="lg" fontWeight="bold" color="gray.600">
+                  Tidak ada materi yang sesuai
+                </Text>
+                <Button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedTingkat('');
+                    setCurrentPage(1);
+                  }}
+                  variant="outline"
+                  colorScheme="orange"
+                >
+                  Reset Filter
+                </Button>
+              </VStack>
+            </Center>
+          </Box>
+        )}
 
         <Link href="/student">
           <Button variant="outline" mt={4}>
@@ -200,15 +438,31 @@ export default function SessionsPage() {
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4}>
-              <Text fontSize="lg" fontWeight="bold">
-                {selectedTopic?.mataPelajaran.nama} - {selectedTopic?.nama}
-              </Text>
+              {selectedTopic && (
+                <>
+                  <Box bg="orange.50" p={4} borderRadius="md" w="full">
+                    <Text fontSize="sm" fontWeight="bold" color="gray.600" mb={2}>
+                      Materi
+                    </Text>
+                    <Text fontSize="lg" fontWeight="bold" color="orange.600">
+                      {selectedTopic.mataPelajaran.nama}
+                    </Text>
+                    <Text fontSize="md" color="gray.700" mt={1}>
+                      {selectedTopic.nama}
+                    </Text>
+                  </Box>
+                </>
+              )}
               <FormControl isRequired>
                 <FormLabel>Nama Anda</FormLabel>
                 <Input
                   value={namaPeserta}
                   onChange={(e) => setNamaPeserta(e.target.value)}
                   placeholder="Masukkan nama Anda"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') handleStartTest();
+                  }}
+                  autoFocus
                 />
               </FormControl>
             </VStack>

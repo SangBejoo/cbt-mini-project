@@ -87,7 +87,7 @@ func (h *materiHandler) DeleteMateri(ctx context.Context, req *base.DeleteMateri
 // ListMateri lists materi
 func (h *materiHandler) ListMateri(ctx context.Context, req *base.ListMateriRequest) (*base.ListMateriResponse, error) {
 	page := 1
-	pageSize := 10
+	pageSize := 100 // Changed from 10 to 100 for better default
 	if req.Pagination != nil {
 		if req.Pagination.Page > 0 {
 			page = int(req.Pagination.Page)
@@ -95,6 +95,10 @@ func (h *materiHandler) ListMateri(ctx context.Context, req *base.ListMateriRequ
 		if req.Pagination.PageSize > 0 {
 			pageSize = int(req.Pagination.PageSize)
 		}
+	}
+	// Cap pageSize to prevent abuse
+	if pageSize > 1000 {
+		pageSize = 1000
 	}
 	materis, pagination, err := h.usecase.ListMateri(int(req.IdMataPelajaran), int(req.IdTingkat), page, pageSize)
 	if err != nil {
