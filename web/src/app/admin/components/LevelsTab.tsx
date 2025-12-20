@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import React from 'react';
 import {
   Box,
   Button,
@@ -21,103 +22,67 @@ import {
   FormLabel,
   Input,
   useDisclosure,
-  useToast,
   Text,
 } from '@chakra-ui/react';
-import axios from 'axios';
+import { useCRUD, useForm, usePagination } from '../hooks';
+import { Level } from '../types';
 
-interface Level {
-  id: number;
-  nama: string;
-}
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1/levels';
-
-export default function LevelsTab() {
-  const [levels, setLevels] = useState<Level[]>([]);
+export default React.memo(function LevelsTab() {
+  const { data: levels, create, update, remove } = useCRUD<Level>('levels');
   const [editingLevel, setEditingLevel] = useState<Level | null>(null);
-  const [formData, setFormData] = useState({ nama: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const toast = useToast();
+
+  const form = useForm({
+    initialValues: { nama: '' },
+    onSubmit: async (values) => {
+      if (editingLevel) {
+        await update(editingLevel.id, values);
+      } else {
+        await create(values);
+      }
+      onClose();
+      form.reset();
+      setEditingLevel(null);
+    },
+  });
 
   useEffect(() => {
-    fetchLevels();
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const fetchLevels = async () => {
-    try {
-      const response = await axios.get(API_BASE);
-      const data = response.data;
-      setLevels(
-        Array.isArray(data) ? data :
-        Array.isArray(data.data) ? data.data :
-        Array.isArray(data.tingkat) ? data.tingkat : []
-      );
-    } catch (error) {
-      toast({ title: 'Error mengambil tingkat', status: 'error' });
-      setLevels([]);
-    }
-  };
-
   const filteredLevels = useMemo(() => {
-    return levels.filter(level => level.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase()));
+    return levels.filter((level) =>
+      level.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    );
   }, [levels, debouncedSearchQuery]);
 
-  const totalPages = Math.ceil(filteredLevels.length / itemsPerPage);
-  const paginatedLevels = filteredLevels.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const { paginatedItems, currentPage, totalPages, goToPage, nextPage, prevPage } =
+    usePagination(filteredLevels, { itemsPerPage: 10 });
 
-  const handleCreate = () => {
+  const handleCreate = useCallback(() => {
     setEditingLevel(null);
-    setFormData({ nama: '' });
+    form.reset();
     onOpen();
-  };
+  }, [form, onOpen]);
 
-  const handleEdit = (level: Level) => {
-    setEditingLevel(level);
-    setFormData({ nama: level.nama });
-    onOpen();
-  };
+  const handleEdit = useCallback(
+    (level: Level) => {
+      setEditingLevel(level);
+      form.setFieldValue('nama', level.nama);
+      onOpen();
+    },
+    [form, onOpen]
+  );
 
-  const handleDelete = async (id: number) => {
-    try {
-      await axios.delete(`${API_BASE}/${id}`);
-      fetchLevels();
-      toast({ title: 'Tingkat dihapus', status: 'success' });
-    } catch (error) {
-      toast({ title: 'Error menghapus tingkat', status: 'error' });
-    }
-  };
-
-  const handleSubmit = async () => {
-    try {
-      if (editingLevel) {
-        await axios.put(`${API_BASE}/${editingLevel.id}`, formData);
-        toast({ title: 'Tingkat diperbarui', status: 'success' });
-      } else {
-        await axios.post(API_BASE, formData);
-        toast({ title: 'Tingkat dibuat', status: 'success' });
-      }
-      fetchLevels();
-      onClose();
-    } catch (error) {
-      toast({ title: 'Error menyimpan tingkat', status: 'error' });
-    }
-  };
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      setDebouncedSearchQuery(searchQuery);
-    }
-  };
+  const handleDelete = useCallback(
+    async (id: number) => {
+      await remove(id);
+    },
+    [remove]
+  );
 
   return (
     <Box>
@@ -128,7 +93,6 @@ export default function LevelsTab() {
         placeholder="Cari tingkat..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        onKeyDown={handleSearchKeyDown}
         mb={4}
       />
       <Table variant="simple">
@@ -139,7 +103,7 @@ export default function LevelsTab() {
           </Tr>
         </Thead>
         <Tbody>
-          {paginatedLevels.map((level) => (
+          {paginatedItems.map((level) => (
             <Tr key={level.id}>
               <Td>{level.nama}</Td>
               <Td>
@@ -155,11 +119,13 @@ export default function LevelsTab() {
         </Tbody>
       </Table>
       <Box mt={4} display="flex" justifyContent="space-between" alignItems="center">
-        <Button isDisabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
+        <Button isDisabled={currentPage === 1} onClick={prevPage}>
           Prev
         </Button>
-        <Text>Halaman {currentPage} dari {totalPages}</Text>
-        <Button isDisabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>
+        <Text>
+          Halaman {currentPage} dari {totalPages}
+        </Text>
+        <Button isDisabled={currentPage === totalPages} onClick={nextPage}>
           Next
         </Button>
       </Box>
@@ -173,16 +139,30 @@ export default function LevelsTab() {
             <FormControl>
               <FormLabel>Nama Tingkatan</FormLabel>
               <Input
-                value={formData.nama}
-                onChange={(e) => setFormData({ nama: e.target.value })}
+                name="nama"
+                value={form.values.nama}
+                onChange={form.handleChange}
+                placeholder="Masukkan nama tingkatan"
               />
             </FormControl>
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={handleSubmit}>
+            <Button
+              colorScheme="blue"
+              mr={3}
+              onClick={() => form.handleSubmit()}
+              isLoading={form.isSubmitting}
+            >
               Simpan
             </Button>
-            <Button variant="ghost" onClick={onClose}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                onClose();
+                setEditingLevel(null);
+                form.reset();
+              }}
+            >
               Batal
             </Button>
           </ModalFooter>
@@ -190,4 +170,4 @@ export default function LevelsTab() {
       </Modal>
     </Box>
   );
-}
+})

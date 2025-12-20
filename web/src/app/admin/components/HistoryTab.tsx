@@ -1,176 +1,71 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
+  Container,
   Box,
   VStack,
-  Heading,
-  Container,
-  useToast,
-  Card,
-  CardBody,
-  Text,
-  Badge,
   HStack,
-  SimpleGrid,
-  Select,
+  Heading,
+  Text,
+  Spinner,
   Input,
+  Select,
   Accordion,
   AccordionItem,
   AccordionButton,
   AccordionPanel,
   AccordionIcon,
-  Spinner,
+  Badge,
+  SimpleGrid,
+  Card,
+  CardBody,
 } from '@chakra-ui/react';
-import { useAuth } from '../../auth-context';
-
-interface TestSession {
-  id: number;
-  sessionToken: string;
-  user: {
-    id: number;
-    email: string;
-    nama: string;
-    role: string;
-    isActive: boolean;
-  } | null;
-  namaPeserta: string;
-  tingkat: {
-    id: number;
-    nama: string;
-  };
-  mataPelajaran: {
-    id: number;
-    nama: string;
-  };
-  waktuMulai: string;
-  waktuSelesai: string | null;
-  batasWaktu: string;
-  durasiMenit: number;
-  nilaiAkhir: number | null;
-  jumlahBenar: number | null;
-  totalSoal: number | null;
-  status: string;
-}
-
-interface ApiResponse {
-  testSessions: TestSession[];
-  pagination: {
-    totalCount: number;
-    totalPages: number;
-    currentPage: number;
-    pageSize: number;
-  };
-}
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1/admin/sessions';
+import { useSessions } from '../hooks';
 
 export default function HistoryTab() {
-  const toast = useToast();
-  const { token } = useAuth();
-  const [sessions, setSessions] = useState<TestSession[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { sessions, loading, getPesertas, getSubjects, getLevels, getFilteredGroups } =
+    useSessions();
+
   const [searchPeserta, setSearchPeserta] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('Semua');
   const [selectedLevel, setSelectedLevel] = useState<string>('Semua');
 
-  useEffect(() => {
-    fetchSessions();
-  }, []);
+  const pesertas = useMemo(
+    () => getPesertas(searchPeserta),
+    [searchPeserta, getPesertas]
+  );
 
-  const fetchSessions = async () => {
-    try {
-      const response = await fetch(API_BASE, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      const data: ApiResponse = await response.json();
-      setSessions(data.testSessions || []);
-    } catch (error) {
-      console.error('Error fetching sessions:', error);
-      toast({ title: 'Error loading sessions', status: 'error' });
-      setSessions([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const subjects = useMemo(
+    () => getSubjects(pesertas, selectedSubject),
+    [pesertas, selectedSubject, getSubjects]
+  );
 
-  const groupedSessions = useMemo(() => {
-    const groups: Record<string, Record<string, Record<string, TestSession[]>>> = {};
-    if (!Array.isArray(sessions)) return groups;
-    sessions.forEach(item => {
-      const peserta = item.namaPeserta || 'Unknown';
-      const subj = item.mataPelajaran?.nama || 'Unknown';
-      const lvl = item.tingkat?.nama || 'Unknown';
-      if (!groups[peserta]) groups[peserta] = {};
-      if (!groups[peserta][subj]) groups[peserta][subj] = {};
-      if (!groups[peserta][subj][lvl]) groups[peserta][subj][lvl] = [];
-      groups[peserta][subj][lvl].push(item);
-    });
-    return groups;
-  }, [sessions]);
+  const levels = useMemo(
+    () => getLevels(pesertas, selectedSubject, selectedLevel),
+    [pesertas, selectedSubject, selectedLevel, getLevels]
+  );
 
-  const pesertas = useMemo(() => {
-    const allPesertas = Object.keys(groupedSessions);
-    if (searchPeserta.trim() === '') return allPesertas;
-    return allPesertas.filter(p => p.toLowerCase().includes(searchPeserta.toLowerCase()));
-  }, [groupedSessions, searchPeserta]);
-
-  const subjects = useMemo(() => {
-    if (searchPeserta.trim() === '') {
-      const allSubjects = new Set<string>();
-      Object.values(groupedSessions).forEach(peserta => Object.keys(peserta).forEach(subj => allSubjects.add(subj)));
-      return ['Semua', ...Array.from(allSubjects)];
-    } else {
-      const matchedPesertas = pesertas;
-      const allSubjects = new Set<string>();
-      matchedPesertas.forEach(p => {
-        Object.keys(groupedSessions[p] || {}).forEach(subj => allSubjects.add(subj));
-      });
-      return ['Semua', ...Array.from(allSubjects)];
-    }
-  }, [groupedSessions, searchPeserta, pesertas]);
-
-  const levels = useMemo(() => {
-    if (selectedSubject === 'Semua') {
-      const allLevels = new Set<string>();
-      pesertas.forEach(p => {
-        Object.values(groupedSessions[p] || {}).forEach(subj =>
-          Object.keys(subj).forEach(lvl => allLevels.add(lvl))
-        );
-      });
-      return ['Semua', ...Array.from(allLevels)];
-    } else {
-      const allLevels = new Set<string>();
-      pesertas.forEach(p => {
-        Object.keys(groupedSessions[p]?.[selectedSubject] || {}).forEach(lvl => allLevels.add(lvl));
-      });
-      return ['Semua', ...Array.from(allLevels)];
-    }
-  }, [groupedSessions, selectedSubject, pesertas]);
-
-  const filteredGroups = useMemo(() => {
-    const filtered: Record<string, Record<string, Record<string, TestSession[]>>> = {};
-    pesertas.forEach(peserta => {
-      filtered[peserta] = {};
-      Object.keys(groupedSessions[peserta]).forEach(subj => {
-        if (selectedSubject !== 'Semua' && subj !== selectedSubject) return;
-        filtered[peserta][subj] = {};
-        Object.keys(groupedSessions[peserta][subj]).forEach(lvl => {
-          if (selectedLevel !== 'Semua' && lvl !== selectedLevel) return;
-          filtered[peserta][subj][lvl] = groupedSessions[peserta][subj][lvl];
-        });
-        if (Object.keys(filtered[peserta][subj]).length === 0) delete filtered[peserta][subj];
-      });
-      if (Object.keys(filtered[peserta]).length === 0) delete filtered[peserta];
-    });
-    return filtered;
-  }, [groupedSessions, pesertas, selectedSubject, selectedLevel]);
+  const filteredGroups = useMemo(
+    () => getFilteredGroups(pesertas, selectedSubject, selectedLevel),
+    [pesertas, selectedSubject, selectedLevel, getFilteredGroups]
+  );
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) + ' - ' + date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return (
+      date.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      }) +
+      ' - ' +
+      date.toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+    );
   };
 
   const formatDuration = (waktuMulai: string, waktuSelesai: string | null) => {
@@ -223,8 +118,10 @@ export default function HistoryTab() {
               onChange={(e) => setSelectedSubject(e.target.value)}
               placeholder="Pilih Mata Pelajaran"
             >
-              {subjects.map(subj => (
-                <option key={subj} value={subj}>{subj === 'Semua' ? 'Semua Mata Pelajaran' : subj}</option>
+              {subjects.map((subj) => (
+                <option key={subj} value={subj}>
+                  {subj === 'Semua' ? 'Semua Mata Pelajaran' : subj}
+                </option>
               ))}
             </Select>
             <Select
@@ -233,8 +130,10 @@ export default function HistoryTab() {
               onChange={(e) => setSelectedLevel(e.target.value)}
               placeholder="Pilih Tingkat"
             >
-              {levels.map(lvl => (
-                <option key={lvl} value={lvl}>{lvl === 'Semua' ? 'Semua Tingkat' : `Tingkat ${lvl}`}</option>
+              {levels.map((lvl) => (
+                <option key={lvl} value={lvl}>
+                  {lvl === 'Semua' ? 'Semua Tingkat' : `Tingkat ${lvl}`}
+                </option>
               ))}
             </Select>
           </HStack>
@@ -243,12 +142,14 @@ export default function HistoryTab() {
         {Object.keys(filteredGroups).length === 0 ? (
           <Card>
             <CardBody>
-              <Text textAlign="center">Belum ada riwayat sesi tersedia untuk filter yang dipilih.</Text>
+              <Text textAlign="center">
+                Belum ada riwayat sesi tersedia untuk filter yang dipilih.
+              </Text>
             </CardBody>
           </Card>
         ) : (
           <Accordion allowMultiple>
-            {Object.keys(filteredGroups).map(peserta => (
+            {Object.keys(filteredGroups).map((peserta) => (
               <AccordionItem key={peserta}>
                 <AccordionButton>
                   <Box flex="1" textAlign="left" fontWeight="bold" fontSize="md">
@@ -258,7 +159,7 @@ export default function HistoryTab() {
                 </AccordionButton>
                 <AccordionPanel pb={4}>
                   <Accordion allowMultiple>
-                    {Object.keys(filteredGroups[peserta]).map(subj => (
+                    {Object.keys(filteredGroups[peserta]).map((subj) => (
                       <AccordionItem key={subj} ml={4}>
                         <AccordionButton>
                           <Box flex="1" textAlign="left" fontWeight="bold" fontSize="sm">
@@ -267,7 +168,7 @@ export default function HistoryTab() {
                           <AccordionIcon />
                         </AccordionButton>
                         <AccordionPanel pb={4}>
-                          {Object.keys(filteredGroups[peserta][subj]).map(lvl => (
+                          {Object.keys(filteredGroups[peserta][subj]).map((lvl) => (
                             <Box key={lvl} mb={6}>
                               <Heading size="sm" mb={4} color="gray.700">
                                 Tingkat {lvl}
@@ -286,39 +187,77 @@ export default function HistoryTab() {
                                     <CardBody>
                                       <VStack spacing={4} align="stretch">
                                         <HStack justify="space-between">
-                                          <Badge colorScheme="orange" px={3} py={1} borderRadius="md" fontSize="xs">
+                                          <Badge
+                                            colorScheme="orange"
+                                            px={3}
+                                            py={1}
+                                            borderRadius="md"
+                                            fontSize="xs"
+                                          >
                                             Nilai CBT
                                           </Badge>
                                           <Text fontSize="xs" color="gray.500">
-                                            {item.totalSoal ? `${item.totalSoal} soal` : 'No Questions'}
+                                            {item.totalSoal
+                                              ? `${item.totalSoal} soal`
+                                              : 'No Questions'}
                                           </Text>
                                         </HStack>
 
                                         <Box textAlign="center" py={4}>
-                                          <Text fontSize="5xl" fontWeight="bold" color="orange.500">
-                                            {item.nilaiAkhir ? item.nilaiAkhir.toFixed(2) : '0.00'}
+                                          <Text
+                                            fontSize="5xl"
+                                            fontWeight="bold"
+                                            color="orange.500"
+                                          >
+                                            {item.nilaiAkhir
+                                              ? item.nilaiAkhir.toFixed(2)
+                                              : '0.00'}
                                           </Text>
                                           <Text fontSize="xs" color="gray.600">
-                                            {item.jumlahBenar || 0}/{item.totalSoal || 0} benar
+                                            {item.jumlahBenar || 0}/{item.totalSoal || 0}{' '}
+                                            benar
                                           </Text>
                                         </Box>
 
-                                        <VStack spacing={2} align="stretch" fontSize="xs" color="gray.600">
+                                        <VStack
+                                          spacing={2}
+                                          align="stretch"
+                                          fontSize="xs"
+                                          color="gray.600"
+                                        >
                                           <HStack>
                                             <Text>Mulai:</Text>
-                                            <Text fontSize="xs">{formatDateTime(item.waktuMulai)}</Text>
+                                            <Text fontSize="xs">
+                                              {formatDateTime(item.waktuMulai)}
+                                            </Text>
                                           </HStack>
                                           <HStack>
                                             <Text>Selesai:</Text>
-                                            <Text fontSize="xs">{item.waktuSelesai ? formatDateTime(item.waktuSelesai) : 'Belum selesai'}</Text>
+                                            <Text fontSize="xs">
+                                              {item.waktuSelesai
+                                                ? formatDateTime(item.waktuSelesai)
+                                                : 'Belum selesai'}
+                                            </Text>
                                           </HStack>
                                           <HStack>
                                             <Text>Durasi:</Text>
-                                            <Text fontWeight="medium" fontSize="xs">{formatDuration(item.waktuMulai, item.waktuSelesai)}</Text>
+                                            <Text fontWeight="medium" fontSize="xs">
+                                              {formatDuration(
+                                                item.waktuMulai,
+                                                item.waktuSelesai
+                                              )}
+                                            </Text>
                                           </HStack>
                                           <HStack>
                                             <Text>Status:</Text>
-                                            <Badge colorScheme={item.status === 'COMPLETED' ? 'green' : 'yellow'} fontSize="xs">
+                                            <Badge
+                                              colorScheme={
+                                                item.status === 'COMPLETED'
+                                                  ? 'green'
+                                                  : 'yellow'
+                                              }
+                                              fontSize="xs"
+                                            >
                                               {item.status}
                                             </Badge>
                                           </HStack>

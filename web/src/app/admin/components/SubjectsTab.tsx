@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import React from 'react';
 import {
   Box,
   Button,
@@ -21,103 +22,67 @@ import {
   FormLabel,
   Input,
   useDisclosure,
-  useToast,
   Text,
 } from '@chakra-ui/react';
-import axios from 'axios';
+import { useCRUD, useForm, usePagination } from '../hooks';
+import { Subject } from '../types';
 
-interface Subject {
-  id: number;
-  nama: string;
-}
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1/subjects';
-
-export default function SubjectsTab() {
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+export default React.memo(function SubjectsTab() {
+  const { data: subjects, create, update, remove } = useCRUD<Subject>('subjects');
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
-  const [formData, setFormData] = useState({ nama: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const toast = useToast();
+
+  const form = useForm({
+    initialValues: { nama: '' },
+    onSubmit: async (values) => {
+      if (editingSubject) {
+        await update(editingSubject.id, values);
+      } else {
+        await create(values);
+      }
+      onClose();
+      form.reset();
+      setEditingSubject(null);
+    },
+  });
 
   useEffect(() => {
-    fetchSubjects();
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const fetchSubjects = async () => {
-    try {
-      const response = await axios.get(API_BASE);
-      const data = response.data;
-      setSubjects(
-        Array.isArray(data) ? data :
-        Array.isArray(data.data) ? data.data :
-        Array.isArray(data.mataPelajaran) ? data.mataPelajaran : []
-      );
-    } catch (error) {
-      toast({ title: 'Error mengambil mata pelajaran', status: 'error' });
-      setSubjects([]);
-    }
-  };
-
   const filteredSubjects = useMemo(() => {
-    return subjects.filter(subject => subject.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase()));
+    return subjects.filter((subject) =>
+      subject.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    );
   }, [subjects, debouncedSearchQuery]);
 
-  const totalPages = Math.ceil(filteredSubjects.length / itemsPerPage);
-  const paginatedSubjects = filteredSubjects.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const { paginatedItems, currentPage, totalPages, nextPage, prevPage } =
+    usePagination(filteredSubjects, { itemsPerPage: 10 });
 
-  const handleCreate = () => {
+  const handleCreate = useCallback(() => {
     setEditingSubject(null);
-    setFormData({ nama: '' });
+    form.reset();
     onOpen();
-  };
+  }, [form, onOpen]);
 
-  const handleEdit = (subject: Subject) => {
-    setEditingSubject(subject);
-    setFormData({ nama: subject.nama });
-    onOpen();
-  };
+  const handleEdit = useCallback(
+    (subject: Subject) => {
+      setEditingSubject(subject);
+      form.setFieldValue('nama', subject.nama);
+      onOpen();
+    },
+    [form, onOpen]
+  );
 
-  const handleDelete = async (id: number) => {
-    try {
-      await axios.delete(`${API_BASE}/${id}`);
-      fetchSubjects();
-      toast({ title: 'Mata pelajaran dihapus', status: 'success' });
-    } catch (error) {
-      toast({ title: 'Error menghapus mata pelajaran', status: 'error' });
-    }
-  };
-
-  const handleSubmit = async () => {
-    try {
-      if (editingSubject) {
-        await axios.put(`${API_BASE}/${editingSubject.id}`, formData);
-        toast({ title: 'Mata pelajaran diperbarui', status: 'success' });
-      } else {
-        await axios.post(API_BASE, formData);
-        toast({ title: 'Mata pelajaran dibuat', status: 'success' });
-      }
-      fetchSubjects();
-      onClose();
-    } catch (error) {
-      toast({ title: 'Error menyimpan mata pelajaran', status: 'error' });
-    }
-  };
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      setDebouncedSearchQuery(searchQuery);
-    }
-  };
+  const handleDelete = useCallback(
+    async (id: number) => {
+      await remove(id);
+    },
+    [remove]
+  );
 
   return (
     <Box>
@@ -128,7 +93,6 @@ export default function SubjectsTab() {
         placeholder="Cari mata pelajaran..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        onKeyDown={handleSearchKeyDown}
         mb={4}
       />
       <Table variant="simple">
@@ -139,7 +103,7 @@ export default function SubjectsTab() {
           </Tr>
         </Thead>
         <Tbody>
-          {paginatedSubjects.map((subject) => (
+          {paginatedItems.map((subject) => (
             <Tr key={subject.id}>
               <Td>{subject.nama}</Td>
               <Td>
@@ -155,11 +119,13 @@ export default function SubjectsTab() {
         </Tbody>
       </Table>
       <Box mt={4} display="flex" justifyContent="space-between" alignItems="center">
-        <Button isDisabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
+        <Button isDisabled={currentPage === 1} onClick={prevPage}>
           Prev
         </Button>
-        <Text>Halaman {currentPage} dari {totalPages}</Text>
-        <Button isDisabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>
+        <Text>
+          Halaman {currentPage} dari {totalPages}
+        </Text>
+        <Button isDisabled={currentPage === totalPages} onClick={nextPage}>
           Next
         </Button>
       </Box>
@@ -167,22 +133,38 @@ export default function SubjectsTab() {
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>{editingSubject ? 'Edit Mata Pelajaran' : 'Tambah Mata Pelajaran'}</ModalHeader>
+          <ModalHeader>
+            {editingSubject ? 'Edit Mata Pelajaran' : 'Tambah Mata Pelajaran'}
+          </ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <FormControl>
               <FormLabel>Nama</FormLabel>
               <Input
-                value={formData.nama}
-                onChange={(e) => setFormData({ nama: e.target.value })}
+                name="nama"
+                value={form.values.nama}
+                onChange={form.handleChange}
+                placeholder="Masukkan nama mata pelajaran"
               />
             </FormControl>
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="green" mr={3} onClick={handleSubmit}>
+            <Button
+              colorScheme="green"
+              mr={3}
+              onClick={() => form.handleSubmit()}
+              isLoading={form.isSubmitting}
+            >
               Simpan
             </Button>
-            <Button variant="ghost" onClick={onClose}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                onClose();
+                setEditingSubject(null);
+                form.reset();
+              }}
+            >
               Batal
             </Button>
           </ModalFooter>
@@ -190,4 +172,4 @@ export default function SubjectsTab() {
       </Modal>
     </Box>
   );
-}
+})

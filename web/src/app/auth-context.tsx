@@ -14,7 +14,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -82,7 +82,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User> => {
     try {
       const response = await fetch('http://localhost:8080/v1/auth/login', {
         method: 'POST',
@@ -101,7 +101,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const { token: newToken, user: userData } = data;
 
       // Convert role from number to string if needed
-      const processedUserData = {
+      const processedUserData: User = {
         ...userData,
         role: typeof userData.role === 'number' 
           ? (userData.role === 1 ? 'SISWA' : userData.role === 2 ? 'ADMIN' : 'SISWA')

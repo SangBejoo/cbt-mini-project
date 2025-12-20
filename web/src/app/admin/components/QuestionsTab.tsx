@@ -1,16 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { debounce } from 'lodash';
+import { useState, useRef, useCallback, useMemo, useEffect, useDeferredValue, memo } from 'react';
+import React from 'react';
 import {
   Box,
   Button,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
+  Container,
   IconButton,
   useDisclosure,
   Modal,
@@ -30,69 +25,20 @@ import {
   VStack,
   Text,
   Badge,
-  Image as ChakraImage,
   Heading,
-  SimpleGrid,
   Divider,
-  Stepper,
-  Step,
-  StepIndicator,
-  StepStatus,
-  StepTitle,
-  StepSeparator,
   Accordion,
   AccordionItem,
   AccordionButton,
   AccordionPanel,
   AccordionIcon,
+  Card,
+  CardBody,
+  SimpleGrid,
+  Flex,
 } from '@chakra-ui/react';
-import { EditIcon, DeleteIcon, AddIcon } from '@chakra-ui/icons';
-import { useAuth } from '../../auth-context';
-
-// --- Interfaces ---
-interface Level {
-  id: number;
-  nama: string;
-}
-
-interface Subject {
-  id: number;
-  nama: string;
-}
-
-interface Topic {
-  id: number;
-  mataPelajaran: { id: number; nama: string };
-  tingkat: { id: number; nama: string };
-  nama: string;
-}
-
-interface Question {
-  id: number;
-  materi: {
-    id: number;
-    mataPelajaran: { id: number; nama: string };
-    tingkat: { id: number; nama: string };
-    nama: string;
-  };
-  pertanyaan: string;
-  opsiA: string;
-  opsiB: string;
-  opsiC: string;
-  opsiD: string;
-  jawabanBenar: string;
-  pembahasan?: string;
-  gambar: {
-    id: number;
-    namaFile: string;
-    filePath: string;
-    fileSize: number;
-    mimeType: string;
-    urutan: number;
-    keterangan: string;
-    createdAt: string;
-  }[];
-}
+import { EditIcon, DeleteIcon, AddIcon, ChevronUpIcon, ChevronDownIcon } from '@chakra-ui/icons';
+import { useQuestions } from '../hooks';
 
 const mapLetterToEnum = (val: string) => {
   switch ((val || '').trim().toUpperCase()) {
@@ -104,71 +50,153 @@ const mapLetterToEnum = (val: string) => {
   }
 };
 
-const mapEnumToLetter = (val: string | number) => {
-  const raw = `${val || ''}`.trim().toUpperCase();
-  if (raw === 'A' || raw === '1') return 'A';
-  if (raw === 'B' || raw === '2') return 'B';
-  if (raw === 'C' || raw === '3') return 'C';
-  if (raw === 'D' || raw === '4') return 'D';
-  if (raw.endsWith('_A')) return 'A';
-  if (raw.endsWith('_B')) return 'B';
-  if (raw.endsWith('_C')) return 'C';
-  if (raw.endsWith('_D')) return 'D';
-  return 'A';
-};
-
-// --- API Helpers ---
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1';
-
-const steps = [
-  { title: 'Pilih', description: 'Materi & Tingkat' },
-  { title: 'Isi', description: 'Soal & Jawaban' },
-  { title: 'Gambar', description: 'Upload Gambar' },
-];
+// Materi Select tetap memoized
+const MateriSelect = memo(({ value, onChange, topics }: {
+  value: number;
+  onChange: (topic: any) => void;
+  topics: any[];
+}) => {
+  return (
+    <Select
+      placeholder="Pilih Materi"
+      value={value || ''}
+      onChange={(e) => {
+        const topic = topics.find((t) => t.id === Number(e.target.value));
+        onChange(topic || { id: 0, nama: '' });
+      }}
+    >
+      {topics.map((t) => (
+        <option key={t.id} value={t.id}>
+          {t.mataPelajaran.nama} • {t.tingkat.nama} • {t.nama}
+        </option>
+      ))}
+    </Select>
+  );
+});
 
 export default function QuestionsTab() {
   const toast = useToast();
-  const { token } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- API Helpers ---
-  const authFetch = (url: string, options: RequestInit = {}) => {
-    return fetch(url, {
-      ...options,
-      headers: {
-        ...options.headers,
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-  };
+  const {
+    questions,
+    topics,
+    createQuestion,
+    updateQuestion,
+    deleteQuestion,
+    uploadImage,
+    deleteImage,
+  } = useQuestions();
 
-  // --- State ---
-  const [levels, setLevels] = useState<Level[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isOpen: isQuestionOpen, onOpen: onQuestionOpen, onClose: onQuestionClose } = useDisclosure();
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
 
-  // Filter state
-  const [selectedLevel, setSelectedLevel] = useState<string>('');
-  const [selectedSubject, setSelectedSubject] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  
-  // Debounced filter values to prevent excessive re-renders
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>('');
+  const [currentQuestion, setCurrentQuestion] = useState<any>({});
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentDeleteId, setCurrentDeleteId] = useState<number | null>(null);
 
-  // Pagination for levels (if >5 levels)
-  const levelsPerPage = 5;
+  // State untuk single open level
+  const [openLevelName, setOpenLevelName] = useState<string | null>(null);
+
+  // State untuk context tambah soal
+  const [addContext, setAddContext] = useState<{ level?: string; subject?: string; topic?: string } | null>(null);
+
+  // State untuk paginasi per topic
+  const [currentPages, setCurrentPages] = useState<Record<string, number>>({});
+
+  // State untuk paginasi tingkat
   const [currentLevelPage, setCurrentLevelPage] = useState(1);
 
-  // Multi-step modal state
-  const { isOpen: isQuestionOpen, onOpen: onQuestionOpen, onClose: onQuestionClose } = useDisclosure();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [currentQuestion, setCurrentQuestion] = useState<Partial<Question>>({});
-  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // Local form state to avoid re-render on every keystroke
+  const pageSize = 5; // soal per halaman
+  const levelPageSize = 1; // tingkat per halaman
+
+  // State untuk filter
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedLevelFilter, setSelectedLevelFilter] = useState('');
+
+  const getPageKey = (level: string, subject: string, topic: string) => `${level}-${subject}-${topic}`;
+
+  const getCurrentPage = (level: string, subject: string, topic: string) => currentPages[getPageKey(level, subject, topic)] || 1;
+
+  const setPage = (level: string, subject: string, topic: string, page: number) => {
+    setCurrentPages(prev => ({ ...prev, [getPageKey(level, subject, topic)]: page }));
+  };
+
+  const getPaginatedQuestions = (questions: any[], level: string, subject: string, topic: string) => {
+    const page = getCurrentPage(level, subject, topic);
+    const start = (page - 1) * pageSize;
+    return questions.slice(start, start + pageSize);
+  };
+
+  const getTotalPages = (questions: any[]) => Math.ceil(questions.length / pageSize);
+
+  // Grouping full (tapi hanya yang terbuka yang di-render)
+  const groupedQuestions = useMemo(() => {
+    const groups: Record<string, Record<string, Record<string, any[]>>> = {};
+
+    for (const question of questions) {
+      const levelName = question.materi?.tingkat?.nama || 'Unknown';
+      const subjectName = question.materi?.mataPelajaran?.nama || 'Unknown';
+      const topicName = question.materi?.nama || 'Unknown';
+
+      if (!groups[levelName]) groups[levelName] = {};
+      if (!groups[levelName][subjectName]) groups[levelName][subjectName] = {};
+      if (!groups[levelName][subjectName][topicName]) groups[levelName][subjectName][topicName] = [];
+
+      groups[levelName][subjectName][topicName].push(question);
+    }
+
+    return groups;
+  }, [questions]);
+
+  const levelEntries = Object.entries(groupedQuestions);
+
+  // Filtered level entries berdasarkan search dan filter
+  const filteredLevelEntries = useMemo(() => {
+    return levelEntries.filter(([levelName, subjects]) => {
+      if (selectedLevelFilter && levelName !== selectedLevelFilter) return false;
+      if (searchTerm) {
+        const lowerSearch = searchTerm.toLowerCase();
+        if (levelName.toLowerCase().includes(lowerSearch)) return true;
+        for (const [subjectName, topics] of Object.entries(subjects)) {
+          if (subjectName.toLowerCase().includes(lowerSearch)) return true;
+          for (const [topicName, topicQuestions] of Object.entries(topics)) {
+            if (topicName.toLowerCase().includes(lowerSearch)) return true;
+            if (topicQuestions.some((q: any) => q.pertanyaan?.toLowerCase().includes(lowerSearch))) return true;
+          }
+        }
+        return false;
+      }
+      return true;
+    });
+  }, [levelEntries, searchTerm, selectedLevelFilter]);
+
+  const getTotalLevelPages = () => Math.ceil(filteredLevelEntries.length / levelPageSize);
+
+  const getPaginatedLevels = () => {
+    const start = (currentLevelPage - 1) * levelPageSize;
+    return filteredLevelEntries.slice(start, start + levelPageSize);
+  };
+
+  // Filtered topics berdasarkan context
+  const filteredTopics = useMemo(() => {
+    if (!addContext) return topics;
+    return topics.filter(t => {
+      if (addContext.level && t.tingkat.nama !== addContext.level) return false;
+      if (addContext.subject && t.mataPelajaran.nama !== addContext.subject) return false;
+      if (addContext.topic && t.nama !== addContext.topic) return false;
+      return true;
+    });
+  }, [topics, addContext]);
+
+  // Preselected materi berdasarkan context
+  const preselectedMateri = useMemo(() => {
+    if (!addContext?.topic) return null;
+    return topics.find(t => t.nama === addContext.topic && t.mataPelajaran.nama === addContext.subject && t.tingkat.nama === addContext.level) || null;
+  }, [topics, addContext]);
+
+  // Form state
   const [formValues, setFormValues] = useState({
     pertanyaan: '',
     opsiA: '',
@@ -177,99 +205,42 @@ export default function QuestionsTab() {
     opsiD: '',
     jawabanBenar: 'A',
     pembahasan: '',
+    materi: { id: 0, nama: '' },
   });
 
-  // Delete confirmation
-  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
-  const [currentDeleteId, setCurrentDeleteId] = useState<number | null>(null);
+  const [localPertanyaan, setLocalPertanyaan] = useState('');
+  const [localPembahasan, setLocalPembahasan] = useState('');
 
-  // --- Debounced Search Query Update ---
+  const deferredPertanyaan = useDeferredValue(localPertanyaan);
+  const deferredPembahasan = useDeferredValue(localPembahasan);
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    setFormValues(prev => ({ ...prev, pertanyaan: deferredPertanyaan }));
+  }, [deferredPertanyaan]);
 
-  // --- Direct Update for Form Inputs (No Debounce on State, Debounce on Save) ---
-  const updateFormValue = useCallback((field: string, value: string) => {
+  useEffect(() => {
+    setFormValues(prev => ({ ...prev, pembahasan: deferredPembahasan }));
+  }, [deferredPembahasan]);
+
+  useEffect(() => {
+    if (preselectedMateri) {
+      setFormValues(prev => ({ ...prev, materi: preselectedMateri }));
+    }
+  }, [preselectedMateri]);
+
+  useEffect(() => {
+    setCurrentLevelPage(1);
+  }, [searchTerm, selectedLevelFilter]);
+
+  const updateFormField = useCallback((field: string, value: any) => {
     setFormValues(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  // --- Fetch Data ---
-  const fetchLevels = async () => {
-    try {
-      const res = await authFetch(`${API_BASE}/levels`);
-      if (res.ok) {
-        const data = await res.json();
-        setLevels(data.tingkat || []);
-        setCurrentLevelPage(1);
-      }
-    } catch (error) {
-      console.error('Failed to fetch levels', error);
-    }
-  };
-
-  const fetchSubjects = async () => {
-    try {
-      const res = await authFetch(`${API_BASE}/subjects`);
-      if (res.ok) {
-        const data = await res.json();
-        setSubjects(data.mataPelajaran || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch subjects', error);
-    }
-  };
-
-  const fetchTopics = async () => {
-    try {
-      const res = await authFetch(`${API_BASE}/topics`);
-      if (res.ok) {
-        const data = await res.json();
-        setTopics(data.materi || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch topics', error);
-    }
-  };
-
-  const fetchQuestions = async () => {
-    try {
-      const res = await authFetch(`${API_BASE}/questions`);
-      if (res.ok) {
-        const data = await res.json();
-        const normalized = (data.soal || []).map((q: Question) => ({
-          ...q,
-          jawabanBenar: mapEnumToLetter((q as any).jawabanBenar),
-        }));
-        setQuestions(normalized);
-      }
-    } catch (error) {
-      console.error('Failed to fetch questions', error);
-    }
-  };
-
-  useEffect(() => {
-    const loadData = async () => {
-      await Promise.all([fetchLevels(), fetchSubjects(), fetchTopics(), fetchQuestions()]);
-      setIsLoading(false);
-    };
-    loadData();
-  }, []);
-
-  // --- Handlers ---
-
-  const handleOpenNewQuestion = () => {
-    setCurrentQuestion({
-      pertanyaan: '',
-      opsiA: '',
-      opsiB: '',
-      opsiC: '',
-      opsiD: '',
-      jawabanBenar: 'A',
-      pembahasan: '',
-    });
+  // Handler buka modal tambah soal dengan context
+  const handleOpenNewQuestion = useCallback((context?: { level?: string; subject?: string; topic?: string }) => {
+    setAddContext(context || null);
+    setCurrentQuestion({});
+    const materi = preselectedMateri;
     setFormValues({
       pertanyaan: '',
       opsiA: '',
@@ -278,13 +249,15 @@ export default function QuestionsTab() {
       opsiD: '',
       jawabanBenar: 'A',
       pembahasan: '',
+      materi: materi || { id: 0, nama: '' },
     });
+    setLocalPertanyaan('');
+    setLocalPembahasan('');
     setSelectedFiles(null);
-    setCurrentStep(0);
     onQuestionOpen();
-  };
+  }, [preselectedMateri, onQuestionOpen]);
 
-  const handleEditQuestion = (question: Question) => {
+  const handleEditQuestion = useCallback((question: any) => {
     setCurrentQuestion(question);
     setFormValues({
       pertanyaan: question.pertanyaan || '',
@@ -294,524 +267,369 @@ export default function QuestionsTab() {
       opsiD: question.opsiD || '',
       jawabanBenar: question.jawabanBenar || 'A',
       pembahasan: question.pembahasan || '',
+      materi: question.materi || { id: 0, nama: '' },
     });
+    setLocalPertanyaan(question.pertanyaan || '');
+    setLocalPembahasan(question.pembahasan || '');
     setSelectedFiles(null);
-    setCurrentStep(0);
     onQuestionOpen();
-  };
+  }, [onQuestionOpen]);
 
-  const handleNextStep = () => {
-    // Validation for each step
-    if (currentStep === 0) {
-      if (!currentQuestion.materi?.id) {
-        toast({ title: 'Pilih Materi terlebih dahulu', status: 'error' });
-        return;
-      }
-    } else if (currentStep === 1) {
-      if (
-        !formValues.pertanyaan ||
-        !formValues.opsiA ||
-        !formValues.opsiB ||
-        !formValues.opsiC ||
-        !formValues.opsiD ||
-        !formValues.jawabanBenar
-      ) {
-        toast({ title: 'Semua field harus diisi', status: 'error' });
-        return;
+  const handleDeleteClick = useCallback((id: number) => {
+    setCurrentDeleteId(id);
+    onDeleteOpen();
+  }, [onDeleteOpen]);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (currentDeleteId !== null) {
+      try {
+        await deleteQuestion(currentDeleteId);
+        toast({ title: 'Soal dihapus', status: 'success' });
+        onDeleteClose();
+        setCurrentDeleteId(null);
+      } catch (error) {
+        toast({ title: 'Error menghapus soal', status: 'error' });
       }
     }
+  }, [currentDeleteId, deleteQuestion, toast, onDeleteClose]);
 
-    setCurrentStep(currentStep + 1);
-  };
-
-  const handlePrevStep = () => {
-    setCurrentStep(currentStep - 1);
-  };
-
-  const handleSaveQuestion = async () => {
-    // Merge form values into current question
-    const mergedQuestion = {
-      ...currentQuestion,
-      ...formValues,
-    };
-
-    if (!mergedQuestion.pertanyaan || !mergedQuestion.opsiA || !mergedQuestion.opsiB || !mergedQuestion.opsiC || !mergedQuestion.opsiD || !mergedQuestion.jawabanBenar || !mergedQuestion.materi?.id) {
-      toast({ title: 'Semua field harus diisi', status: 'error' });
+  const handleSubmitQuestion = useCallback(async () => {
+    if (!formValues.pertanyaan || !formValues.opsiA || !formValues.opsiB || !formValues.opsiC || !formValues.opsiD || !formValues.materi?.id) {
+      toast({ title: 'Harap isi semua field', status: 'warning' });
       return;
     }
 
-    const data: any = {
-      idMateri: mergedQuestion.materi?.id,
-      idTingkat: mergedQuestion.materi?.tingkat?.id,
-      pertanyaan: mergedQuestion.pertanyaan,
-      opsiA: mergedQuestion.opsiA,
-      opsiB: mergedQuestion.opsiB,
-      opsiC: mergedQuestion.opsiC,
-      opsiD: mergedQuestion.opsiD,
-      jawabanBenar: mapLetterToEnum(mergedQuestion.jawabanBenar || 'A'),
-      pembahasan: mergedQuestion.pembahasan || '',
-      imageBytes: [],
-    };
-
-    if (selectedFiles) {
-      for (let i = 0; i < selectedFiles.length; i++) {
-        const file = selectedFiles[i];
-        const base64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
-        });
-        data.imageBytes.push(base64.split(',')[1]);
-      }
-    }
-
-    const method = mergedQuestion.id ? 'PUT' : 'POST';
-    const url = mergedQuestion.id ? `${API_BASE}/questions/${mergedQuestion.id}` : `${API_BASE}/questions`;
-
+    setIsSubmitting(true);
     try {
-      const res = await authFetch(url, {
-        method,
-        body: JSON.stringify(data),
-      });
-
-      if (res.ok) {
-        toast({ title: 'Soal berhasil disimpan', status: 'success' });
-        fetchQuestions();
-        onQuestionClose();
-        setCurrentStep(0);
-        setSelectedFiles(null);
-        setFormValues({
-          pertanyaan: '',
-          opsiA: '',
-          opsiB: '',
-          opsiC: '',
-          opsiD: '',
-          jawabanBenar: 'A',
-          pembahasan: '',
-        });
-      } else {
-        const errorText = await res.text();
-        toast({ title: `Gagal menyimpan soal: ${errorText}`, status: 'error' });
+      let imageBytes: string[] = [];
+      if (selectedFiles && selectedFiles.length > 0) {
+        imageBytes = await Promise.all(
+          Array.from(selectedFiles).map(file =>
+            new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const base64 = reader.result as string;
+                resolve(base64.split(',')[1]); // Remove prefix
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            })
+          )
+        );
       }
-    } catch (e) {
+
+      const questionData = {
+        id_materi: formValues.materi.id,
+        id_tingkat: formValues.materi.tingkat.id,
+        pertanyaan: formValues.pertanyaan,
+        opsi_a: formValues.opsiA,
+        opsi_b: formValues.opsiB,
+        opsi_c: formValues.opsiC,
+        opsi_d: formValues.opsiD,
+        jawaban_benar: formValues.jawabanBenar === 'A' ? 1 : formValues.jawabanBenar === 'B' ? 2 : formValues.jawabanBenar === 'C' ? 3 : 4,
+        pembahasan: formValues.pembahasan,
+        image_bytes: imageBytes,
+      };
+
+      const newQuestion = await createQuestion(questionData);
+      setCurrentQuestion(newQuestion);
+
+      // Auto open the level accordion to show the new question
+      setOpenLevelName(newQuestion.materi?.tingkat?.nama);
+
+      onQuestionClose();
+    } catch (error) {
       toast({ title: 'Error menyimpan soal', status: 'error' });
+    } finally {
+      setIsSubmitting(false);
     }
-  };
+  }, [formValues, selectedFiles, createQuestion, toast, onQuestionClose]);
 
-  const handleDeleteQuestion = async () => {
-    if (!currentDeleteId) return;
-    try {
-      const res = await authFetch(`${API_BASE}/questions/${currentDeleteId}`, { method: 'DELETE' });
-      if (res.ok) {
-        toast({ title: 'Soal berhasil dihapus', status: 'success' });
-        fetchQuestions();
-        onDeleteClose();
-        setCurrentDeleteId(null);
-      } else {
-        toast({ title: 'Gagal menghapus soal', status: 'error' });
-      }
-    } catch (e) {
-      toast({ title: 'Error menghapus soal', status: 'error' });
+  const handleUploadImages = useCallback(async () => {
+    if (!selectedFiles || selectedFiles.length === 0 || !currentQuestion?.id) {
+      toast({ title: 'Tidak ada file untuk diupload', status: 'warning' });
+      return;
     }
-  };
 
-  const handleDeleteImage = async (questionId: number, imageId: number) => {
-    if (!confirm('Hapus gambar ini?')) return;
+    setIsSubmitting(true);
     try {
-      const res = await authFetch(`${API_BASE}/questions/${questionId}/images/${imageId}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        toast({ title: 'Gambar berhasil dihapus', status: 'success' });
-        fetchQuestions();
-        if (currentQuestion && currentQuestion.id === questionId) {
-          const updatedImages = currentQuestion.gambar?.filter((img) => img.id !== imageId);
-          setCurrentQuestion({ ...currentQuestion, gambar: updatedImages });
-        }
-      } else {
-        toast({ title: 'Gagal menghapus gambar', status: 'error' });
+      await uploadImage(currentQuestion.id, selectedFiles);
+      toast({ title: 'Gambar berhasil diupload', status: 'success' });
+      onQuestionClose();
+    } catch (error) {
+      toast({ title: 'Error mengupload gambar', status: 'error' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [selectedFiles, currentQuestion, uploadImage, toast, onQuestionClose]);
+
+  const handleDeleteImage = useCallback(async (imageId: number) => {
+    try {
+      if (currentQuestion?.id) {
+        await deleteImage(currentQuestion.id, imageId);
+        toast({ title: 'Gambar dihapus', status: 'success' });
       }
-    } catch (e) {
+    } catch (error) {
       toast({ title: 'Error menghapus gambar', status: 'error' });
     }
-  };
+  }, [currentQuestion?.id, deleteImage, toast]);
 
-  // --- Render Helpers ---
-
-  const filteredQuestions = useMemo(() => {
-    return questions.filter((q) => {
-      const matchesLevel = selectedLevel === '' || q.materi.tingkat.id.toString() === selectedLevel;
-      const matchesSubject = selectedSubject === '' || q.materi.mataPelajaran.id.toString() === selectedSubject;
-      const matchesSearch = debouncedSearchQuery === '' ||
-        q.materi.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        q.materi.mataPelajaran.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
-      return matchesLevel && matchesSubject && matchesSearch;
-    });
-  }, [questions, selectedLevel, selectedSubject, debouncedSearchQuery]);
-
-  const nestedData = useMemo(() => {
-    return filteredQuestions.reduce(
-      (acc, q) => {
-        const levelId = q.materi.tingkat.id;
-        const subjectId = q.materi.mataPelajaran.id;
-        const topicId = q.materi.id;
-
-        if (!acc[levelId]) {
-          acc[levelId] = {
-            level: q.materi.tingkat,
-            subjects: {},
-          };
-        }
-
-        if (!acc[levelId].subjects[subjectId]) {
-          acc[levelId].subjects[subjectId] = {
-            subject: q.materi.mataPelajaran,
-            topics: {},
-          };
-        }
-
-        if (!acc[levelId].subjects[subjectId].topics[topicId]) {
-          acc[levelId].subjects[subjectId].topics[topicId] = {
-            topic: q.materi,
-            questions: [],
-          };
-        }
-
-        acc[levelId].subjects[subjectId].topics[topicId].questions.push(q);
-        return acc;
-      },
-      {} as Record<number, {
-        level: { id: number; nama: string };
-        subjects: Record<number, {
-          subject: { id: number; nama: string };
-          topics: Record<number, {
-            topic: { id: number; nama: string; mataPelajaran: { id: number; nama: string }; tingkat: { id: number; nama: string } };
-            questions: Question[];
-          }>;
-        }>;
-      }>
-    );
-  }, [filteredQuestions]);
-
-  const renderContent = useMemo(() => {
-    if (isLoading) return <Text>Loading...</Text>;
-
-    const totalLevelPages = Math.ceil(levels.length / levelsPerPage);
-    const displayedLevels = levels.slice((currentLevelPage - 1) * levelsPerPage, currentLevelPage * levelsPerPage);
-    const filteredNestedData = Object.values(nestedData).filter(levelData =>
-      displayedLevels.some(level => level.id === levelData.level.id)
-    );
-
-    return (
-      <>
-        {levels.length > levelsPerPage && (
-          <HStack justify="center" mb={4}>
-            <Button
-              onClick={() => setCurrentLevelPage(Math.max(1, currentLevelPage - 1))}
-              isDisabled={currentLevelPage === 1}
-            >
-              Previous
-            </Button>
-            <Text>
-              Halaman {currentLevelPage} dari {totalLevelPages}
+  const renderQuestionCard = useCallback((question: any) => (
+    <Card key={question.id} size="sm" mb={3}>
+      <CardBody p={4}>
+        <Flex direction={{ base: 'column', md: 'row' }} gap={4}>
+          <Box flex={1}>
+            <Text fontWeight="medium" mb={2} noOfLines={2}>
+              {question.pertanyaan}
             </Text>
-            <Button
-              onClick={() => setCurrentLevelPage(Math.min(totalLevelPages, currentLevelPage + 1))}
-              isDisabled={currentLevelPage === totalLevelPages}
-            >
-              Next
-            </Button>
+            <HStack spacing={2} mb={2}>
+              <Badge colorScheme="green" size="sm">Jawaban: {question.jawabanBenar}</Badge>
+              {question.gambar && question.gambar.length > 0 && (
+                <Badge colorScheme="purple" size="sm">{question.gambar.length} gambar</Badge>
+              )}
+            </HStack>
+            {question.pembahasan && (
+              <Text fontSize="sm" color="gray.600" noOfLines={1}>
+                Pembahasan: {question.pembahasan}
+              </Text>
+            )}
+          </Box>
+          <HStack spacing={2} alignSelf={{ base: 'flex-end', md: 'center' }}>
+            <IconButton aria-label="Edit" icon={<EditIcon />} size="sm" colorScheme="blue" onClick={() => handleEditQuestion(question)} />
+            <IconButton aria-label="Delete" icon={<DeleteIcon />} size="sm" colorScheme="red" onClick={() => handleDeleteClick(question.id)} />
           </HStack>
-        )}
-        {filteredNestedData.map((levelData) => (
-          <Accordion allowToggle key={levelData.level.id} mb={8}>
-            <AccordionItem>
-              <AccordionButton>
-                <Box flex="1" textAlign="left">
-                  <Heading size="md">{levelData.level.nama}</Heading>
-                </Box>
-                <AccordionIcon />
-              </AccordionButton>
-              <AccordionPanel pb={4}>
-                <Accordion allowToggle>
-                  {Object.values(levelData.subjects).map((subjectData) => (
-                    <AccordionItem key={subjectData.subject.id}>
-                      <AccordionButton>
-                        <Box flex="1" textAlign="left">
-                          <Text fontWeight="bold">{subjectData.subject.nama}</Text>
-                        </Box>
-                        <AccordionIcon />
-                      </AccordionButton>
-                      <AccordionPanel pb={4}>
-                        <Accordion allowToggle>
-                          {Object.values(subjectData.topics).map((topicData) => (
-                            <AccordionItem key={topicData.topic.id}>
-                              <AccordionButton>
-                                <Box flex="1" textAlign="left">
-                                  <Text fontWeight="semibold">{topicData.topic.nama}</Text>
-                                </Box>
-                                <AccordionIcon />
-                              </AccordionButton>
-                              <AccordionPanel pb={4}>
-                                <Table variant="simple" size="sm">
-                                  <Thead>
-                                    <Tr>
-                                      <Th>Soal</Th>
-                                      <Th>Jawaban Benar</Th>
-                                      <Th>Gambar</Th>
-                                      <Th>Aksi</Th>
-                                    </Tr>
-                                  </Thead>
-                                  <Tbody>
-                                    {topicData.questions.map((q) => (
-                                      <Tr key={q.id}>
-                                        <Td maxW="300px" isTruncated>
-                                          {q.pertanyaan}
-                                        </Td>
-                                        <Td>
-                                          <Badge colorScheme="green">{q.jawabanBenar}</Badge>
-                                        </Td>
-                                        <Td>
-                                          <Badge colorScheme="blue">{q.gambar.length}</Badge>
-                                        </Td>
-                                        <Td>
-                                          <IconButton
-                                            aria-label="Edit"
-                                            icon={<EditIcon />}
-                                            size="sm"
-                                            mr={2}
-                                            onClick={() => handleEditQuestion(q)}
-                                          />
-                                          <IconButton
-                                            aria-label="Delete"
-                                            icon={<DeleteIcon />}
-                                            size="sm"
-                                            colorScheme="red"
-                                            onClick={() => {
-                                              setCurrentDeleteId(q.id);
-                                              onDeleteOpen();
-                                            }}
-                                          />
-                                        </Td>
-                                      </Tr>
-                                    ))}
-                                  </Tbody>
-                                </Table>
-                              </AccordionPanel>
-                            </AccordionItem>
-                          ))}
-                        </Accordion>
-                      </AccordionPanel>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </AccordionPanel>
-            </AccordionItem>
-          </Accordion>
-        ))}
-      </>
-    );
-  }, [nestedData, levels, currentLevelPage, isLoading]);
+        </Flex>
+      </CardBody>
+    </Card>
+  ), [handleEditQuestion, handleDeleteClick]);
 
   return (
-    <Box>
-      <Button leftIcon={<AddIcon />} colorScheme="blue" onClick={handleOpenNewQuestion} mb={4}>
-        Tambah Soal
-      </Button>
+    <Container maxW="container.xl" py={10}>
+      <VStack spacing={6} align="stretch">
+        <Box bg="blue.50" py={6} px={4} borderRadius="md" textAlign="center">
+          <Heading as="h1" size="lg" color="blue.700">MANAJEMEN SOAL</Heading>
+        </Box>
 
-      {/* Filter Section */}
-      <HStack spacing={4} mb={6}>
-        <FormControl>
-          <FormLabel>Filter Tingkat</FormLabel>
-          <Select
-            placeholder="Semua Tingkat"
-            value={selectedLevel}
-            onChange={(e) => setSelectedLevel(e.target.value)}
-          >
-            {levels.map((level) => (
-              <option key={level.id} value={level.id.toString()}>
-                {level.nama}
-              </option>
-            ))}
-          </Select>
-        </FormControl>
-        <FormControl>
-          <FormLabel>Filter Mata Pelajaran</FormLabel>
-          <Select
-            placeholder="Semua Mata Pelajaran"
-            value={selectedSubject}
-            onChange={(e) => setSelectedSubject(e.target.value)}
-          >
-            {subjects.map((subject) => (
-              <option key={subject.id} value={subject.id.toString()}>
-                {subject.nama}
-              </option>
-            ))}
-          </Select>
-        </FormControl>
-        <FormControl>
-          <FormLabel>Pencarian</FormLabel>
-          <Input
-            placeholder="Cari berdasarkan materi atau mata pelajaran"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </FormControl>
-      </HStack>
+        <Box>
+          <Text fontWeight="bold" color="gray.700">Total Soal: {questions.length}</Text>
+        </Box>
 
-      {renderContent}
+        <HStack spacing={4} mb={4}>
+          <FormControl>
+            <FormLabel>Search</FormLabel>
+            <Input
+              placeholder="Cari tingkat, mata pelajaran, materi, atau soal..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </FormControl>
+          <FormControl>
+            <FormLabel>Filter Tingkat</FormLabel>
+            <Select
+              placeholder="Semua Tingkat"
+              value={selectedLevelFilter}
+              onChange={(e) => setSelectedLevelFilter(e.target.value)}
+            >
+              {levelEntries.map(([levelName]) => (
+                <option key={levelName} value={levelName}>
+                  {levelName}
+                </option>
+              ))}
+            </Select>
+          </FormControl>
+        </HStack>
 
-      {/* Multi-Step Question Modal */}
-      <Modal isOpen={isQuestionOpen} onClose={onQuestionClose} size="2xl" closeOnEsc={false} closeOnOverlayClick={false}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>{currentQuestion.id ? 'Edit Soal' : 'Tambah Soal Baru'}</ModalHeader>
-          <ModalCloseButton isDisabled={currentStep > 0} />
+        {questions.length === 0 ? (
+          <Box textAlign="center" py={10}>
+            <Text color="gray.500" mb={4}>Belum ada soal</Text>
+            <Button colorScheme="blue" onClick={() => handleOpenNewQuestion()}>
+              Tambah Soal Pertama
+            </Button>
+          </Box>
+        ) : (
+          <VStack spacing={4} align="stretch">
+            {getPaginatedLevels().map(([levelName, subjects], levelIndex) => (
+              <Box key={levelName}>
+                <Button
+                  bg="blue.50"
+                  _hover={{ bg: 'blue.100' }}
+                  w="full"
+                  justifyContent="space-between"
+                  rightIcon={openLevelName === levelName ? <ChevronUpIcon /> : <ChevronDownIcon />}
+                  onClick={() => setOpenLevelName(openLevelName === levelName ? null : levelName)}
+                  mb={2}
+                >
+                  <HStack>
+                    <Badge colorScheme="blue" fontSize="md" px={3} py={1}>{levelName}</Badge>
+                    <Text fontWeight="bold">
+                      ({Object.values(subjects).reduce((total, topics) => total + Object.values(topics).reduce((tTotal, q) => tTotal + q.length, 0), 0)} soal)
+                    </Text>
+                  </HStack>
+                </Button>
 
-          <Stepper size="sm" index={currentStep} mb={6} colorScheme="blue" px={6} pt={4}>
-            {steps.map((step, index) => (
-              <Step key={index}>
-                <StepIndicator>
-                  <StepStatus complete={`✓`} incomplete={index + 1} active={index + 1} />
-                </StepIndicator>
-                <Box flexShrink="0">
-                  <StepTitle fontSize="sm">{step.title}</StepTitle>
-                  <Text fontSize="xs" color="gray.500">{step.description}</Text>
-                </Box>
-                <StepSeparator />
-              </Step>
-            ))}
-          </Stepper>
+                {openLevelName === levelName && (
+                  <Box pl={4} borderLeft="2px solid" borderColor="blue.200">
+                    <Button
+                      leftIcon={<AddIcon />}
+                      colorScheme="blue"
+                      size="sm"
+                      mb={4}
+                      onClick={() => handleOpenNewQuestion({ level: levelName })}
+                    >
+                      Tambah Soal di {levelName}
+                    </Button>
 
-          <ModalBody pb={6}>
-            {/* STEP 1: Select Topic & Level */}
-            {currentStep === 0 && (
-              <VStack spacing={4} align="stretch">
-                <Box>
-                  <Heading size="sm" mb={4}>
-                    Langkah 1: Pilih Materi & Tingkatan
-                  </Heading>
-                  <Divider mb={4} />
-                </Box>
+                    <Accordion allowMultiple>
+                      {Object.entries(subjects).map(([subjectName, topics]) => (
+                        <AccordionItem key={subjectName}>
+                          <AccordionButton bg="green.50" _hover={{ bg: 'green.100' }}>
+                            <Box flex="1" textAlign="left">
+                              <HStack>
+                                <Badge colorScheme="green" fontSize="sm" px={2} py={1}>{subjectName}</Badge>
+                                <Text fontWeight="semibold">
+                                  ({Object.values(topics).reduce((total, q) => total + q.length, 0)} soal)
+                                </Text>
+                              </HStack>
+                            </Box>
+                            <AccordionIcon />
+                          </AccordionButton>
 
-                <FormControl isRequired>
-                  <FormLabel fontWeight="bold">Pilih Materi</FormLabel>
-                  <Select
-                    placeholder="-- Pilih Materi --"
-                    value={currentQuestion.materi?.id || ''}
-                    onChange={(e) => {
-                      const topicId = parseInt(e.target.value);
-                      const topic = topics.find((t) => t.id === topicId);
-                      setCurrentQuestion({ ...currentQuestion, materi: topic });
-                    }}
-                    size="lg"
-                    focusBorderColor="blue.400"
-                  >
-                    {topics.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.nama} - {t.mataPelajaran.nama} ({t.tingkat.nama})
-                      </option>
-                    ))}
-                  </Select>
-                </FormControl>
+                          <AccordionPanel pb={4}>
+                            <Button
+                              leftIcon={<AddIcon />}
+                              colorScheme="green"
+                              size="sm"
+                              mb={4}
+                              onClick={() => handleOpenNewQuestion({ level: levelName, subject: subjectName })}
+                            >
+                              Tambah Soal di {subjectName}
+                            </Button>
 
-                {currentQuestion.materi && (
-                  <Box bg="blue.50" p={4} borderRadius="md" borderLeft="4px solid" borderLeftColor="blue.400">
-                    <VStack align="start" spacing={2}>
-                      <Text>
-                        <strong>Mata Pelajaran:</strong> {currentQuestion.materi.mataPelajaran.nama}
-                      </Text>
-                      <Text>
-                        <strong>Tingkatan:</strong> <Badge colorScheme="blue">{currentQuestion.materi.tingkat.nama}</Badge>
-                      </Text>
-                      <Text>
-                        <strong>Materi:</strong> {currentQuestion.materi.nama}
-                      </Text>
-                    </VStack>
+                            <Accordion allowMultiple>
+                              {Object.entries(topics).map(([topicName, topicQuestions]) => (
+                                <AccordionItem key={topicName}>
+                                  <AccordionButton bg="purple.50" _hover={{ bg: 'purple.100' }}>
+                                    <Box flex="1" textAlign="left">
+                                      <HStack>
+                                        <Badge colorScheme="purple" fontSize="sm" px={2} py={1}>{topicName}</Badge>
+                                        <Text fontWeight="medium">({topicQuestions.length} soal)</Text>
+                                      </HStack>
+                                    </Box>
+                                    <AccordionIcon />
+                                  </AccordionButton>
+
+                                  <AccordionPanel pb={4}>
+                                    <Button
+                                      leftIcon={<AddIcon />}
+                                      colorScheme="purple"
+                                      size="sm"
+                                      mb={4}
+                                      onClick={() => handleOpenNewQuestion({ level: levelName, subject: subjectName, topic: topicName })}
+                                    >
+                                      Tambah Soal di {topicName}
+                                    </Button>
+
+                                    <SimpleGrid columns={1} spacing={3}>
+                                      {getPaginatedQuestions(topicQuestions, levelName, subjectName, topicName).map(renderQuestionCard)}
+                                    </SimpleGrid>
+
+                                    {topicQuestions.length > pageSize && (
+                                      <HStack justify="center" mt={4}>
+                                        <Button
+                                          size="sm"
+                                          onClick={() => setPage(levelName, subjectName, topicName, Math.max(1, getCurrentPage(levelName, subjectName, topicName) - 1))}
+                                          isDisabled={getCurrentPage(levelName, subjectName, topicName) === 1}
+                                        >
+                                          Prev
+                                        </Button>
+                                        <Text fontSize="sm">
+                                          Page {getCurrentPage(levelName, subjectName, topicName)} of {getTotalPages(topicQuestions)}
+                                        </Text>
+                                        <Button
+                                          size="sm"
+                                          onClick={() => setPage(levelName, subjectName, topicName, Math.min(getTotalPages(topicQuestions), getCurrentPage(levelName, subjectName, topicName) + 1))}
+                                          isDisabled={getCurrentPage(levelName, subjectName, topicName) === getTotalPages(topicQuestions)}
+                                        >
+                                          Next
+                                        </Button>
+                                      </HStack>
+                                    )}
+                                  </AccordionPanel>
+                                </AccordionItem>
+                              ))}
+                            </Accordion>
+                          </AccordionPanel>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
                   </Box>
                 )}
-              </VStack>
+              </Box>
+            ))}
+
+            {getTotalLevelPages() > 1 && (
+              <HStack justify="center" mt={4}>
+                <Button
+                  size="sm"
+                  onClick={() => setCurrentLevelPage(Math.max(1, currentLevelPage - 1))}
+                  isDisabled={currentLevelPage === 1}
+                >
+                  Prev Levels
+                </Button>
+                <Text fontSize="sm">
+                  Level Page {currentLevelPage} of {getTotalLevelPages()}
+                </Text>
+                <Button
+                  size="sm"
+                  onClick={() => setCurrentLevelPage(Math.min(getTotalLevelPages(), currentLevelPage + 1))}
+                  isDisabled={currentLevelPage === getTotalLevelPages()}
+                >
+                  Next Levels
+                </Button>
+              </HStack>
             )}
+          </VStack>
+        )}
 
-            {/* STEP 2: Question & Answers */}
-            {currentStep === 1 && (
+        {/* Modal dengan semua optimasi anti-lag */}
+        <Modal
+          isOpen={isQuestionOpen}
+          onClose={onQuestionClose}
+          size="2xl"
+          scrollBehavior="inside"
+          motionPreset="none"
+          trapFocus={false}
+          blockScrollOnMount={false}
+        >
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>{currentQuestion?.id ? 'Edit Soal' : 'Tambah Soal Baru'}</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody py={6}>
               <VStack spacing={4} align="stretch">
-                <Box>
-                  <Heading size="sm" mb={4}>
-                    Langkah 2: Soal, Opsi Jawaban & Pembahasan
-                  </Heading>
-                  <Divider mb={4} />
-                </Box>
+                <FormControl isRequired>
+                  <FormLabel>Materi</FormLabel>
+                  <MateriSelect value={formValues.materi?.id} onChange={(topic) => updateFormField('materi', topic)} topics={filteredTopics} />
+                </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel fontWeight="bold">Soal/Pertanyaan</FormLabel>
+                  <FormLabel>Pertanyaan</FormLabel>
                   <Textarea
-                    value={formValues.pertanyaan}
-                    onChange={(e) => updateFormValue('pertanyaan', e.target.value)}
-                    placeholder="Masukkan pertanyaan soal di sini..."
-                    rows={4}
-                    size="lg"
-                    focusBorderColor="blue.400"
+                    value={localPertanyaan}
+                    onChange={(e) => setLocalPertanyaan(e.target.value)}
+                    placeholder="Masukkan pertanyaan"
+                    rows={3}
                   />
                 </FormControl>
 
-                <Divider my={2} />
+                <FormControl isRequired><FormLabel>Opsi A</FormLabel><Input value={formValues.opsiA} onChange={(e) => updateFormField('opsiA', e.target.value)} /></FormControl>
+                <FormControl isRequired><FormLabel>Opsi B</FormLabel><Input value={formValues.opsiB} onChange={(e) => updateFormField('opsiB', e.target.value)} /></FormControl>
+                <FormControl isRequired><FormLabel>Opsi C</FormLabel><Input value={formValues.opsiC} onChange={(e) => updateFormField('opsiC', e.target.value)} /></FormControl>
+                <FormControl isRequired><FormLabel>Opsi D</FormLabel><Input value={formValues.opsiD} onChange={(e) => updateFormField('opsiD', e.target.value)} /></FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel fontWeight="bold">A. Opsi A</FormLabel>
-                  <Input
-                    value={formValues.opsiA}
-                    onChange={(e) => updateFormValue('opsiA', e.target.value)}
-                    placeholder="Masukkan pilihan A..."
-                    size="lg"
-                    focusBorderColor="blue.400"
-                  />
-                </FormControl>
-
-                <FormControl isRequired>
-                  <FormLabel fontWeight="bold">B. Opsi B</FormLabel>
-                  <Input
-                    value={formValues.opsiB}
-                    onChange={(e) => updateFormValue('opsiB', e.target.value)}
-                    placeholder="Masukkan pilihan B..."
-                    size="lg"
-                    focusBorderColor="blue.400"
-                  />
-                </FormControl>
-
-                <FormControl isRequired>
-                  <FormLabel fontWeight="bold">C. Opsi C</FormLabel>
-                  <Input
-                    value={formValues.opsiC}
-                    onChange={(e) => updateFormValue('opsiC', e.target.value)}
-                    placeholder="Masukkan pilihan C..."
-                    size="lg"
-                    focusBorderColor="blue.400"
-                  />
-                </FormControl>
-
-                <FormControl isRequired>
-                  <FormLabel fontWeight="bold">D. Opsi D</FormLabel>
-                  <Input
-                    value={formValues.opsiD}
-                    onChange={(e) => updateFormValue('opsiD', e.target.value)}
-                    placeholder="Masukkan pilihan D..."
-                    size="lg"
-                    focusBorderColor="blue.400"
-                  />
-                </FormControl>
-
-                <Divider my={2} />
-
-                <FormControl isRequired>
-                  <FormLabel fontWeight="bold">Jawaban Benar</FormLabel>
-                  <Select
-                    value={formValues.jawabanBenar || 'A'}
-                    onChange={(e) => updateFormValue('jawabanBenar', e.target.value)}
-                    size="lg"
-                    focusBorderColor="green.400"
-                    bg="green.50"
-                  >
+                  <FormLabel>Jawaban Benar</FormLabel>
+                  <Select value={formValues.jawabanBenar} onChange={(e) => updateFormField('jawabanBenar', e.target.value)}>
                     <option value="A">A</option>
                     <option value="B">B</option>
                     <option value="C">C</option>
@@ -820,158 +638,65 @@ export default function QuestionsTab() {
                 </FormControl>
 
                 <FormControl>
-                  <FormLabel fontWeight="bold">Pembahasan (Opsional)</FormLabel>
+                  <FormLabel>Pembahasan (Opsional)</FormLabel>
                   <Textarea
-                    value={formValues.pembahasan || ''}
-                    onChange={(e) => updateFormValue('pembahasan', e.target.value)}
-                    placeholder="Masukkan penjelasan untuk membantu siswa memahami jawaban yang benar..."
+                    value={localPembahasan}
+                    onChange={(e) => setLocalPembahasan(e.target.value)}
+                    placeholder="Masukkan pembahasan"
                     rows={3}
-                    size="lg"
-                    focusBorderColor="blue.400"
                   />
-                  <Text fontSize="xs" color="gray.500" mt={1}>
-                    Pembahasan membantu siswa belajar lebih dalam
-                  </Text>
                 </FormControl>
-              </VStack>
-            )}
 
-            {/* STEP 3: Images */}
-            {currentStep === 2 && (
-              <VStack spacing={4} align="start" w="100%">
-                <Box w="100%">
-                  <Heading size="sm" mb={4}>
-                    Langkah 3: Upload Gambar (Opsional)
-                  </Heading>
-                  <Divider mb={4} />
-                </Box>
+                <FormControl>
+                  <FormLabel>Upload Gambar (Opsional)</FormLabel>
+                  <Input ref={fileInputRef} type="file" multiple accept="image/*" onChange={(e) => setSelectedFiles(e.target.files)} />
+                  <Text fontSize="xs" color="gray.500" mt={2}>Pilih satu atau lebih file gambar</Text>
+                </FormControl>
 
-                {/* Existing Images */}
-                {currentQuestion.gambar && currentQuestion.gambar.length > 0 && (
-                  <Box w="100%">
-                    <Text fontWeight="bold" mb={3}>
-                      Gambar yang Ada ({currentQuestion.gambar.length})
-                    </Text>
-                    <SimpleGrid columns={[2, 3, 4]} spacing={3}>
-                      {currentQuestion.gambar.map((img) => (
-                        <Box
-                          key={img.id}
-                          position="relative"
-                          borderWidth="1px"
-                          borderRadius="md"
-                          overflow="hidden"
-                          _hover={{ shadow: 'md' }}
-                          bg="gray.50"
-                        >
-                          <ChakraImage
-                            src={`${process.env.NEXT_PUBLIC_API_BASE}/${img.filePath.replace(/\\/g, '/')}`}
-                            alt="Question Image"
-                            boxSize="100px"
-                            objectFit="cover"
-                          />
-                          <IconButton
-                            aria-label="Delete Image"
-                            icon={<DeleteIcon />}
-                            size="xs"
-                            colorScheme="red"
-                            position="absolute"
-                            top={1}
-                            right={1}
-                            onClick={() => handleDeleteImage(currentQuestion.id!, img.id)}
-                          />
-                        </Box>
+                {currentQuestion?.gambar && currentQuestion.gambar.length > 0 && (
+                  <>
+                    <Heading size="sm">Gambar yang Ada</Heading>
+                    <VStack spacing={2} align="stretch">
+                      {currentQuestion.gambar.map((img: any) => (
+                        <HStack key={img.id} p={3} border="1px solid" borderColor="gray.200" borderRadius="md" justify="space-between">
+                          <VStack align="start" spacing={1}>
+                            <Text fontWeight="bold" fontSize="sm">{img.namaFile}</Text>
+                            <Text fontSize="xs" color="gray.600">{(img.fileSize / 1024).toFixed(2)} KB</Text>
+                          </VStack>
+                          <IconButton aria-label="Delete image" icon={<DeleteIcon />} size="sm" colorScheme="red" onClick={() => handleDeleteImage(img.id)} />
+                        </HStack>
                       ))}
-                    </SimpleGrid>
-                    <Divider my={4} />
-                  </Box>
+                    </VStack>
+                  </>
                 )}
-
-                {/* Upload New Images */}
-                <FormControl w="100%">
-                  <FormLabel fontWeight="bold">Upload Gambar Baru</FormLabel>
-                  <Input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    ref={fileInputRef}
-                    onChange={(e) => setSelectedFiles(e.target.files)}
-                    size="lg"
-                    focusBorderColor="blue.400"
-                  />
-                  <Text fontSize="xs" color="gray.500" mt={2}>
-                    Format: JPG, PNG, GIF. Maksimal 5MB per file.
-                  </Text>
-                </FormControl>
-
-                {selectedFiles && selectedFiles.length > 0 && (
-                  <Box bg="green.50" p={3} borderRadius="md" w="100%" borderLeft="4px solid" borderLeftColor="green.400">
-                    <Text fontWeight="bold" color="green.700">
-                      {selectedFiles.length} file siap di-upload
-                    </Text>
-                  </Box>
-                )}
-
-                <Box bg="gray.50" p={3} borderRadius="md" w="100%">
-                  <Text fontSize="sm" color="gray.600">
-                    Gambar opsional. Klik &quot;Simpan Soal&quot; untuk menyelesaikan pembuatan soal.
-                  </Text>
-                </Box>
               </VStack>
-            )}
-          </ModalBody>
+            </ModalBody>
 
-          <ModalFooter>
-            <HStack spacing={2}>
-              {currentStep > 0 && (
-                <Button variant="outline" onClick={handlePrevStep}>
-                  ← Kembali
-                </Button>
-              )}
-
-              {currentStep < steps.length - 1 && (
-                <Button colorScheme="blue" onClick={handleNextStep}>
-                  Lanjut →
-                </Button>
-              )}
-
-              {currentStep === steps.length - 1 && (
-                <Button colorScheme="green" onClick={handleSaveQuestion}>
-                  Simpan Soal
-                </Button>
-              )}
-
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  onQuestionClose();
-                  setCurrentStep(0);
-                  setSelectedFiles(null);
-                }}
-              >
+            <ModalFooter gap={2}>
+              <Button variant="outline" onClick={onQuestionClose} isDisabled={isSubmitting}>
                 Batal
               </Button>
-            </HStack>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+              <Button colorScheme="blue" onClick={handleSubmitQuestion} isLoading={isSubmitting}>
+                Simpan Soal
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
 
-      {/* Delete Confirmation Modal */}
-      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Konfirmasi Hapus</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <Text>Apakah Anda yakin ingin menghapus soal ini? Tindakan ini tidak dapat dibatalkan.</Text>
-          </ModalBody>
-          <ModalFooter>
-            <Button colorScheme="red" mr={3} onClick={handleDeleteQuestion}>
-              Ya, Hapus
-            </Button>
-            <Button onClick={onDeleteClose}>Batal</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </Box>
+        {/* Delete Confirmation */}
+        <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} size="sm">
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Konfirmasi Hapus</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>Apakah Anda yakin ingin menghapus soal ini?</ModalBody>
+            <ModalFooter gap={2}>
+              <Button variant="outline" onClick={onDeleteClose}>Batal</Button>
+              <Button colorScheme="red" onClick={handleConfirmDelete} isLoading={isSubmitting}>Hapus</Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      </VStack>
+    </Container>
   );
 }

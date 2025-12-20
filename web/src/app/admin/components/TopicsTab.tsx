@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import React from 'react';
 import {
   Box,
   Button,
@@ -23,164 +24,80 @@ import {
   Select,
   useDisclosure,
   VStack,
-  useToast,
   Text,
 } from '@chakra-ui/react';
-import axios from 'axios';
+import { useCRUD, useForm, usePagination } from '../hooks';
+import { Topic, Level, Subject } from '../types';
 
-interface Topic {
-  id: number;
-  mataPelajaran: { id: number; nama: string };
-  tingkat: { id: number; nama: string };
-  nama: string;
-}
-
-interface Level {
-  id: number;
-  nama: string;
-}
-
-interface Subject {
-  id: number;
-  nama: string;
-}
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1/topics';
-const LEVELS_API = process.env.NEXT_PUBLIC_API_BASE + '/v1/levels';
-const SUBJECTS_API = process.env.NEXT_PUBLIC_API_BASE + '/v1/subjects';
-
-export default function TopicsTab() {
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [levels, setLevels] = useState<Level[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+export default React.memo(function TopicsTab() {
+  const { data: topics, create, update, remove } = useCRUD<Topic>('topics');
+  const { data: levels } = useCRUD<Level>('levels');
+  const { data: subjects } = useCRUD<Subject>('subjects');
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
-  const [formData, setFormData] = useState({ idMataPelajaran: '', idTingkat: '', nama: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const toast = useToast();
+
+  const form = useForm({
+    initialValues: { idMataPelajaran: '', idTingkat: '', nama: '' },
+    onSubmit: async (values) => {
+      const data = {
+        id_mata_pelajaran: parseInt(values.idMataPelajaran),
+        id_tingkat: parseInt(values.idTingkat),
+        nama: values.nama,
+      } as any;
+      if (editingTopic) {
+        await update(editingTopic.id, data);
+      } else {
+        await create(data);
+      }
+      onClose();
+      form.reset();
+      setEditingTopic(null);
+    },
+  });
 
   useEffect(() => {
-    fetchTopics();
-    fetchLevels();
-    fetchSubjects();
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const fetchTopics = async () => {
-    try {
-      const response = await axios.get(API_BASE);
-      const data = response.data;
-      setTopics(
-        Array.isArray(data) ? data :
-        Array.isArray(data.data) ? data.data :
-        Array.isArray(data.materi) ? data.materi : []
-      );
-    } catch (error) {
-      toast({ title: 'Error mengambil materi', status: 'error' });
-      setTopics([]);
-    }
-  };
-
-  const fetchLevels = async () => {
-    try {
-      const response = await axios.get(LEVELS_API);
-      const data = response.data;
-      setLevels(
-        Array.isArray(data) ? data :
-        Array.isArray(data.data) ? data.data :
-        Array.isArray(data.tingkat) ? data.tingkat : []
-      );
-    } catch (error) {
-      toast({ title: 'Error mengambil tingkat', status: 'error' });
-      setLevels([]);
-    }
-  };
-
-  const fetchSubjects = async () => {
-    try {
-      const response = await axios.get(SUBJECTS_API);
-      const data = response.data;
-      setSubjects(
-        Array.isArray(data) ? data :
-        Array.isArray(data.data) ? data.data :
-        Array.isArray(data.mataPelajaran) ? data.mataPelajaran : []
-      );
-    } catch (error) {
-      toast({ title: 'Error mengambil mata pelajaran', status: 'error' });
-      setSubjects([]);
-    }
-  };
-
   const filteredTopics = useMemo(() => {
-    return topics.filter(topic =>
+    return topics.filter((topic) =>
       topic.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-      topic.mataPelajaran.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      topic.mataPelajaran.nama
+        .toLowerCase()
+        .includes(debouncedSearchQuery.toLowerCase()) ||
       topic.tingkat.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
     );
   }, [topics, debouncedSearchQuery]);
 
-  const totalPages = Math.ceil(filteredTopics.length / itemsPerPage);
-  const paginatedTopics = filteredTopics.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const { paginatedItems, currentPage, totalPages, nextPage, prevPage } =
+    usePagination(filteredTopics, { itemsPerPage: 10 });
 
-  const handleCreate = () => {
+  const handleCreate = useCallback(() => {
     setEditingTopic(null);
-    setFormData({ idMataPelajaran: '', idTingkat: '', nama: '' });
+    form.reset();
     onOpen();
-  };
+  }, [form, onOpen]);
 
-  const handleEdit = (topic: Topic) => {
-    setEditingTopic(topic);
-    setFormData({
-      idMataPelajaran: topic.mataPelajaran.id.toString(),
-      idTingkat: topic.tingkat.id.toString(),
-      nama: topic.nama,
-    });
-    onOpen();
-  };
+  const handleEdit = useCallback(
+    (topic: Topic) => {
+      setEditingTopic(topic);
+      form.setFieldValue('idMataPelajaran', topic.mataPelajaran.id.toString());
+      form.setFieldValue('idTingkat', topic.tingkat.id.toString());
+      form.setFieldValue('nama', topic.nama);
+      onOpen();
+    },
+    [form, onOpen]
+  );
 
-  const handleDelete = async (id: number) => {
-    try {
-      await axios.delete(`${API_BASE}/${id}`);
-      fetchTopics();
-      toast({ title: 'Materi dihapus', status: 'success' });
-    } catch (error) {
-      toast({ title: 'Error menghapus materi', status: 'error' });
-    }
-  };
-
-  const handleSubmit = async () => {
-    const data = {
-      idMataPelajaran: parseInt(formData.idMataPelajaran),
-      idTingkat: parseInt(formData.idTingkat),
-      nama: formData.nama,
-    };
-    try {
-      if (editingTopic) {
-        await axios.put(`${API_BASE}/${editingTopic.id}`, data);
-        toast({ title: 'Materi diperbarui', status: 'success' });
-      } else {
-        await axios.post(API_BASE, data);
-        toast({ title: 'Materi dibuat', status: 'success' });
-      }
-      fetchTopics();
-      onClose();
-    } catch (error) {
-      toast({ title: 'Error menyimpan materi', status: 'error' });
-    }
-  };
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      setDebouncedSearchQuery(searchQuery);
-    }
-  };
+  const handleDelete = useCallback(
+    async (id: number) => {
+      await remove(id);
+    },
+    [remove]
+  );
 
   return (
     <Box>
@@ -191,7 +108,6 @@ export default function TopicsTab() {
         placeholder="Cari materi, mata pelajaran, atau tingkat..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        onKeyDown={handleSearchKeyDown}
         mb={4}
       />
       <Table variant="simple">
@@ -204,7 +120,7 @@ export default function TopicsTab() {
           </Tr>
         </Thead>
         <Tbody>
-          {paginatedTopics.map((topic) => (
+          {paginatedItems.map((topic) => (
             <Tr key={topic.id}>
               <Td>{topic.mataPelajaran.nama}</Td>
               <Td>{topic.tingkat.nama}</Td>
@@ -222,11 +138,13 @@ export default function TopicsTab() {
         </Tbody>
       </Table>
       <Box mt={4} display="flex" justifyContent="space-between" alignItems="center">
-        <Button isDisabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
+        <Button isDisabled={currentPage === 1} onClick={prevPage}>
           Prev
         </Button>
-        <Text>Halaman {currentPage} dari {totalPages}</Text>
-        <Button isDisabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>
+        <Text>
+          Halaman {currentPage} dari {totalPages}
+        </Text>
+        <Button isDisabled={currentPage === totalPages} onClick={nextPage}>
           Next
         </Button>
       </Box>
@@ -241,10 +159,11 @@ export default function TopicsTab() {
               <FormControl>
                 <FormLabel>Mata Pelajaran</FormLabel>
                 <Select
-                  value={formData.idMataPelajaran}
-                  onChange={(e) => setFormData({ ...formData, idMataPelajaran: e.target.value })}
+                  name="idMataPelajaran"
+                  value={form.values.idMataPelajaran}
+                  onChange={form.handleChange}
+                  placeholder="Pilih mata pelajaran"
                 >
-                  <option value="">Pilih Mata Pelajaran</option>
                   {subjects.map((subject) => (
                     <option key={subject.id} value={subject.id.toString()}>
                       {subject.nama}
@@ -255,10 +174,11 @@ export default function TopicsTab() {
               <FormControl>
                 <FormLabel>Tingkat</FormLabel>
                 <Select
-                  value={formData.idTingkat}
-                  onChange={(e) => setFormData({ ...formData, idTingkat: e.target.value })}
+                  name="idTingkat"
+                  value={form.values.idTingkat}
+                  onChange={form.handleChange}
+                  placeholder="Pilih tingkat"
                 >
-                  <option value="">Pilih Tingkat</option>
                   {levels.map((level) => (
                     <option key={level.id} value={level.id.toString()}>
                       {level.nama}
@@ -267,19 +187,33 @@ export default function TopicsTab() {
                 </Select>
               </FormControl>
               <FormControl>
-                <FormLabel>Nama</FormLabel>
+                <FormLabel>Nama Materi</FormLabel>
                 <Input
-                  value={formData.nama}
-                  onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
+                  name="nama"
+                  value={form.values.nama}
+                  onChange={form.handleChange}
+                  placeholder="Masukkan nama materi"
                 />
               </FormControl>
             </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="purple" mr={3} onClick={handleSubmit}>
+            <Button
+              colorScheme="purple"
+              mr={3}
+              onClick={() => form.handleSubmit()}
+              isLoading={form.isSubmitting}
+            >
               Simpan
             </Button>
-            <Button variant="ghost" onClick={onClose}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                onClose();
+                setEditingTopic(null);
+                form.reset();
+              }}
+            >
               Batal
             </Button>
           </ModalFooter>
@@ -287,4 +221,4 @@ export default function TopicsTab() {
       </Modal>
     </Box>
   );
-}
+})

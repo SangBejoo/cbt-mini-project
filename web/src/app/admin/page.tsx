@@ -7,7 +7,9 @@ import { useAuth } from '../auth-context';
 import LevelsTab from './components/LevelsTab';
 import SubjectsTab from './components/SubjectsTab';
 import TopicsTab from './components/TopicsTab';
-import QuestionsTab from './components/QuestionsTab';
+import dynamic from 'next/dynamic';
+
+const QuestionsTab = dynamic(() => import('./components/QuestionsTab'), { ssr: false });
 import UsersTab from './components/UsersTab';
 import HistoryTab from './components/HistoryTab';
 
