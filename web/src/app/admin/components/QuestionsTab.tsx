@@ -115,6 +115,8 @@ export default function QuestionsTab() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevelFilter, setSelectedLevelFilter] = useState('');
 
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+
   const getPageKey = (level: string, subject: string, topic: string) => `${level}-${subject}-${topic}`;
 
   const getCurrentPage = (level: string, subject: string, topic: string) => currentPages[getPageKey(level, subject, topic)] || 1;
@@ -156,8 +158,8 @@ export default function QuestionsTab() {
   const filteredLevelEntries = useMemo(() => {
     return levelEntries.filter(([levelName, subjects]) => {
       if (selectedLevelFilter && levelName !== selectedLevelFilter) return false;
-      if (searchTerm) {
-        const lowerSearch = searchTerm.toLowerCase();
+      if (deferredSearchTerm) {
+        const lowerSearch = deferredSearchTerm.toLowerCase();
         if (levelName.toLowerCase().includes(lowerSearch)) return true;
         for (const [subjectName, topics] of Object.entries(subjects)) {
           if (subjectName.toLowerCase().includes(lowerSearch)) return true;
@@ -170,7 +172,7 @@ export default function QuestionsTab() {
       }
       return true;
     });
-  }, [levelEntries, searchTerm, selectedLevelFilter]);
+  }, [levelEntries, deferredSearchTerm, selectedLevelFilter]);
 
   const getTotalLevelPages = () => Math.ceil(filteredLevelEntries.length / levelPageSize);
 
@@ -331,11 +333,21 @@ export default function QuestionsTab() {
         image_bytes: imageBytes,
       };
 
-      const newQuestion = await createQuestion(questionData);
-      setCurrentQuestion(newQuestion);
+      let result;
+      if (currentQuestion?.id) {
+        // Update existing question
+        result = await updateQuestion(currentQuestion.id, questionData);
+        toast({ title: 'Soal berhasil diupdate', status: 'success' });
+      } else {
+        // Create new question
+        result = await createQuestion(questionData);
+        toast({ title: 'Soal berhasil dibuat', status: 'success' });
+      }
 
-      // Auto open the level accordion to show the new question
-      setOpenLevelName(newQuestion.materi?.tingkat?.nama);
+      setCurrentQuestion(result);
+
+      // Auto open the level accordion to show the question
+      setOpenLevelName(result.materi?.tingkat?.nama);
 
       onQuestionClose();
     } catch (error) {
@@ -343,7 +355,7 @@ export default function QuestionsTab() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [formValues, selectedFiles, createQuestion, toast, onQuestionClose]);
+  }, [formValues, selectedFiles, currentQuestion, createQuestion, updateQuestion, toast, onQuestionClose]);
 
   const handleUploadImages = useCallback(async () => {
     if (!selectedFiles || selectedFiles.length === 0 || !currentQuestion?.id) {
@@ -394,9 +406,27 @@ export default function QuestionsTab() {
               </Text>
             )}
           </Box>
-          <HStack spacing={2} alignSelf={{ base: 'flex-end', md: 'center' }}>
-            <IconButton aria-label="Edit" icon={<EditIcon />} size="sm" colorScheme="blue" onClick={() => handleEditQuestion(question)} />
-            <IconButton aria-label="Delete" icon={<DeleteIcon />} size="sm" colorScheme="red" onClick={() => handleDeleteClick(question.id)} />
+          <HStack spacing={3} alignSelf={{ base: 'flex-end', md: 'center' }}>
+            <IconButton 
+              aria-label="Edit" 
+              icon={<EditIcon />} 
+              size="sm" 
+              colorScheme="blue" 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditQuestion(question);
+              }} 
+            />
+            <IconButton 
+              aria-label="Delete" 
+              icon={<DeleteIcon />} 
+              size="sm" 
+              colorScheme="red" 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteClick(question.id);
+              }} 
+            />
           </HStack>
         </Flex>
       </CardBody>
@@ -411,7 +441,12 @@ export default function QuestionsTab() {
         </Box>
 
         <Box>
-          <Text fontWeight="bold" color="gray.700">Total Soal: {questions.length}</Text>
+          <HStack justify="space-between" align="center" mb={4}>
+            <Text fontWeight="bold" color="gray.700">Total Soal: {questions.length}</Text>
+            <Button colorScheme="blue" leftIcon={<AddIcon />} onClick={() => handleOpenNewQuestion()}>
+              Tambah Soal
+            </Button>
+          </HStack>
         </Box>
 
         <HStack spacing={4} mb={4}>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Container,
   Box,
@@ -11,6 +11,7 @@ import {
   Spinner,
   Input,
   Select,
+  Button,
   Accordion,
   AccordionItem,
   AccordionButton,
@@ -20,16 +21,23 @@ import {
   SimpleGrid,
   Card,
   CardBody,
+  Flex,
+  IconButton,
 } from '@chakra-ui/react';
+import { ChevronLeftIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import { useSessions } from '../hooks';
 
 export default function HistoryTab() {
-  const { sessions, loading, getPesertas, getSubjects, getLevels, getFilteredGroups } =
+  const { sessions, loading, pagination, fetchSessions, getPesertas, getSubjects, getLevels, getFilteredGroups } =
     useSessions();
 
   const [searchPeserta, setSearchPeserta] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('Semua');
   const [selectedLevel, setSelectedLevel] = useState<string>('Semua');
+  const [currentParticipantPage, setCurrentParticipantPage] = useState(1);
+  const [currentSessionPage, setCurrentSessionPage] = useState(1);
+
+  const participantPageSize = 5;
 
   const pesertas = useMemo(
     () => getPesertas(searchPeserta),
@@ -37,8 +45,8 @@ export default function HistoryTab() {
   );
 
   const subjects = useMemo(
-    () => getSubjects(pesertas, selectedSubject),
-    [pesertas, selectedSubject, getSubjects]
+    () => getSubjects(pesertas),
+    [pesertas, getSubjects]
   );
 
   const levels = useMemo(
@@ -50,6 +58,23 @@ export default function HistoryTab() {
     () => getFilteredGroups(pesertas, selectedSubject, selectedLevel),
     [pesertas, selectedSubject, selectedLevel, getFilteredGroups]
   );
+
+  // Pagination for participants
+  const participantKeys = Object.keys(filteredGroups);
+  const totalParticipantPages = Math.ceil(participantKeys.length / participantPageSize);
+  const paginatedParticipants = participantKeys.slice(
+    (currentParticipantPage - 1) * participantPageSize,
+    currentParticipantPage * participantPageSize
+  );
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentParticipantPage(1);
+  }, [searchPeserta, selectedSubject, selectedLevel]);
+
+  useEffect(() => {
+    fetchSessions(currentSessionPage);
+  }, [currentSessionPage, fetchSessions]);
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -148,8 +173,9 @@ export default function HistoryTab() {
             </CardBody>
           </Card>
         ) : (
-          <Accordion allowMultiple>
-            {Object.keys(filteredGroups).map((peserta) => (
+          <>
+            <Accordion allowMultiple>
+            {paginatedParticipants.map((peserta) => (
               <AccordionItem key={peserta}>
                 <AccordionButton>
                   <Box flex="1" textAlign="left" fontWeight="bold" fontSize="md">
@@ -277,6 +303,52 @@ export default function HistoryTab() {
               </AccordionItem>
             ))}
           </Accordion>
+
+          {totalParticipantPages > 1 && (
+            <HStack justify="center" mt={4}>
+              <Button
+                size="sm"
+                onClick={() => setCurrentParticipantPage(Math.max(1, currentParticipantPage - 1))}
+                isDisabled={currentParticipantPage === 1}
+              >
+                Prev
+              </Button>
+              <Text fontSize="sm">
+                Page {currentParticipantPage} of {totalParticipantPages}
+              </Text>
+              <Button
+                size="sm"
+                onClick={() => setCurrentParticipantPage(Math.min(totalParticipantPages, currentParticipantPage + 1))}
+                isDisabled={currentParticipantPage === totalParticipantPages}
+              >
+                Next
+              </Button>
+            </HStack>
+          )}
+          </>
+        )}
+
+        {/* Pagination for Sessions */}
+        {pagination.totalPages > 1 && (
+          <Flex justify="space-between" align="center" mt={6}>
+            <Text fontSize="sm" color="gray.600">
+              Halaman {pagination.currentPage} dari {pagination.totalPages} ({pagination.totalCount} sesi)
+            </Text>
+            <HStack spacing={2}>
+              <IconButton
+                aria-label="Previous"
+                icon={<ChevronLeftIcon />}
+                isDisabled={pagination.currentPage === 1}
+                onClick={() => setCurrentSessionPage(pagination.currentPage - 1)}
+              />
+              <IconButton
+                aria-label="Next"
+                icon={<ChevronRightIcon />}
+                isDisabled={pagination.currentPage === pagination.totalPages}
+                onClick={() => setCurrentSessionPage(pagination.currentPage + 1)}
+              />
+            </HStack>
+          </Flex>
         )}
       </VStack>
     </Container>

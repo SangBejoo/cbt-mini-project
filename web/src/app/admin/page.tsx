@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Button, VStack, Heading, Container, Tabs, TabList, Tab, TabPanels, TabPanel, HStack, Text } from '@chakra-ui/react';
 import { useAuth } from '../auth-context';
 import LevelsTab from './components/LevelsTab';
-import SubjectsTab from './components/SubjectsTab';
+const SubjectsTab = dynamic(() => import('./components/SubjectsTab'), { ssr: false });
 import TopicsTab from './components/TopicsTab';
 import dynamic from 'next/dynamic';
 
@@ -16,12 +16,26 @@ import HistoryTab from './components/HistoryTab';
 export default function AdminHome() {
   const { user, logout, isLoading } = useAuth();
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState(0);
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== 'ADMIN')) {
       router.push('/login');
     }
   }, [user, isLoading, router]);
+
+  useEffect(() => {
+    // Load active tab from localStorage
+    const savedTab = localStorage.getItem('adminActiveTab');
+    if (savedTab) {
+      setActiveTab(parseInt(savedTab, 10));
+    }
+  }, []);
+
+  const handleTabChange = (index: number) => {
+    setActiveTab(index);
+    localStorage.setItem('adminActiveTab', index.toString());
+  };
 
   const handleLogout = () => {
     logout();
@@ -54,7 +68,7 @@ export default function AdminHome() {
         </Button>
       </HStack>
 
-      <Tabs variant="enclosed" colorScheme="blue" isLazy>
+      <Tabs variant="enclosed" colorScheme="blue" isLazy index={activeTab} onChange={handleTabChange}>
         <TabList>
           <Tab>Tingkat</Tab>
           <Tab>Mata Pelajaran</Tab>

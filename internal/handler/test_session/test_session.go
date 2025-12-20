@@ -283,7 +283,7 @@ func (h *testSessionHandler) ListTestSessions(ctx context.Context, req *base.Lis
 	}
 
 	page := 1
-	pageSize := 10
+	pageSize := 1000
 	if req.Pagination != nil {
 		if req.Pagination.Page > 0 {
 			page = int(req.Pagination.Page)

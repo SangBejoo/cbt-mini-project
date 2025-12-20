@@ -49,18 +49,37 @@ export interface GroupedSessions {
   };
 }
 
-export function useSessions() {
+export interface PaginationInfo {
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}
+
+export function useSessions(options: { pageSize?: number } = { pageSize: 10 }) {
   const [sessions, setSessions] = useState<TestSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    totalCount: 0,
+    totalPages: 0,
+    currentPage: 1,
+    pageSize: options.pageSize || 10,
+  });
   const toast = useToast();
 
-  const fetchSessions = useCallback(async () => {
+  const fetchSessions = useCallback(async (page: number = 1) => {
     setLoading(true);
     try {
       const response = await apiClient.get<SessionsResponse>(
-        '/admin/sessions'
+        `/admin/sessions?page=${page}&pageSize=${pagination.pageSize}`
       );
       setSessions(response.data.testSessions || []);
+      setPagination(response.data.pagination || {
+        totalCount: 0,
+        totalPages: 0,
+        currentPage: page,
+        pageSize: options.pageSize || 10,
+      });
     } catch (error: any) {
       const message = error.response?.data?.message || error.message || 'Gagal memuat sesi';
       toast({
@@ -74,7 +93,7 @@ export function useSessions() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, pagination.pageSize]);
 
   useEffect(() => {
     fetchSessions();
@@ -114,17 +133,14 @@ export function useSessions() {
 
   // Get filtered subjects for peserta
   const getSubjects = useCallback(
-    (pesertas: string[], selectedSubject: string = 'Semua') => {
-      if (selectedSubject === 'Semua') {
-        const allSubjects = new Set<string>();
-        pesertas.forEach((p) => {
-          Object.keys(groupedSessions[p] || {}).forEach((subj) =>
-            allSubjects.add(subj)
-          );
-        });
-        return ['Semua', ...Array.from(allSubjects)];
-      }
-      return ['Semua', selectedSubject];
+    (pesertas: string[]) => {
+      const allSubjects = new Set<string>();
+      pesertas.forEach((p) => {
+        Object.keys(groupedSessions[p] || {}).forEach((subj) =>
+          allSubjects.add(subj)
+        );
+      });
+      return ['Semua', ...Array.from(allSubjects)];
     },
     [groupedSessions]
   );
@@ -192,6 +208,7 @@ export function useSessions() {
   return {
     sessions,
     loading,
+    pagination,
     groupedSessions,
     fetchSessions,
     getPesertas,

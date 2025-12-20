@@ -104,13 +104,8 @@ export function useQuestions(options: UseQuestionsOptions = { autoFetch: true })
     async (data: Partial<Question>) => {
       try {
         const response = await apiClient.post<any>('/questions', data);
-        const newQuestion = response.data?.data || response.data;
+        const newQuestion = response.data?.soal || response.data?.data || response.data;
         setQuestions((prev) => [...prev, newQuestion]);
-        toast({
-          title: 'Berhasil',
-          description: 'Soal berhasil dibuat',
-          status: 'success',
-        });
         return newQuestion;
       } catch (error: any) {
         const message =
@@ -130,15 +125,10 @@ export function useQuestions(options: UseQuestionsOptions = { autoFetch: true })
     async (id: number, data: Partial<Question>) => {
       try {
         const response = await apiClient.put<any>(`/questions/${id}`, data);
-        const updatedQuestion = response.data?.data || response.data;
+        const updatedQuestion = response.data?.soal || response.data?.data || response.data;
         setQuestions((prev) =>
           prev.map((q) => (q.id === id ? updatedQuestion : q))
         );
-        toast({
-          title: 'Berhasil',
-          description: 'Soal berhasil diperbarui',
-          status: 'success',
-        });
         return updatedQuestion;
       } catch (error: any) {
         const message =

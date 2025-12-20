@@ -91,7 +91,7 @@ export function useCRUD<T extends BaseEntity>(
         if (endpoint === 'levels') {
           newItem = res.data?.tingkat as T;
         } else if (endpoint === 'subjects') {
-          newItem = res.data?.mata_pelajaran as T;
+          newItem = res.data?.mataPelajaran as T;
         } else if (endpoint === 'topics') {
           newItem = res.data?.materi as T;
         } else if (endpoint === 'auth/users') {
