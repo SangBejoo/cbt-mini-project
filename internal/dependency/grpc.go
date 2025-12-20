@@ -22,6 +22,7 @@ import (
 	testSessionRepo "cbt-test-mini-project/internal/repository/test_session"
 	soalRepo "cbt-test-mini-project/internal/repository/test_soal"
 	tingkatRepo "cbt-test-mini-project/internal/repository/tingkat"
+	userLimitUsecase "cbt-test-mini-project/internal/usecase"
 	authUsecase "cbt-test-mini-project/internal/usecase/auth"
 	historyUsecase "cbt-test-mini-project/internal/usecase/history"
 	mataPelajaranUsecase "cbt-test-mini-project/internal/usecase/mata_pelajaran"
@@ -49,6 +50,7 @@ func InitGrpcDependency(server *grpc.Server, repo infra.Repository, config *conf
 	testSessionUsecase := testSessionUsecase.NewTestSessionUsecase(testSessionRepo, authRepo)
 	historyUsecase := historyUsecase.NewHistoryUsecase(historyRepo)
 	tingkatUsecase := tingkatUsecase.NewTingkatUsecase(tingkatRepo)
+	userLimitUsecase := userLimitUsecase.NewUserLimitUsecase(repo.UserLimitRepo)
 
 	// Initialize handlers
 	baseServer := baseGrpcServer.NewBaseHandler()
@@ -56,7 +58,7 @@ func InitGrpcDependency(server *grpc.Server, repo infra.Repository, config *conf
 	mataPelajaranServer := mataPelajaranHandler.NewMataPelajaranHandler(mataPelajaranUsecase)
 	materiServer := materiHandler.NewMateriHandler(materiUsecase)
 	soalServer := soalHandler.NewSoalHandler(soalUsecase)
-	testSessionServer := testSessionHandler.NewTestSessionHandler(testSessionUsecase, tingkatUsecase)
+	testSessionServer := testSessionHandler.NewTestSessionHandler(testSessionUsecase, tingkatUsecase, userLimitUsecase)
 	historyServer := historyHandler.NewHistoryHandler(historyUsecase)
 	tingkatServer := tingkatHandler.NewTingkatHandler(tingkatUsecase)
 

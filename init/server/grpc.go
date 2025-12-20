@@ -35,11 +35,18 @@ func RunGRPCServer(ctx context.Context, cfg config.Main, repo infra.Repository) 
 	// Initialize JWT middleware
 	jwtMiddleware := interceptor.NewJWTMiddleware(&cfg)
 
+	// Initialize repositories for middleware
+	userLimitRepo := repo.UserLimitRepo
+
+	// Initialize rate limit middleware
+	rateLimitMiddleware := interceptor.NewRateLimitMiddleware(userLimitRepo)
+
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(metadataInterceptor),
 		grpc.ChainUnaryInterceptor(
 			apmgrpc.NewUnaryServerInterceptor(),
 			jwtMiddleware.UnaryServerInterceptor(),
+			rateLimitMiddleware.UnaryServerInterceptor,
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandlerContext(grpcRecoveryHandler)),
 		),
 		grpc.ChainStreamInterceptor(

@@ -13,6 +13,8 @@ type Main struct {
 	GrpcServer grpcServer
 	JWT        jwt
 	APM        apm
+	RateLimit  rateLimit
+	CORS       cors
 }
 
 type Database struct {
@@ -51,6 +53,18 @@ type apm struct {
 	Enabled        bool
 }
 
+type rateLimit struct {
+	APIRequestsPerHour    int
+	APIRequestsPerDay     int
+	TestSessionsPerDay    int
+	TestSessionsPerWeek   int
+	QuestionsPerDay       int
+}
+
+type cors struct {
+	AllowOrigin string
+}
+
 func Load() *Main {
 	godotenv.Load()
 	return &Main{
@@ -83,6 +97,16 @@ func Load() *Main {
 			ServiceVersion: util.GetEnv("ELASTIC_APM_SERVICE_VERSION", "1.0.0"),
 			Environment:    util.GetEnv("ELASTIC_APM_ENVIRONMENT", "development"),
 			Enabled:        util.GetEnv("ELASTIC_APM_ENABLED", true),
+		},
+		RateLimit: rateLimit{
+			APIRequestsPerHour:    util.GetEnv("RATE_LIMIT_API_REQUESTS_PER_HOUR", 1000),
+			APIRequestsPerDay:     util.GetEnv("RATE_LIMIT_API_REQUESTS_PER_DAY", 10000),
+			TestSessionsPerDay:    util.GetEnv("RATE_LIMIT_TEST_SESSIONS_PER_DAY", 10),
+			TestSessionsPerWeek:   util.GetEnv("RATE_LIMIT_TEST_SESSIONS_PER_WEEK", 50),
+			QuestionsPerDay:       util.GetEnv("RATE_LIMIT_QUESTIONS_PER_DAY", 100),
+		},
+		CORS: cors{
+			AllowOrigin: util.GetEnv("CORS_ALLOW_ORIGIN", "*"),
 		},
 	}
 }

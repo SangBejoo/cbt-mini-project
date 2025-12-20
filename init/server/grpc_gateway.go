@@ -77,7 +77,7 @@ func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repos
 	// Create HTTP server with timeouts
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.RestServer.Port),
-		Handler:      corsMiddleware(mux),
+		Handler:      corsMiddleware(&cfg)(mux),
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  120 * time.Second,
