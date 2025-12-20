@@ -16,6 +16,7 @@ type AuthRepository interface {
 	UpdateUser(ctx context.Context, id int32, updates map[string]interface{}) (*base.User, error)
 	DeleteUser(ctx context.Context, id int32) error
 	ListUsers(ctx context.Context, role int32, statusFilter int32, limit, offset int) ([]*base.User, int, error)
+	CheckUserHasTestSessions(ctx context.Context, id int32) (bool, error)
 }
 
 // InitAuthRepository initializes the auth repository

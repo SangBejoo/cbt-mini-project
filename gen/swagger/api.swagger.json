@@ -2541,6 +2541,10 @@
           "$ref": "#/definitions/baseUser",
           "title": "From JWT, not input"
         },
+        "namaPeserta": {
+          "type": "string",
+          "title": "Participant's name"
+        },
         "tingkat": {
           "$ref": "#/definitions/baseTingkat"
         },

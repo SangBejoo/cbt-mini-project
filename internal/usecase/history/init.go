@@ -8,4 +8,5 @@ import (
 type HistoryUsecase interface {
 	GetStudentHistory(userID int, tingkatan, idMataPelajaran *int, page, pageSize int) (*entity.StudentHistoryResponse, error)
 	GetHistoryDetail(sessionToken string) (*entity.HistoryDetailResponse, error)
+	ListStudentHistories(userID, tingkatan, idMataPelajaran *int, page, pageSize int) ([]entity.StudentHistoryWithUser, int, error)
 }

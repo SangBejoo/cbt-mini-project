@@ -91,3 +91,15 @@ func (u *historyUsecaseImpl) GetHistoryDetail(sessionToken string) (*entity.Hist
 
 	return response, nil
 }
+
+// ListStudentHistories lists all student histories with user info
+func (u *historyUsecaseImpl) ListStudentHistories(userID, tingkatan, idMataPelajaran *int, page, pageSize int) ([]entity.StudentHistoryWithUser, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+
+	return u.repo.ListStudentHistories(userID, tingkatan, idMataPelajaran, pageSize, (page-1)*pageSize)
+}

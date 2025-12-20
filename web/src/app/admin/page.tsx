@@ -9,6 +9,7 @@ import SubjectsTab from './components/SubjectsTab';
 import TopicsTab from './components/TopicsTab';
 import QuestionsTab from './components/QuestionsTab';
 import UsersTab from './components/UsersTab';
+import HistoryTab from './components/HistoryTab';
 
 export default function AdminHome() {
   const { user, logout, isLoading } = useAuth();
@@ -58,6 +59,7 @@ export default function AdminHome() {
           <Tab>Materi</Tab>
           <Tab>Soal</Tab>
           <Tab>Users</Tab>
+          <Tab>History</Tab>
         </TabList>
         <TabPanels>
           <TabPanel>
@@ -74,6 +76,9 @@ export default function AdminHome() {
           </TabPanel>
           <TabPanel>
             <UsersTab />
+          </TabPanel>
+          <TabPanel>
+            <HistoryTab />
           </TabPanel>
         </TabPanels>
       </Tabs>

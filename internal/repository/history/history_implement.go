@@ -69,7 +69,7 @@ func (r *historyRepositoryImpl) GetStudentHistory(userID int, tingkatan, idMataP
 			NamaPeserta:           s.NamaPeserta,
 			MataPelajaran:         s.MataPelajaran,
 			Tingkat:               s.Tingkat,
-			WaktuMulai:            s.WaktuMulai,
+			WaktuMulai:            &s.WaktuMulai,
 			WaktuSelesai:          s.WaktuSelesai,
 			DurasiPengerjaanDetik: durasi,
 			NilaiAkhir:            nilaiAkhir,
@@ -175,4 +175,113 @@ func (r *historyRepositoryImpl) GetUserFromSessionToken(sessionToken string) (*e
 		return nil, gorm.ErrRecordNotFound
 	}
 	return session.User, nil
+}
+
+// ListStudentHistories lists all student histories with user info
+func (r *historyRepositoryImpl) ListStudentHistories(userID, tingkatan, idMataPelajaran *int, limit, offset int) ([]entity.StudentHistoryWithUser, int, error) {
+	var results []entity.StudentHistoryWithUser
+	var total int64
+
+	// First, get distinct user_ids from completed test sessions
+	userQuery := r.db.Model(&entity.TestSession{}).Select("DISTINCT user_id").Where("status = ?", entity.TestStatusCompleted)
+
+	if userID != nil && *userID > 0 {
+		userQuery = userQuery.Where("user_id = ?", *userID)
+	}
+	if tingkatan != nil && *tingkatan > 0 {
+		userQuery = userQuery.Where("id_tingkat = ?", *tingkatan)
+	}
+	if idMataPelajaran != nil && *idMataPelajaran > 0 {
+		userQuery = userQuery.Where("id_mata_pelajaran = ?", *idMataPelajaran)
+	}
+
+	// Count total users
+	if err := userQuery.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get user IDs with pagination
+	var userIDs []int
+	if err := userQuery.Limit(limit).Offset(offset).Pluck("user_id", &userIDs).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// For each user, get their histories
+	for _, uid := range userIDs {
+		// Get user info
+		var user entity.User
+		if err := r.db.Where("id = ?", uid).First(&user).Error; err != nil {
+			continue // Skip if user not found
+		}
+
+		// Get user's completed test sessions
+		var sessions []entity.TestSession
+		sessionQuery := r.db.Model(&entity.TestSession{}).Preload("MataPelajaran").Preload("Tingkat").Where("user_id = ? AND status = ?", uid, entity.TestStatusCompleted)
+
+		if tingkatan != nil && *tingkatan > 0 {
+			sessionQuery = sessionQuery.Where("id_tingkat = ?", *tingkatan)
+		}
+		if idMataPelajaran != nil && *idMataPelajaran > 0 {
+			sessionQuery = sessionQuery.Where("id_mata_pelajaran = ?", *idMataPelajaran)
+		}
+
+		if err := sessionQuery.Find(&sessions).Error; err != nil {
+			continue
+		}
+
+		// Convert to HistorySummary
+		histories := make([]entity.HistorySummary, len(sessions))
+		totalNilai := 0.0
+		for i, s := range sessions {
+			durasi := 0
+			if s.WaktuSelesai != nil && s.WaktuMulai.IsZero() == false {
+				durasi = int(s.WaktuSelesai.Sub(s.WaktuMulai).Seconds())
+			}
+
+			nilai := 0.0
+			if s.NilaiAkhir != nil {
+				nilai = *s.NilaiAkhir
+				totalNilai += nilai
+			}
+
+			jumlahBenar := 0
+			if s.JumlahBenar != nil {
+				jumlahBenar = *s.JumlahBenar
+			}
+
+			totalSoal := 0
+			if s.TotalSoal != nil {
+				totalSoal = *s.TotalSoal
+			}
+
+			histories[i] = entity.HistorySummary{
+				SessionToken:          s.SessionToken,
+				NamaPeserta:           s.NamaPeserta,
+				MataPelajaran:         s.MataPelajaran,
+				Tingkat:               s.Tingkat,
+				NilaiAkhir:            nilai,
+				DurasiPengerjaanDetik: durasi,
+				WaktuMulai:            &s.WaktuMulai,
+				WaktuSelesai:          s.WaktuSelesai,
+				JumlahBenar:           jumlahBenar,
+				TotalSoal:             totalSoal,
+				Status:                s.Status,
+			}
+		}
+
+		// Calculate average
+		rataRata := 0.0
+		if len(histories) > 0 {
+			rataRata = totalNilai / float64(len(histories))
+		}
+
+		results = append(results, entity.StudentHistoryWithUser{
+			User:              user,
+			History:           histories,
+			RataRataNilai:     rataRata,
+			TotalTestCompleted: len(histories),
+		})
+	}
+
+	return results, int(total), nil
 }

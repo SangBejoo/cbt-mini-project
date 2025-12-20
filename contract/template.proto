@@ -485,16 +485,17 @@ message TestSession {
     int32 id = 1;
     string session_token = 2;
     User user = 3;  // From JWT, not input
-    Tingkat tingkat = 4;
-    MataPelajaran mata_pelajaran = 5;  // Nested object
-    google.protobuf.Timestamp waktu_mulai = 6;
-    google.protobuf.Timestamp waktu_selesai = 7;
-    google.protobuf.Timestamp batas_waktu = 8;  // ADDED
-    int32 durasi_menit = 9;
-    double nilai_akhir = 10;
-    int32 jumlah_benar = 11;
-    int32 total_soal = 12;
-    TestStatus status = 13;
+    string nama_peserta = 4;  // Participant's name
+    Tingkat tingkat = 5;
+    MataPelajaran mata_pelajaran = 6;  // Nested object
+    google.protobuf.Timestamp waktu_mulai = 7;
+    google.protobuf.Timestamp waktu_selesai = 8;
+    google.protobuf.Timestamp batas_waktu = 9;  // ADDED
+    int32 durasi_menit = 10;
+    double nilai_akhir = 11;
+    int32 jumlah_benar = 12;
+    int32 total_soal = 13;
+    TestStatus status = 14;
 }
 
 message CreateTestSessionRequest {

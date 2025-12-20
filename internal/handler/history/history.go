@@ -88,7 +88,7 @@ func (h *historyHandler) GetStudentHistory(ctx context.Context, req *base.Studen
 			NamaPeserta:           h.NamaPeserta,
 			MataPelajaran:         &base.MataPelajaran{Id: int32(h.MataPelajaran.ID), Nama: h.MataPelajaran.Nama},
 			Tingkat:               &base.Tingkat{Id: int32(h.Tingkat.ID), Nama: h.Tingkat.Nama},
-			WaktuMulai:            timestamppb.New(h.WaktuMulai),
+			WaktuMulai:            timestamppb.New(*h.WaktuMulai),
 			WaktuSelesai:          waktuSelesai,
 			DurasiPengerjaanDetik: int32(h.DurasiPengerjaanDetik),
 			NilaiAkhir:            h.NilaiAkhir,
@@ -214,4 +214,123 @@ func (h *historyHandler) convertUserToProto(user *entity.User) *base.User {
 		CreatedAt: timestamppb.New(user.CreatedAt),
 		UpdatedAt: timestamppb.New(user.UpdatedAt),
 	}
+}
+
+// convertHistoriesToProto converts []entity.HistorySummary to []*base.HistorySummary
+func (h *historyHandler) convertHistoriesToProto(histories []entity.HistorySummary) []*base.HistorySummary {
+	protoHistories := make([]*base.HistorySummary, len(histories))
+	for i, h := range histories {
+		var waktuMulai, waktuSelesai *timestamppb.Timestamp
+		if h.WaktuMulai != nil {
+			waktuMulai = timestamppb.New(*h.WaktuMulai)
+		}
+		if h.WaktuSelesai != nil {
+			waktuSelesai = timestamppb.New(*h.WaktuSelesai)
+		}
+
+		status := base.TestStatus(base.TestStatus_value[strings.ToUpper(string(h.Status))])
+
+		protoHistories[i] = &base.HistorySummary{
+			Id:                    int32(h.ID),
+			SessionToken:          h.SessionToken,
+			MataPelajaran:         &base.MataPelajaran{Id: int32(h.MataPelajaran.ID), Nama: h.MataPelajaran.Nama},
+			Tingkat:               &base.Tingkat{Id: int32(h.Tingkat.ID), Nama: h.Tingkat.Nama},
+			WaktuMulai:            waktuMulai,
+			WaktuSelesai:          waktuSelesai,
+			DurasiPengerjaanDetik: int32(h.DurasiPengerjaanDetik),
+			NilaiAkhir:            h.NilaiAkhir,
+			JumlahBenar:           int32(h.JumlahBenar),
+			TotalSoal:             int32(h.TotalSoal),
+			Status:                status,
+			NamaPeserta:           h.NamaPeserta,
+		}
+	}
+	return protoHistories
+}
+
+// ListStudentHistories lists all student histories (admin only)
+func (h *historyHandler) ListStudentHistories(ctx context.Context, req *base.ListStudentHistoriesRequest) (*base.ListStudentHistoriesResponse, error) {
+	// Get user from context
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		// For REST gateway, extract token from metadata
+		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
+		if extractErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+		}
+		claims, validateErr := interceptor.ValidateToken(token)
+		if validateErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
+		user = &base.User{
+			Id:    claims.UserID,
+			Email: claims.Email,
+			Role:  base.UserRole(claims.Role),
+		}
+		// Add to context for consistency
+		ctx = interceptor.AddUserToContext(ctx, claims)
+	}
+
+	// Check if user is admin
+	if user.Role != base.UserRole_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "admin access required")
+	}
+
+	page := 1
+	pageSize := 10
+	if req.Pagination != nil {
+		if req.Pagination.Page > 0 {
+			page = int(req.Pagination.Page)
+		}
+		if req.Pagination.PageSize > 0 {
+			pageSize = int(req.Pagination.PageSize)
+		}
+	}
+
+	var userID, tingkatan, idMataPelajaran *int
+	if req.UserId > 0 {
+		userID = &[]int{int(req.UserId)}[0]
+	}
+	if req.Tingkatan > 0 {
+		tingkatan = &[]int{int(req.Tingkatan)}[0]
+	}
+	if req.IdMataPelajaran > 0 {
+		idMataPelajaran = &[]int{int(req.IdMataPelajaran)}[0]
+	}
+
+	histories, total, err := h.usecase.ListStudentHistories(userID, tingkatan, idMataPelajaran, page, pageSize)
+	if err != nil {
+		return &base.ListStudentHistoriesResponse{
+			HistoryPerStudent: []*base.StudentHistoryWithUser{},
+			Pagination: &base.PaginationResponse{
+				TotalCount:  0,
+				TotalPages:  0,
+				CurrentPage: int32(page),
+				PageSize:    int32(pageSize),
+			},
+		}, nil
+	}
+
+	// Convert to proto
+	protoHistories := make([]*base.StudentHistoryWithUser, len(histories))
+	for i, hist := range histories {
+		protoHistories[i] = &base.StudentHistoryWithUser{
+			User:               h.convertUserToProto(&hist.User),
+			History:            h.convertHistoriesToProto(hist.History),
+			RataRataNilai:      hist.RataRataNilai,
+			TotalTestCompleted: int32(hist.TotalTestCompleted),
+		}
+	}
+
+	totalPages := (total + pageSize - 1) / pageSize
+
+	return &base.ListStudentHistoriesResponse{
+		HistoryPerStudent: protoHistories,
+		Pagination: &base.PaginationResponse{
+			TotalCount:  int32(total),
+			TotalPages:  int32(totalPages),
+			CurrentPage: int32(page),
+			PageSize:    int32(pageSize),
+		},
+	}, nil
 }

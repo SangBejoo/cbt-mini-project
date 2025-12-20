@@ -17,7 +17,7 @@ type HistorySummary struct {
 	NamaPeserta           string        `json:"nama_peserta"`
 	MataPelajaran         MataPelajaran `json:"mata_pelajaran"`
 	Tingkat               Tingkat       `json:"tingkat"`
-	WaktuMulai            time.Time     `json:"waktu_mulai"`
+	WaktuMulai            *time.Time    `json:"waktu_mulai"`
 	WaktuSelesai          *time.Time    `json:"waktu_selesai"`
 	DurasiPengerjaanDetik int           `json:"durasi_pengerjaan_detik"`
 	NilaiAkhir            float64       `json:"nilai_akhir"`
@@ -55,4 +55,12 @@ type HistoryDetailResponse struct {
 	SessionInfo     *TestSession       `json:"session_info"`
 	DetailJawaban   []JawabanDetail    `json:"detail_jawaban"`
 	BreakdownMateri []MateriBreakdown  `json:"breakdown_materi"`
+}
+
+// StudentHistoryWithUser for admin list student histories
+type StudentHistoryWithUser struct {
+	User               User            `json:"user"`
+	History            []HistorySummary `json:"history"`
+	RataRataNilai      float64         `json:"rata_rata_nilai"`
+	TotalTestCompleted int             `json:"total_test_completed"`
 }

@@ -115,6 +115,16 @@ func (u *authUsecaseImpl) DeleteUser(ctx context.Context, id int32) error {
 		return errors.New("invalid user ID")
 	}
 
+	// Check if user has any test sessions
+	hasTestSessions, err := u.repo.CheckUserHasTestSessions(ctx, id)
+	if err != nil {
+		return errors.New("failed to check user test sessions")
+	}
+
+	if hasTestSessions {
+		return errors.New("cannot delete user: user has existing test sessions or results")
+	}
+
 	return u.repo.DeleteUser(ctx, id)
 }
 

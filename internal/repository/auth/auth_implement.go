@@ -194,6 +194,13 @@ func (r *authRepositoryImpl) UpdateUser(ctx context.Context, id int32, updates m
 	return user, nil
 }
 
+// CheckUserHasTestSessions checks if user has any test sessions
+func (r *authRepositoryImpl) CheckUserHasTestSessions(ctx context.Context, id int32) (bool, error) {
+	var count int64
+	err := r.db.Model(&entity.TestSession{}).Where("user_id = ?", id).Count(&count).Error
+	return count > 0, err
+}
+
 // DeleteUser deletes a user (hard delete)
 func (r *authRepositoryImpl) DeleteUser(ctx context.Context, id int32) error {
 	return r.db.Unscoped().Delete(&entity.User{}, id).Error

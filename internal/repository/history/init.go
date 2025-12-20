@@ -14,4 +14,7 @@ type HistoryRepository interface {
 
 	// Get user from session token
 	GetUserFromSessionToken(sessionToken string) (*entity.User, error)
+
+	// List all student histories with user info
+	ListStudentHistories(userID, tingkatan, idMataPelajaran *int, limit, offset int) ([]entity.StudentHistoryWithUser, int, error)
 }

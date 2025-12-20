@@ -758,7 +758,7 @@ export default function ResultsPage() {
         <VStack spacing={4}>
           <Link href="/student/history">
             <Button colorScheme="orange" size="lg" variant="outline">
-              Lihat Riwayat Seluruh Siswa
+              Lihat Riwayat Tes
             </Button>
           </Link>
           <Link href="/student">

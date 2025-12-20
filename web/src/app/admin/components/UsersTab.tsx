@@ -275,6 +275,8 @@ export default function UsersTab() {
           title: response.data.message || 'Gagal hapus user', 
           status: 'error',
           position: 'top-right',
+          duration: 4000,
+          isClosable: true,
         });
       }
     } catch (error: any) {
@@ -287,6 +289,8 @@ export default function UsersTab() {
         title: error.response?.data?.message || 'Error hapus user', 
         status: 'error',
         position: 'top-right',
+        duration: 4000,
+        isClosable: true,
       });
     }
   };

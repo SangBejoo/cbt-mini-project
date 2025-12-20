@@ -240,6 +240,32 @@ func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTes
 
 // ListTestSessions lists sessions
 func (h *testSessionHandler) ListTestSessions(ctx context.Context, req *base.ListTestSessionsRequest) (*base.ListTestSessionsResponse, error) {
+	// Get user from JWT context for admin access
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		// For REST gateway, extract token from metadata
+		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
+		if extractErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+		}
+		claims, validateErr := interceptor.ValidateToken(token)
+		if validateErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
+		user = &base.User{
+			Id:    claims.UserID,
+			Email: claims.Email,
+			Role:  base.UserRole(claims.Role),
+		}
+		// Add to context for consistency
+		ctx = interceptor.AddUserToContext(ctx, claims)
+	}
+
+	// Check if user is admin
+	if user.Role != base.UserRole_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "only admin can access this endpoint")
+	}
+
 	var tingkatan, idMataPelajaran *int
 	var status *entity.TestStatus
 
@@ -315,6 +341,7 @@ func (h *testSessionHandler) convertToProtoTestSession(session *entity.TestSessi
 		Id:              int32(session.ID),
 		SessionToken:    session.SessionToken,
 		User:            h.convertUserToProto(session.User),
+		NamaPeserta:     session.NamaPeserta,
 		Tingkat:         &base.Tingkat{Id: int32(session.Tingkat.ID), Nama: session.Tingkat.Nama},
 		MataPelajaran:   &base.MataPelajaran{Id: int32(session.MataPelajaran.ID), Nama: session.MataPelajaran.Nama},
 		WaktuMulai:      timestamppb.New(session.WaktuMulai),

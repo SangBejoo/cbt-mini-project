@@ -27,7 +27,7 @@ func (r *testSessionRepositoryImpl) Create(session *entity.TestSession) error {
 // Get session by token
 func (r *testSessionRepositoryImpl) GetByToken(token string) (*entity.TestSession, error) {
 	var session entity.TestSession
-	err := r.db.Preload("MataPelajaran").Preload("Tingkat").Where("session_token = ?", token).First(&session).Error
+	err := r.db.Preload("MataPelajaran").Preload("Tingkat").Preload("User").Where("session_token = ?", token).First(&session).Error
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (r *testSessionRepositoryImpl) List(tingkatan, idMataPelajaran *int, status
 	var sessions []entity.TestSession
 	var total int64
 
-	query := r.db.Model(&entity.TestSession{}).Preload("MataPelajaran").Preload("Tingkat")
+	query := r.db.Model(&entity.TestSession{}).Preload("MataPelajaran").Preload("Tingkat").Preload("User")
 
 	if tingkatan != nil {
 		query = query.Where("id_tingkat = ?", *tingkatan)
