@@ -1,0 +1,104 @@
+{"time":"2025-12-20T19:25:22.5150186+07:00","level":"INFO","msg":"APM initialized: service=cbt-mini-project, version=1.0.0, environment=development, server=http://localhost:8200"}
+{"time":"2025-12-20T19:25:22.6305937+07:00","level":"INFO","msg":"server grpc listening at [::]:6000"}
+{"time":"2025-12-20T19:25:22.6311392+07:00","level":"INFO","msg":"servers started successfully","grpc_port":6000,"rest_port":8080}
+{"time":"2025-12-20T19:25:22.6311392+07:00","level":"INFO","msg":"starting REST gateway server","port":8080}
+{"time":"2025-12-20T19:30:31.4855708+07:00","level":"INFO","msg":"shutting down: grpc"}
+{"time":"2025-12-20T19:30:31.4855708+07:00","level":"INFO","msg":"shutting down: rest_gateway"}
+{"time":"2025-12-20T19:30:31.4877276+07:00","level":"INFO","msg":"rest gateway stopped gracefully"}
+{"time":"2025-12-20T19:30:31.4877276+07:00","level":"INFO","msg":"rest_gateway was shutted down gracefully"}
+{"time":"2025-12-20T19:30:31.488793+07:00","level":"INFO","msg":"grpc server stopped gracefully"}
+{"time":"2025-12-20T19:30:31.488793+07:00","level":"INFO","msg":"grpc was shutted down gracefully"}
+{"time":"2025-12-20T19:30:31.4893345+07:00","level":"INFO","msg":"application shutdown complete"}
+{"time":"2025-12-20T19:30:41.5729678+07:00","level":"INFO","msg":"APM initialized: service=cbt-mini-project, version=1.0.0, environment=development, server=http://localhost:8200"}
+{"time":"2025-12-20T19:30:41.6224795+07:00","level":"INFO","msg":"server grpc listening at [::]:6000"}
+{"time":"2025-12-20T19:30:41.6251281+07:00","level":"INFO","msg":"servers started successfully","grpc_port":6000,"rest_port":8080}
+{"time":"2025-12-20T19:30:41.6251281+07:00","level":"INFO","msg":"starting REST gateway server","port":8080}
+{"time":"2025-12-20T19:56:37.7838083+07:00","level":"INFO","msg":"shutting down: grpc"}
+{"time":"2025-12-20T19:56:37.7838083+07:00","level":"INFO","msg":"shutting down: rest_gateway"}
+{"time":"2025-12-20T19:56:37.7848933+07:00","level":"INFO","msg":"rest gateway stopped gracefully"}
+{"time":"2025-12-20T19:56:37.7848933+07:00","level":"INFO","msg":"rest_gateway was shutted down gracefully"}
+{"time":"2025-12-20T19:56:37.7859683+07:00","level":"INFO","msg":"grpc server stopped gracefully"}
+{"time":"2025-12-20T19:56:37.7859683+07:00","level":"INFO","msg":"grpc was shutted down gracefully"}
+{"time":"2025-12-20T19:56:37.7859683+07:00","level":"INFO","msg":"application shutdown complete"}
+{"time":"2025-12-20T19:57:10.6614707+07:00","level":"INFO","msg":"APM initialized: service=cbt-mini-project, version=1.0.0, environment=development, server=http://localhost:8200"}
+{"time":"2025-12-20T19:57:10.7047735+07:00","level":"INFO","msg":"server grpc listening at [::]:6000"}
+{"time":"2025-12-20T19:57:10.7053054+07:00","level":"INFO","msg":"servers started successfully","grpc_port":6000,"rest_port":8080}
+{"time":"2025-12-20T19:57:10.7053054+07:00","level":"INFO","msg":"starting REST gateway server","port":8080}
+{"time":"2025-12-20T19:58:12.778152+07:00","level":"INFO","msg":"shutting down: grpc"}
+{"time":"2025-12-20T19:58:12.778152+07:00","level":"INFO","msg":"shutting down: rest_gateway"}
+{"time":"2025-12-20T19:58:12.778152+07:00","level":"INFO","msg":"rest gateway stopped gracefully"}
+{"time":"2025-12-20T19:58:12.778152+07:00","level":"INFO","msg":"rest_gateway was shutted down gracefully"}
+{"time":"2025-12-20T19:58:12.778152+07:00","level":"INFO","msg":"grpc server stopped gracefully"}
+{"time":"2025-12-20T19:58:12.778152+07:00","level":"INFO","msg":"grpc was shutted down gracefully"}
+{"time":"2025-12-20T19:58:12.778152+07:00","level":"INFO","msg":"application shutdown complete"}
+{"time":"2025-12-20T19:58:17.6536698+07:00","level":"INFO","msg":"APM initialized: service=cbt-mini-project, version=1.0.0, environment=development, server=http://localhost:8200"}
+{"time":"2025-12-20T19:58:17.6968702+07:00","level":"INFO","msg":"server grpc listening at [::]:6000"}
+{"time":"2025-12-20T19:58:17.6968702+07:00","level":"INFO","msg":"servers started successfully","grpc_port":6000,"rest_port":8080}
+{"time":"2025-12-20T19:58:17.6968702+07:00","level":"INFO","msg":"starting REST gateway server","port":8080}
+{"time":"2025-12-20T19:58:33.0157793+07:00","level":"INFO","msg":"shutting down: rest_gateway"}
+{"time":"2025-12-20T19:58:33.0157793+07:00","level":"INFO","msg":"shutting down: grpc"}
+{"time":"2025-12-20T19:58:33.0157793+07:00","level":"INFO","msg":"rest gateway stopped gracefully"}
+{"time":"2025-12-20T19:58:33.0157793+07:00","level":"INFO","msg":"grpc server stopped gracefully"}
+{"time":"2025-12-20T19:58:33.0162854+07:00","level":"INFO","msg":"grpc was shutted down gracefully"}
+{"time":"2025-12-20T19:58:33.0157793+07:00","level":"INFO","msg":"rest_gateway was shutted down gracefully"}
+{"time":"2025-12-20T19:58:33.0162854+07:00","level":"INFO","msg":"application shutdown complete"}
+{"time":"2025-12-20T19:58:38.6603049+07:00","level":"INFO","msg":"APM initialized: service=cbt-mini-project, version=1.0.0, environment=development, server=http://localhost:8200"}
+{"time":"2025-12-20T19:58:38.7046104+07:00","level":"INFO","msg":"server grpc listening at [::]:6000"}
+{"time":"2025-12-20T19:58:38.7051354+07:00","level":"INFO","msg":"servers started successfully","grpc_port":6000,"rest_port":8080}
+{"time":"2025-12-20T19:58:38.7051354+07:00","level":"INFO","msg":"starting REST gateway server","port":8080}
+{"time":"2025-12-20T19:58:58.8700407+07:00","level":"INFO","msg":"shutting down: grpc"}
+{"time":"2025-12-20T19:58:58.8700407+07:00","level":"INFO","msg":"shutting down: rest_gateway"}
+{"time":"2025-12-20T19:58:58.8715507+07:00","level":"INFO","msg":"rest gateway stopped gracefully"}
+{"time":"2025-12-20T19:58:58.8715507+07:00","level":"INFO","msg":"grpc server stopped gracefully"}
+{"time":"2025-12-20T19:58:58.8715507+07:00","level":"INFO","msg":"grpc was shutted down gracefully"}
+{"time":"2025-12-20T19:58:58.8715507+07:00","level":"INFO","msg":"rest_gateway was shutted down gracefully"}
+{"time":"2025-12-20T19:58:58.8715507+07:00","level":"INFO","msg":"application shutdown complete"}
+{"time":"2025-12-20T19:59:09.1690261+07:00","level":"INFO","msg":"APM initialized: service=cbt-mini-project, version=1.0.0, environment=development, server=http://localhost:8200"}
+{"time":"2025-12-20T19:59:09.2175178+07:00","level":"INFO","msg":"server grpc listening at [::]:6000"}
+{"time":"2025-12-20T19:59:09.21804+07:00","level":"INFO","msg":"servers started successfully","grpc_port":6000,"rest_port":8080}
+{"time":"2025-12-20T19:59:09.21804+07:00","level":"INFO","msg":"starting REST gateway server","port":8080}
+{"time":"2025-12-20T19:59:25.4994491+07:00","level":"INFO","msg":"APM initialized: service=cbt-mini-project, version=1.0.0, environment=development, server=http://localhost:8200"}
+{"time":"2025-12-20T19:59:25.5447837+07:00","level":"INFO","msg":"server grpc listening at [::]:6000"}
+{"time":"2025-12-20T19:59:25.5453122+07:00","level":"INFO","msg":"servers started successfully","grpc_port":6000,"rest_port":8080}
+{"time":"2025-12-20T19:59:25.5453122+07:00","level":"INFO","msg":"starting REST gateway server","port":8080}
+{"time":"2025-12-20T19:59:37.3523394+07:00","level":"INFO","msg":"shutting down: rest_gateway"}
+{"time":"2025-12-20T19:59:37.3523394+07:00","level":"INFO","msg":"shutting down: grpc"}
+{"time":"2025-12-20T19:59:37.3523394+07:00","level":"INFO","msg":"rest gateway stopped gracefully"}
+{"time":"2025-12-20T19:59:37.3523394+07:00","level":"INFO","msg":"grpc server stopped gracefully"}
+{"time":"2025-12-20T19:59:37.3523394+07:00","level":"INFO","msg":"grpc was shutted down gracefully"}
+{"time":"2025-12-20T19:59:37.3523394+07:00","level":"INFO","msg":"rest_gateway was shutted down gracefully"}
+{"time":"2025-12-20T19:59:37.3523394+07:00","level":"INFO","msg":"application shutdown complete"}
+{"time":"2025-12-20T19:59:44.1300179+07:00","level":"INFO","msg":"APM initialized: service=cbt-mini-project, version=1.0.0, environment=development, server=http://localhost:8200"}
+{"time":"2025-12-20T19:59:44.1815735+07:00","level":"INFO","msg":"server grpc listening at [::]:6000"}
+{"time":"2025-12-20T19:59:44.1821647+07:00","level":"INFO","msg":"servers started successfully","grpc_port":6000,"rest_port":8080}
+{"time":"2025-12-20T19:59:44.1821647+07:00","level":"INFO","msg":"starting REST gateway server","port":8080}
+{"time":"2025-12-20T19:59:55.5967324+07:00","level":"INFO","msg":"shutting down: rest_gateway"}
+{"time":"2025-12-20T19:59:55.5967324+07:00","level":"INFO","msg":"shutting down: grpc"}
+{"time":"2025-12-20T19:59:55.5977374+07:00","level":"INFO","msg":"rest gateway stopped gracefully"}
+{"time":"2025-12-20T19:59:55.5977374+07:00","level":"INFO","msg":"grpc server stopped gracefully"}
+{"time":"2025-12-20T19:59:55.5977374+07:00","level":"INFO","msg":"rest_gateway was shutted down gracefully"}
+{"time":"2025-12-20T19:59:55.5977374+07:00","level":"INFO","msg":"grpc was shutted down gracefully"}
+{"time":"2025-12-20T19:59:55.5977374+07:00","level":"INFO","msg":"application shutdown complete"}
+{"time":"2025-12-20T19:59:58.206632+07:00","level":"INFO","msg":"APM initialized: service=cbt-mini-project, version=1.0.0, environment=development, server=http://localhost:8200"}
+{"time":"2025-12-20T19:59:58.2496131+07:00","level":"INFO","msg":"server grpc listening at [::]:6000"}
+{"time":"2025-12-20T19:59:58.2502554+07:00","level":"INFO","msg":"servers started successfully","grpc_port":6000,"rest_port":8080}
+{"time":"2025-12-20T19:59:58.2502554+07:00","level":"INFO","msg":"starting REST gateway server","port":8080}
+{"time":"2025-12-20T20:00:28.1337183+07:00","level":"INFO","msg":"shutting down: rest_gateway"}
+{"time":"2025-12-20T20:00:28.1337183+07:00","level":"INFO","msg":"shutting down: grpc"}
+{"time":"2025-12-20T20:00:28.1337183+07:00","level":"INFO","msg":"rest gateway stopped gracefully"}
+{"time":"2025-12-20T20:00:28.1342678+07:00","level":"INFO","msg":"rest_gateway was shutted down gracefully"}
+{"time":"2025-12-20T20:00:28.1342678+07:00","level":"INFO","msg":"grpc server stopped gracefully"}
+{"time":"2025-12-20T20:00:28.1342678+07:00","level":"INFO","msg":"grpc was shutted down gracefully"}
+{"time":"2025-12-20T20:00:28.1342678+07:00","level":"INFO","msg":"application shutdown complete"}
+{"time":"2025-12-20T20:01:46.2576206+07:00","level":"INFO","msg":"✓ Database connected successfully"}
+{"time":"2025-12-20T20:01:46.3052479+07:00","level":"INFO","msg":"✓ APM initialized: service=cbt-mini-project, version=1.0.0, environment=development, server=http://localhost:8200"}
+{"time":"2025-12-20T20:01:46.3508249+07:00","level":"INFO","msg":"server grpc listening at [::]:6000"}
+{"time":"2025-12-20T20:01:46.3513641+07:00","level":"INFO","msg":"servers started successfully","grpc_port":6000,"rest_port":8080}
+{"time":"2025-12-20T20:01:46.3513641+07:00","level":"INFO","msg":"starting REST gateway server","port":8080}
+{"time":"2025-12-20T20:04:39.3451226+07:00","level":"INFO","msg":"shutting down: rest_gateway"}
+{"time":"2025-12-20T20:04:39.3451226+07:00","level":"INFO","msg":"shutting down: grpc"}
+{"time":"2025-12-20T20:04:39.3456298+07:00","level":"INFO","msg":"grpc server stopped gracefully"}
+{"time":"2025-12-20T20:04:39.3456298+07:00","level":"INFO","msg":"rest gateway stopped gracefully"}
+{"time":"2025-12-20T20:04:39.3456298+07:00","level":"INFO","msg":"rest_gateway was shutted down gracefully"}
+{"time":"2025-12-20T20:04:39.3456298+07:00","level":"INFO","msg":"grpc was shutted down gracefully"}
+{"time":"2025-12-20T20:04:39.3456298+07:00","level":"INFO","msg":"application shutdown complete"}

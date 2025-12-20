@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	_ "net/http/pprof"
+	"os"
 	"time"
 
 	"cbt-test-mini-project/init/config"
@@ -26,26 +27,56 @@ func main() {
 	repo := infra.LoadRepository(*cfg)
 	defer func() {
 		if errClose := repo.Close(); errClose != nil {
-			slog.Error(fmt.Sprintf("failed to close repositories: %v", errClose))
+			slog.Error("failed to close repositories", "error", errClose)
 		}
 	}()
+
+	// Initialize APM monitoring
+	infra.InitAPM(*cfg)
 
 	ctx := context.Background()
 	grpcServer, err := server.RunGRPCServer(ctx, *cfg, *repo)
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to run grpc server: %v", err))
+		slog.Error("failed to run grpc server", "error", err)
+		os.Exit(1)
 	}
 
-	err = server.RunGatewayRestServer(ctx, *cfg, *repo)
+	restServer, err := server.RunGatewayRestServer(ctx, *cfg, *repo)
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to run gateway rest server: %v", err))
+		slog.Error("failed to run gateway rest server", "error", err)
+		os.Exit(1)
 	}
 
-	wait := util.GracefulShutdown(ctx, 5*time.Second, map[string]util.Operation{
+	slog.Info("servers started successfully", "grpc_port", cfg.GrpcServer.Port, "rest_port", cfg.RestServer.Port)
+
+	// Print startup banner
+	fmt.Println()
+	fmt.Println("═══════════════════════════════════════════════════════════════")
+	fmt.Println("               🚀 CBT Mini Project Server Started 🚀")
+	fmt.Println("═══════════════════════════════════════════════════════════════")
+	fmt.Printf("  gRPC Server   : http://localhost:%d\n", cfg.GrpcServer.Port)
+	fmt.Printf("  REST Gateway  : http://localhost:%d\n", cfg.RestServer.Port)
+	fmt.Printf("  APM Dashboard : http://localhost:5601\n")
+	fmt.Println("═══════════════════════════════════════════════════════════════")
+	fmt.Println()
+
+	wait := util.GracefulShutdown(ctx, 30*time.Second, map[string]util.Operation{
 		"grpc": func(ctx context.Context) error {
 			grpcServer.GracefulStop()
+			slog.Info("grpc server stopped gracefully")
+			return nil
+		},
+		"rest_gateway": func(ctx context.Context) error {
+			shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+			if err := restServer.Shutdown(shutdownCtx); err != nil {
+				slog.Error("rest gateway shutdown failed", "error", err)
+				return err
+			}
+			slog.Info("rest gateway stopped gracefully")
 			return nil
 		},
 	})
 	<-wait
+	slog.Info("application shutdown complete")
 }

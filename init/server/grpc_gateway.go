@@ -10,6 +10,7 @@ import (
 	"net/smtp"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
@@ -46,8 +47,12 @@ type ShareEmailResponse struct {
 	Message string `json:"message"`
 }
 
-func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repository) error {
-	gwMux := runtime.NewServeMux()
+func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repository) (*http.Server, error) {
+	gwMux := runtime.NewServeMux(
+		runtime.WithIncomingHeaderMatcher(customHeaderMatcher),
+		runtime.WithOutgoingHeaderMatcher(customHeaderMatcher),
+		runtime.WithErrorHandler(customErrorHandler),
+	)
 
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -69,9 +74,24 @@ func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repos
 	// Serve API through gRPC-Gateway
 	mux.Handle("/", gwMux)
 
-	// Wrap mux with CORS middleware
-	fmt.Printf("Starting HTTP server on port %d\n", cfg.RestServer.Port)
-	return http.ListenAndServe(fmt.Sprintf(":%d", cfg.RestServer.Port), corsMiddleware(mux))
+	// Create HTTP server with timeouts
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.RestServer.Port),
+		Handler:      corsMiddleware(mux),
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+
+	// Start server in goroutine
+	go func() {
+		slog.Info("starting REST gateway server", "port", cfg.RestServer.Port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("failed to start REST gateway server", "error", err)
+		}
+	}()
+
+	return srv, nil
 }
 
 // handleShareEmail handles email sharing requests
@@ -176,6 +196,34 @@ func sendEmailNotification(req ShareEmailRequest) bool {
 		"score", req.Score,
 	)
 	return true
+}
+
+// Custom header matcher for gRPC-Gateway
+func customHeaderMatcher(key string) (string, bool) {
+	switch key {
+	case "authorization":
+		return key, true
+	case "x-request-id":
+		return key, true
+	default:
+		return key, false
+	}
+}
+
+// Custom error handler for gRPC-Gateway
+func customErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, req *http.Request, err error) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusInternalServerError)
+
+	response := map[string]interface{}{
+		"error":   "Internal Server Error",
+		"message": "Something went wrong",
+		"code":    500,
+	}
+
+	if jsonErr := json.NewEncoder(w).Encode(response); jsonErr != nil {
+		slog.Error("Failed to encode error response", "error", jsonErr)
+	}
 }
 
 // buildEmailBody builds the email body

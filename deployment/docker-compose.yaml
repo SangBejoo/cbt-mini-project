@@ -1,22 +1,80 @@
 services:
-  db:
-    image: mysql:8.0
+  # db:  # Commented out - using local MySQL installation
+  #   image: mysql:8.0
+  #   environment:
+  #     MYSQL_DATABASE: cbt_test
+  #     MYSQL_USER: root
+  #     MYSQL_PASSWORD: root
+  #     MYSQL_ROOT_PASSWORD: root
+  #   ports:
+  #     - "3306:3306"
+  #   volumes:
+  #     - mysql_data:/var/lib/mysql
+  #     - ../databases/migration/17-Des-2025-Data.sql:/docker-entrypoint-initdb.d/data.sql
+  #     - ../databases/seed/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  # Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
     environment:
-      MYSQL_DATABASE: cbt_test
-      MYSQL_USER: root
-      MYSQL_PASSWORD: root
-      MYSQL_ROOT_PASSWORD: root
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ports:
-      - "3306:3306"
+      - "9200:9200"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ../databases/migration/17-Des-2025-Data.sql:/docker-entrypoint-initdb.d/data.sql
-      - ../databases/seed/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+      - elasticsearch_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Kibana
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # APM Server
+  apm-server:
+    image: docker.elastic.co/apm/apm-server:7.17.0
+    ports:
+      - "8200:8200"
+    environment:
+      - output.elasticsearch.hosts=["http://elasticsearch:9200"]
+      - apm-server.host="0.0.0.0:8200"
+      - setup.kibana.host="http://kibana:5601"
+      - setup.template.enabled=true
+      - apm-server.kibana.enabled=true
+      - apm-server.kibana.host="http://kibana:5601"
+      - xpack.security.enabled=false
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      kibana:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8200/ || exit 1"]
+      interval: 30s
+      timeout: 10s
       retries: 5
 
 volumes:
-  mysql_data:
+  # mysql_data:  # Commented out - using local MySQL
+  elasticsearch_data:
