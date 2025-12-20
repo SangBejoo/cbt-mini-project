@@ -7,16 +7,19 @@ import (
 )
 
 type Main struct {
-	Database   database
+	Database   Database
 	Log        log
 	RestServer restServer
 	GrpcServer grpcServer
 	JWT        jwt
 }
 
-type database struct {
-	DriverName string
-	DSN        string
+type Database struct {
+	DriverName     string
+	DSN            string
+	MaxOpenConns   int
+	MaxIdleConns   int
+	ConnMaxLifetime int // in minutes
 }
 
 type log struct {
@@ -41,9 +44,12 @@ type jwt struct {
 func Load() *Main {
 	godotenv.Load()
 	return &Main{
-		Database: database{
-			DriverName: util.GetEnv("DB_DRIVER", "mysql"),
-			DSN:        util.GetEnv("DB_DSN", "root:root@tcp(localhost:3306)/cbt_test?charset=utf8mb4&parseTime=True&loc=Local"),
+		Database: Database{
+			DriverName:     util.GetEnv("DB_DRIVER", "mysql"),
+			DSN:            util.GetEnv("DB_DSN", "root:root@tcp(localhost:3306)/cbt_test?charset=utf8mb4&parseTime=True&loc=Local"),
+			MaxOpenConns:   util.GetEnv("DB_MAX_OPEN_CONNS", 25),
+			MaxIdleConns:   util.GetEnv("DB_MAX_IDLE_CONNS", 25),
+			ConnMaxLifetime: util.GetEnv("DB_CONN_MAX_LIFETIME_MINUTES", 5),
 		},
 		Log: log{
 			Level:     util.GetEnv("LOG_LEVEL", -1),

@@ -1998,9 +1998,8 @@ var TestSessionService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	HistoryService_GetStudentHistory_FullMethodName    = "/base.HistoryService/GetStudentHistory"
-	HistoryService_GetHistoryDetail_FullMethodName     = "/base.HistoryService/GetHistoryDetail"
-	HistoryService_ListStudentHistories_FullMethodName = "/base.HistoryService/ListStudentHistories"
+	HistoryService_GetStudentHistory_FullMethodName = "/base.HistoryService/GetStudentHistory"
+	HistoryService_GetHistoryDetail_FullMethodName  = "/base.HistoryService/GetHistoryDetail"
 )
 
 // HistoryServiceClient is the client API for HistoryService service.
@@ -2009,8 +2008,6 @@ const (
 type HistoryServiceClient interface {
 	GetStudentHistory(ctx context.Context, in *StudentHistoryRequest, opts ...grpc.CallOption) (*StudentHistoryResponse, error)
 	GetHistoryDetail(ctx context.Context, in *GetHistoryDetailRequest, opts ...grpc.CallOption) (*HistoryDetailResponse, error)
-	// Admin: List all students' histories with filters
-	ListStudentHistories(ctx context.Context, in *ListStudentHistoriesRequest, opts ...grpc.CallOption) (*ListStudentHistoriesResponse, error)
 }
 
 type historyServiceClient struct {
@@ -2041,24 +2038,12 @@ func (c *historyServiceClient) GetHistoryDetail(ctx context.Context, in *GetHist
 	return out, nil
 }
 
-func (c *historyServiceClient) ListStudentHistories(ctx context.Context, in *ListStudentHistoriesRequest, opts ...grpc.CallOption) (*ListStudentHistoriesResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListStudentHistoriesResponse)
-	err := c.cc.Invoke(ctx, HistoryService_ListStudentHistories_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // HistoryServiceServer is the server API for HistoryService service.
 // All implementations must embed UnimplementedHistoryServiceServer
 // for forward compatibility.
 type HistoryServiceServer interface {
 	GetStudentHistory(context.Context, *StudentHistoryRequest) (*StudentHistoryResponse, error)
 	GetHistoryDetail(context.Context, *GetHistoryDetailRequest) (*HistoryDetailResponse, error)
-	// Admin: List all students' histories with filters
-	ListStudentHistories(context.Context, *ListStudentHistoriesRequest) (*ListStudentHistoriesResponse, error)
 	mustEmbedUnimplementedHistoryServiceServer()
 }
 
@@ -2074,9 +2059,6 @@ func (UnimplementedHistoryServiceServer) GetStudentHistory(context.Context, *Stu
 }
 func (UnimplementedHistoryServiceServer) GetHistoryDetail(context.Context, *GetHistoryDetailRequest) (*HistoryDetailResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetHistoryDetail not implemented")
-}
-func (UnimplementedHistoryServiceServer) ListStudentHistories(context.Context, *ListStudentHistoriesRequest) (*ListStudentHistoriesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListStudentHistories not implemented")
 }
 func (UnimplementedHistoryServiceServer) mustEmbedUnimplementedHistoryServiceServer() {}
 func (UnimplementedHistoryServiceServer) testEmbeddedByValue()                        {}
@@ -2135,24 +2117,6 @@ func _HistoryService_GetHistoryDetail_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _HistoryService_ListStudentHistories_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListStudentHistoriesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HistoryServiceServer).ListStudentHistories(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: HistoryService_ListStudentHistories_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HistoryServiceServer).ListStudentHistories(ctx, req.(*ListStudentHistoriesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // HistoryService_ServiceDesc is the grpc.ServiceDesc for HistoryService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2167,10 +2131,6 @@ var HistoryService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetHistoryDetail",
 			Handler:    _HistoryService_GetHistoryDetail_Handler,
-		},
-		{
-			MethodName: "ListStudentHistories",
-			Handler:    _HistoryService_ListStudentHistories_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

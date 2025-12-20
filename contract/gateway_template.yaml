@@ -183,5 +183,4 @@ http:
     - selector: base.HistoryService.GetHistoryDetail
       get: /v1/history/{session_token}/detail
 
-    - selector: base.HistoryService.ListStudentHistories
-      get: /v1/admin/history/students
+  

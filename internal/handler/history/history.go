@@ -115,9 +115,35 @@ func (h *historyHandler) GetStudentHistory(ctx context.Context, req *base.Studen
 
 // GetHistoryDetail gets detailed history
 func (h *historyHandler) GetHistoryDetail(ctx context.Context, req *base.GetHistoryDetailRequest) (*base.HistoryDetailResponse, error) {
+	// Get user from JWT context
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		// For REST gateway, extract token from metadata
+		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
+		if extractErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+		}
+		claims, validateErr := interceptor.ValidateToken(token)
+		if validateErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
+		user = &base.User{
+			Id:    claims.UserID,
+			Email: claims.Email,
+			Role:  base.UserRole(claims.Role),
+		}
+		// Add to context for consistency
+		ctx = interceptor.AddUserToContext(ctx, claims)
+	}
+
 	response, err := h.usecase.GetHistoryDetail(req.SessionToken)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check if the session belongs to the authenticated user
+	if response.SessionInfo.UserID == nil || *response.SessionInfo.UserID != int(user.Id) {
+		return nil, status.Error(codes.PermissionDenied, "you do not have permission to access this session history")
 	}
 
 	var jawabanDetails []*base.JawabanDetail

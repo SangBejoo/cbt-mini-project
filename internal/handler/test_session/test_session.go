@@ -64,9 +64,35 @@ func (h *testSessionHandler) CreateTestSession(ctx context.Context, req *base.Cr
 
 // GetTestSession gets session by token
 func (h *testSessionHandler) GetTestSession(ctx context.Context, req *base.GetTestSessionRequest) (*base.TestSessionResponse, error) {
+	// Get user from JWT context
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		// For REST gateway, extract token from metadata
+		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
+		if extractErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+		}
+		claims, validateErr := interceptor.ValidateToken(token)
+		if validateErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
+		user = &base.User{
+			Id:    claims.UserID,
+			Email: claims.Email,
+			Role:  base.UserRole(claims.Role),
+		}
+		// Add to context for consistency
+		ctx = interceptor.AddUserToContext(ctx, claims)
+	}
+
 	session, err := h.usecase.GetTestSession(req.SessionToken)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check if the session belongs to the authenticated user
+	if session.UserID == nil || *session.UserID != int(user.Id) {
+		return nil, status.Error(codes.PermissionDenied, "you do not have permission to access this session")
 	}
 
 	return &base.TestSessionResponse{
@@ -76,12 +102,38 @@ func (h *testSessionHandler) GetTestSession(ctx context.Context, req *base.GetTe
 
 // GetTestQuestions gets all questions for the session
 func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.GetTestQuestionsRequest) (*base.TestQuestionsResponse, error) {
+	// Get user from JWT context
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		// For REST gateway, extract token from metadata
+		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
+		if extractErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+		}
+		claims, validateErr := interceptor.ValidateToken(token)
+		if validateErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
+		user = &base.User{
+			Id:    claims.UserID,
+			Email: claims.Email,
+			Role:  base.UserRole(claims.Role),
+		}
+		// Add to context for consistency
+		ctx = interceptor.AddUserToContext(ctx, claims)
+	}
+
 	session, err := h.usecase.GetTestSession(req.SessionToken)
 	if err != nil {
 		return nil, err
 	}
 	if session == nil {
 		return nil, errors.New("session not found")
+	}
+
+	// Check if the session belongs to the authenticated user
+	if session.UserID == nil || *session.UserID != int(user.Id) {
+		return nil, status.Error(codes.PermissionDenied, "you do not have permission to access this session")
 	}
 
 	soals, err := h.usecase.GetAllTestQuestions(req.SessionToken)
@@ -141,8 +193,40 @@ func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.Get
 
 // SubmitAnswer submits an answer
 func (h *testSessionHandler) SubmitAnswer(ctx context.Context, req *base.SubmitAnswerRequest) (*base.SubmitAnswerResponse, error) {
+	// Get user from JWT context
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		// For REST gateway, extract token from metadata
+		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
+		if extractErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+		}
+		claims, validateErr := interceptor.ValidateToken(token)
+		if validateErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
+		user = &base.User{
+			Id:    claims.UserID,
+			Email: claims.Email,
+			Role:  base.UserRole(claims.Role),
+		}
+		// Add to context for consistency
+		ctx = interceptor.AddUserToContext(ctx, claims)
+	}
+
+	// Get session to check ownership
+	session, err := h.usecase.GetTestSession(req.SessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if the session belongs to the authenticated user
+	if session.UserID == nil || *session.UserID != int(user.Id) {
+		return nil, status.Error(codes.PermissionDenied, "you do not have permission to access this session")
+	}
+
 	jawaban := entity.JawabanOption(req.JawabanDipilih.String()[0])
-	err := h.usecase.SubmitAnswer(req.SessionToken, int(req.NomorUrut), jawaban)
+	err = h.usecase.SubmitAnswer(req.SessionToken, int(req.NomorUrut), jawaban)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +242,39 @@ func (h *testSessionHandler) SubmitAnswer(ctx context.Context, req *base.SubmitA
 
 // ClearAnswer clears an answer
 func (h *testSessionHandler) ClearAnswer(ctx context.Context, req *base.ClearAnswerRequest) (*base.ClearAnswerResponse, error) {
-	err := h.usecase.ClearAnswer(req.SessionToken, int(req.NomorUrut))
+	// Get user from JWT context
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		// For REST gateway, extract token from metadata
+		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
+		if extractErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+		}
+		claims, validateErr := interceptor.ValidateToken(token)
+		if validateErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
+		user = &base.User{
+			Id:    claims.UserID,
+			Email: claims.Email,
+			Role:  base.UserRole(claims.Role),
+		}
+		// Add to context for consistency
+		ctx = interceptor.AddUserToContext(ctx, claims)
+	}
+
+	// Get session to check ownership
+	session, err := h.usecase.GetTestSession(req.SessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if the session belongs to the authenticated user
+	if session.UserID == nil || *session.UserID != int(user.Id) {
+		return nil, status.Error(codes.PermissionDenied, "you do not have permission to access this session")
+	}
+
+	err = h.usecase.ClearAnswer(req.SessionToken, int(req.NomorUrut))
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +288,39 @@ func (h *testSessionHandler) ClearAnswer(ctx context.Context, req *base.ClearAns
 
 // CompleteSession completes the session
 func (h *testSessionHandler) CompleteSession(ctx context.Context, req *base.CompleteSessionRequest) (*base.TestSessionResponse, error) {
-	session, err := h.usecase.CompleteSession(req.SessionToken)
+	// Get user from JWT context
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		// For REST gateway, extract token from metadata
+		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
+		if extractErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+		}
+		claims, validateErr := interceptor.ValidateToken(token)
+		if validateErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
+		user = &base.User{
+			Id:    claims.UserID,
+			Email: claims.Email,
+			Role:  base.UserRole(claims.Role),
+		}
+		// Add to context for consistency
+		ctx = interceptor.AddUserToContext(ctx, claims)
+	}
+
+	// Get session to check ownership
+	session, err := h.usecase.GetTestSession(req.SessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if the session belongs to the authenticated user
+	if session.UserID == nil || *session.UserID != int(user.Id) {
+		return nil, status.Error(codes.PermissionDenied, "you do not have permission to access this session")
+	}
+
+	session, err = h.usecase.CompleteSession(req.SessionToken)
 	if err != nil {
 		return nil, err
 	}
@@ -184,9 +332,35 @@ func (h *testSessionHandler) CompleteSession(ctx context.Context, req *base.Comp
 
 // GetTestResult gets test result
 func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTestResultRequest) (*base.TestResultResponse, error) {
+	// Get user from JWT context
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		// For REST gateway, extract token from metadata
+		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
+		if extractErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+		}
+		claims, validateErr := interceptor.ValidateToken(token)
+		if validateErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
+		user = &base.User{
+			Id:    claims.UserID,
+			Email: claims.Email,
+			Role:  base.UserRole(claims.Role),
+		}
+		// Add to context for consistency
+		ctx = interceptor.AddUserToContext(ctx, claims)
+	}
+
 	session, details, err := h.usecase.GetTestResult(req.SessionToken)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check if the session belongs to the authenticated user
+	if session.UserID == nil || *session.UserID != int(user.Id) {
+		return nil, status.Error(codes.PermissionDenied, "you do not have permission to access this session result")
 	}
 
 	// Get all tingkat

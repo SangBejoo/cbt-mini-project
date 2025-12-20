@@ -129,8 +129,6 @@ service TestSessionService {
 service HistoryService {
     rpc GetStudentHistory(StudentHistoryRequest) returns (StudentHistoryResponse) {};  // For logged-in student
     rpc GetHistoryDetail(GetHistoryDetailRequest) returns (HistoryDetailResponse) {};
-    // Admin: List all students' histories with filters
-    rpc ListStudentHistories(ListStudentHistoriesRequest) returns (ListStudentHistoriesResponse) {};
 }
 
 // ========================================

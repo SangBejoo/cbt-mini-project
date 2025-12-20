@@ -5993,7 +5993,7 @@ var file_template_proto_rawDesc = []byte{
 	0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1e,
 	0x2e, 0x62, 0x61, 0x73, 0x65, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x54, 0x65, 0x73, 0x74, 0x53, 0x65,
 	0x73, 0x73, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00,
-	0x32, 0x95, 0x02, 0x0a, 0x0e, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x79, 0x53, 0x65, 0x72, 0x76,
+	0x32, 0xb4, 0x01, 0x0a, 0x0e, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x79, 0x53, 0x65, 0x72, 0x76,
 	0x69, 0x63, 0x65, 0x12, 0x50, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x53, 0x74, 0x75, 0x64, 0x65, 0x6e,
 	0x74, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x79, 0x12, 0x1b, 0x2e, 0x62, 0x61, 0x73, 0x65, 0x2e,
 	0x53, 0x74, 0x75, 0x64, 0x65, 0x6e, 0x74, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x79, 0x52, 0x65,
@@ -6004,16 +6004,10 @@ var file_template_proto_rawDesc = []byte{
 	0x2e, 0x47, 0x65, 0x74, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x79, 0x44, 0x65, 0x74, 0x61, 0x69,
 	0x6c, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1b, 0x2e, 0x62, 0x61, 0x73, 0x65, 0x2e,
 	0x48, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x79, 0x44, 0x65, 0x74, 0x61, 0x69, 0x6c, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x5f, 0x0a, 0x14, 0x4c, 0x69, 0x73, 0x74, 0x53,
-	0x74, 0x75, 0x64, 0x65, 0x6e, 0x74, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x69, 0x65, 0x73, 0x12,
-	0x21, 0x2e, 0x62, 0x61, 0x73, 0x65, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x53, 0x74, 0x75, 0x64, 0x65,
-	0x6e, 0x74, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x69, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x1a, 0x22, 0x2e, 0x62, 0x61, 0x73, 0x65, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x53, 0x74,
-	0x75, 0x64, 0x65, 0x6e, 0x74, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x69, 0x65, 0x73, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x42, 0x26, 0x5a, 0x24, 0x63, 0x62, 0x74, 0x2d,
-	0x74, 0x65, 0x73, 0x74, 0x2d, 0x6d, 0x69, 0x6e, 0x69, 0x2d, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63,
-	0x74, 0x2f, 0x67, 0x65, 0x6e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x62, 0x61, 0x73, 0x65,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x42, 0x26, 0x5a, 0x24, 0x63, 0x62, 0x74, 0x2d, 0x74,
+	0x65, 0x73, 0x74, 0x2d, 0x6d, 0x69, 0x6e, 0x69, 0x2d, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
+	0x2f, 0x67, 0x65, 0x6e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x62, 0x61, 0x73, 0x65, 0x62,
+	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -6234,52 +6228,50 @@ var file_template_proto_depIdxs = []int32{
 	58,  // 117: base.TestSessionService.ListTestSessions:input_type -> base.ListTestSessionsRequest
 	70,  // 118: base.HistoryService.GetStudentHistory:input_type -> base.StudentHistoryRequest
 	76,  // 119: base.HistoryService.GetHistoryDetail:input_type -> base.GetHistoryDetailRequest
-	73,  // 120: base.HistoryService.ListStudentHistories:input_type -> base.ListStudentHistoriesRequest
-	3,   // 121: base.Base.HealthCheck:output_type -> base.MessageStatusResponse
-	8,   // 122: base.AuthService.Login:output_type -> base.LoginResponse
-	17,  // 123: base.AuthService.RefreshToken:output_type -> base.RefreshTokenResponse
-	9,   // 124: base.AuthService.GetProfile:output_type -> base.UserResponse
-	11,  // 125: base.AuthService.ListUsers:output_type -> base.ListUsersResponse
-	9,   // 126: base.AuthService.GetUser:output_type -> base.UserResponse
-	9,   // 127: base.AuthService.UpdateUser:output_type -> base.UserResponse
-	3,   // 128: base.AuthService.DeleteUser:output_type -> base.MessageStatusResponse
-	9,   // 129: base.AuthService.CreateUser:output_type -> base.UserResponse
-	23,  // 130: base.MataPelajaranService.CreateMataPelajaran:output_type -> base.MataPelajaranResponse
-	23,  // 131: base.MataPelajaranService.GetMataPelajaran:output_type -> base.MataPelajaranResponse
-	23,  // 132: base.MataPelajaranService.UpdateMataPelajaran:output_type -> base.MataPelajaranResponse
-	3,   // 133: base.MataPelajaranService.DeleteMataPelajaran:output_type -> base.MessageStatusResponse
-	24,  // 134: base.MataPelajaranService.ListMataPelajaran:output_type -> base.ListMataPelajaranResponse
-	30,  // 135: base.MateriService.CreateMateri:output_type -> base.MateriResponse
-	30,  // 136: base.MateriService.GetMateri:output_type -> base.MateriResponse
-	30,  // 137: base.MateriService.UpdateMateri:output_type -> base.MateriResponse
-	3,   // 138: base.MateriService.DeleteMateri:output_type -> base.MessageStatusResponse
-	32,  // 139: base.MateriService.ListMateri:output_type -> base.ListMateriResponse
-	38,  // 140: base.TingkatService.CreateTingkat:output_type -> base.TingkatResponse
-	38,  // 141: base.TingkatService.GetTingkat:output_type -> base.TingkatResponse
-	38,  // 142: base.TingkatService.UpdateTingkat:output_type -> base.TingkatResponse
-	3,   // 143: base.TingkatService.DeleteTingkat:output_type -> base.MessageStatusResponse
-	39,  // 144: base.TingkatService.ListTingkat:output_type -> base.ListTingkatResponse
-	47,  // 145: base.SoalService.CreateSoal:output_type -> base.SoalResponse
-	47,  // 146: base.SoalService.GetSoal:output_type -> base.SoalResponse
-	47,  // 147: base.SoalService.UpdateSoal:output_type -> base.SoalResponse
-	3,   // 148: base.SoalService.DeleteSoal:output_type -> base.MessageStatusResponse
-	49,  // 149: base.SoalService.ListSoal:output_type -> base.ListSoalResponse
-	51,  // 150: base.SoalService.UploadImageToSoal:output_type -> base.UploadImageResponse
-	3,   // 151: base.SoalService.DeleteImageFromSoal:output_type -> base.MessageStatusResponse
-	3,   // 152: base.SoalService.UpdateImageInSoal:output_type -> base.MessageStatusResponse
-	57,  // 153: base.TestSessionService.CreateTestSession:output_type -> base.TestSessionResponse
-	57,  // 154: base.TestSessionService.GetTestSession:output_type -> base.TestSessionResponse
-	61,  // 155: base.TestSessionService.GetTestQuestions:output_type -> base.TestQuestionsResponse
-	63,  // 156: base.TestSessionService.SubmitAnswer:output_type -> base.SubmitAnswerResponse
-	65,  // 157: base.TestSessionService.ClearAnswer:output_type -> base.ClearAnswerResponse
-	57,  // 158: base.TestSessionService.CompleteSession:output_type -> base.TestSessionResponse
-	69,  // 159: base.TestSessionService.GetTestResult:output_type -> base.TestResultResponse
-	59,  // 160: base.TestSessionService.ListTestSessions:output_type -> base.ListTestSessionsResponse
-	72,  // 161: base.HistoryService.GetStudentHistory:output_type -> base.StudentHistoryResponse
-	77,  // 162: base.HistoryService.GetHistoryDetail:output_type -> base.HistoryDetailResponse
-	74,  // 163: base.HistoryService.ListStudentHistories:output_type -> base.ListStudentHistoriesResponse
-	121, // [121:164] is the sub-list for method output_type
-	78,  // [78:121] is the sub-list for method input_type
+	3,   // 120: base.Base.HealthCheck:output_type -> base.MessageStatusResponse
+	8,   // 121: base.AuthService.Login:output_type -> base.LoginResponse
+	17,  // 122: base.AuthService.RefreshToken:output_type -> base.RefreshTokenResponse
+	9,   // 123: base.AuthService.GetProfile:output_type -> base.UserResponse
+	11,  // 124: base.AuthService.ListUsers:output_type -> base.ListUsersResponse
+	9,   // 125: base.AuthService.GetUser:output_type -> base.UserResponse
+	9,   // 126: base.AuthService.UpdateUser:output_type -> base.UserResponse
+	3,   // 127: base.AuthService.DeleteUser:output_type -> base.MessageStatusResponse
+	9,   // 128: base.AuthService.CreateUser:output_type -> base.UserResponse
+	23,  // 129: base.MataPelajaranService.CreateMataPelajaran:output_type -> base.MataPelajaranResponse
+	23,  // 130: base.MataPelajaranService.GetMataPelajaran:output_type -> base.MataPelajaranResponse
+	23,  // 131: base.MataPelajaranService.UpdateMataPelajaran:output_type -> base.MataPelajaranResponse
+	3,   // 132: base.MataPelajaranService.DeleteMataPelajaran:output_type -> base.MessageStatusResponse
+	24,  // 133: base.MataPelajaranService.ListMataPelajaran:output_type -> base.ListMataPelajaranResponse
+	30,  // 134: base.MateriService.CreateMateri:output_type -> base.MateriResponse
+	30,  // 135: base.MateriService.GetMateri:output_type -> base.MateriResponse
+	30,  // 136: base.MateriService.UpdateMateri:output_type -> base.MateriResponse
+	3,   // 137: base.MateriService.DeleteMateri:output_type -> base.MessageStatusResponse
+	32,  // 138: base.MateriService.ListMateri:output_type -> base.ListMateriResponse
+	38,  // 139: base.TingkatService.CreateTingkat:output_type -> base.TingkatResponse
+	38,  // 140: base.TingkatService.GetTingkat:output_type -> base.TingkatResponse
+	38,  // 141: base.TingkatService.UpdateTingkat:output_type -> base.TingkatResponse
+	3,   // 142: base.TingkatService.DeleteTingkat:output_type -> base.MessageStatusResponse
+	39,  // 143: base.TingkatService.ListTingkat:output_type -> base.ListTingkatResponse
+	47,  // 144: base.SoalService.CreateSoal:output_type -> base.SoalResponse
+	47,  // 145: base.SoalService.GetSoal:output_type -> base.SoalResponse
+	47,  // 146: base.SoalService.UpdateSoal:output_type -> base.SoalResponse
+	3,   // 147: base.SoalService.DeleteSoal:output_type -> base.MessageStatusResponse
+	49,  // 148: base.SoalService.ListSoal:output_type -> base.ListSoalResponse
+	51,  // 149: base.SoalService.UploadImageToSoal:output_type -> base.UploadImageResponse
+	3,   // 150: base.SoalService.DeleteImageFromSoal:output_type -> base.MessageStatusResponse
+	3,   // 151: base.SoalService.UpdateImageInSoal:output_type -> base.MessageStatusResponse
+	57,  // 152: base.TestSessionService.CreateTestSession:output_type -> base.TestSessionResponse
+	57,  // 153: base.TestSessionService.GetTestSession:output_type -> base.TestSessionResponse
+	61,  // 154: base.TestSessionService.GetTestQuestions:output_type -> base.TestQuestionsResponse
+	63,  // 155: base.TestSessionService.SubmitAnswer:output_type -> base.SubmitAnswerResponse
+	65,  // 156: base.TestSessionService.ClearAnswer:output_type -> base.ClearAnswerResponse
+	57,  // 157: base.TestSessionService.CompleteSession:output_type -> base.TestSessionResponse
+	69,  // 158: base.TestSessionService.GetTestResult:output_type -> base.TestResultResponse
+	59,  // 159: base.TestSessionService.ListTestSessions:output_type -> base.ListTestSessionsResponse
+	72,  // 160: base.HistoryService.GetStudentHistory:output_type -> base.StudentHistoryResponse
+	77,  // 161: base.HistoryService.GetHistoryDetail:output_type -> base.HistoryDetailResponse
+	120, // [120:162] is the sub-list for method output_type
+	78,  // [78:120] is the sub-list for method input_type
 	78,  // [78:78] is the sub-list for extension type_name
 	78,  // [78:78] is the sub-list for extension extendee
 	0,   // [0:78] is the sub-list for field type_name

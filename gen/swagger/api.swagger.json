@@ -37,69 +37,6 @@
     "application/json"
   ],
   "paths": {
-    "/v1/admin/history/students": {
-      "get": {
-        "summary": "Admin: List all students' histories with filters",
-        "operationId": "HistoryService_ListStudentHistories",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/baseListStudentHistoriesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "userId",
-            "description": "Optional: filter by specific student",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "tingkatan",
-            "description": "Optional filter",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "idMataPelajaran",
-            "description": "Optional filter",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "pagination.page",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "pagination.pageSize",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          }
-        ],
-        "tags": [
-          "HistoryService"
-        ]
-      }
-    },
     "/v1/admin/sessions": {
       "get": {
         "summary": "Admin queries",
@@ -2016,21 +1953,6 @@
         }
       }
     },
-    "baseListStudentHistoriesResponse": {
-      "type": "object",
-      "properties": {
-        "historyPerStudent": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/baseStudentHistoryWithUser"
-          }
-        },
-        "pagination": {
-          "$ref": "#/definitions/basePaginationResponse"
-        }
-      }
-    },
     "baseListTestSessionsResponse": {
       "type": "object",
       "properties": {
@@ -2415,29 +2337,6 @@
           "$ref": "#/definitions/baseUser"
         },
         "tingkatan": {
-          "type": "integer",
-          "format": "int32"
-        }
-      }
-    },
-    "baseStudentHistoryWithUser": {
-      "type": "object",
-      "properties": {
-        "user": {
-          "$ref": "#/definitions/baseUser"
-        },
-        "history": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/baseHistorySummary"
-          }
-        },
-        "rataRataNilai": {
-          "type": "number",
-          "format": "double"
-        },
-        "totalTestCompleted": {
           "type": "integer",
           "format": "int32"
         }
