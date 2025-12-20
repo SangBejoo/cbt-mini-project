@@ -1,130 +1,131 @@
-# CBT Mini Project
+# CBT Mini Project ✅
 
-Computer-Based Test (CBT) system for educational institutions with comprehensive monitoring and analytics.
+Sistem Computer-Based Test (CBT) sederhana untuk institusi pendidikan — fokus pada manajemen sesi tes, soal, dan pelaporan.
 
-## Tech Stack
+---
+
+## 🔧 Teknologi (Tech Stack)
 
 - **Backend**: Go 1.21+, gRPC, REST Gateway
-- **Database**: MySQL with GORM
+- **Database**: MySQL (GORM)
+- **Frontend**: Next.js + TypeScript
+- **Auth**: JWT
 - **Monitoring**: Elastic APM (Elasticsearch, Kibana)
-- **Authentication**: JWT
-- **Frontend**: Next.js, TypeScript
-- **Deployment**: Docker, Docker Compose
+- **Deploy**: Docker & Docker Compose
 
-## Features
+---
 
-### Core Features
-- ✅ User authentication (Admin, Student)
-- ✅ Test session management
-- ✅ Question management (Multiple choice, Essay)
-- ✅ Answer submission and grading
-- ✅ Student history tracking
-- ✅ Subject and level management
+## ✨ Fitur Utama (Singkat)
 
-### Monitoring & Analytics
-- ✅ Real-time performance monitoring
-- ✅ Transaction tracing (gRPC/HTTP)
-- ✅ Error tracking
-- ✅ Database query monitoring
-- ✅ Service health checks
+- **Autentikasi**: login/logout untuk Admin dan Siswa
+- **Manajemen Sesi**: buat, mulai, dan akhiri sesi tes
+- **Manajemen Soal**: CRUD soal (pilihan ganda & esai)
+- **Pengumpulan Jawaban**: kirim jawaban dan penilaian otomatis dasar
+- **Riwayat Siswa**: rekam hasil tes dan ringkasan skor
+- **Monitoring**: tracing gRPC/HTTP, APM untuk performa dan error
 
-## Prerequisites
+---
 
-- Go 1.21+
-- MySQL 8.0+
-- Node.js 18+
-- Docker & Docker Compose
+## 🚀 Quick Start
 
-## Quick Start
+1. Clone repo dan salin environment:
 
-### 1. Clone & Setup
-```bash
-git clone <repository-url>
+```powershell
+git clone <repo-url>
 cd cbt-mini-project
-cp .env.example .env
+copy .env.example .env
 ```
 
-### 2. Start Infrastructure
-```bash
+2. Jalankan infrastruktur (Docker):
+
+```powershell
 cd deployment
 docker-compose up -d
 ```
 
-### 3. Run Backend
-```bash
+3. Jalankan backend:
+
+```powershell
 go run main.go
 ```
 
-### 4. Run Frontend
-```bash
+4. Jalankan frontend (opsional):
+
+```powershell
 cd web
 npm install
 npm run dev
 ```
 
-## API Endpoints
+> Tip: Pastikan MySQL berjalan dan `DB_DSN` di `.env` sesuai.
 
-### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
+---
 
-### Test Management
-- `GET /api/test-sessions` - List test sessions
-- `POST /api/test-sessions` - Create test session
-- `GET /api/test-sessions/{id}/questions` - Get test questions
-- `POST /api/test-sessions/{id}/submit` - Submit answers
+## 📌 API (Admin & Siswa)
 
-### Admin Features
-- `GET /api/users` - List users
-- `POST /api/questions` - Create questions
-- `GET /api/subjects` - List subjects
-- `GET /api/history` - Student history
+**Autentikasi (semua pengguna)**
 
-## Monitoring Dashboard
+- `POST /api/auth/login` — Login (body: `{email, password}`) → Response: `{token}`
+- `POST /api/auth/logout` — Logout (butuh Authorization)
 
-- **Kibana**: http://localhost:5601
-- **APM Server**: http://localhost:8200
-- **Elasticsearch**: http://localhost:9200
+**Admin** (Role: `admin`, Header: `Authorization: Bearer <token>`)
 
-## Development
+- `GET /api/admin/users` — Daftar pengguna
+- `POST /api/admin/users` — Buat pengguna (body: `{name,email,role,password}`)
+- `GET /api/admin/users/{id}` — Detail pengguna
+- `PUT /api/admin/users/{id}` — Update pengguna
+- `DELETE /api/admin/users/{id}` — Hapus pengguna
 
-### Project Structure
-```
-├── main.go                 # Application entry point
-├── init/                   # Initialization modules
-│   ├── config/            # Configuration management
-│   ├── infra/             # Infrastructure setup
-│   ├── logger/            # Logging setup
-│   └── server/            # Server setup
-├── internal/               # Business logic
-│   ├── entity/            # Data models
-│   ├── handler/           # HTTP handlers
-│   ├── repository/        # Data access layer
-│   └── usecase/           # Business logic layer
-├── util/                   # Utilities
-├── web/                    # Frontend application
-├── deployment/             # Docker deployment
-└── databases/              # Database migrations
-```
+- `GET /api/admin/questions` — Daftar soal
+- `POST /api/admin/questions` — Buat soal (body: `{title,type,options,answer,subject,level}`)
+- `PUT /api/admin/questions/{id}` — Update soal
+- `DELETE /api/admin/questions/{id}` — Hapus soal
 
-### Environment Variables
+- `GET /api/admin/test-sessions` — Daftar sesi
+- `POST /api/admin/test-sessions` — Buat sesi (body: `{title,start_at,end_at,question_ids}`)
+- `PUT /api/admin/test-sessions/{id}` — Update sesi
+- `DELETE /api/admin/test-sessions/{id}` — Hapus sesi
 
-```env
-# Database
-DB_DSN=root:root@tcp(localhost:3306)/cbt_test
+- `GET /api/admin/reports` — Laporan hasil / statistik (opsional filter)
 
-# Server
-GRPC_PORT=6000
-REST_PORT=8080
+**Siswa** (Header: `Authorization: Bearer <token>`)
 
-# JWT
-JWT_SECRET=your-secret-key
+- `GET /api/test-sessions` — Daftar sesi tersedia
+- `GET /api/test-sessions/{id}` — Detail sesi
+- `GET /api/test-sessions/{id}/questions` — Ambil soal untuk sesi
+- `POST /api/test-sessions/{id}/submit` — Kirim jawaban (body: `{answers: [{question_id, answer}]}`)
+- `GET /api/history` — Riwayat tes (siswa)
+- `GET /api/users/me` — Profil siswa
 
-# APM
-ELASTIC_APM_SERVER_URL=http://localhost:8200
-ELASTIC_APM_SERVICE_NAME=cbt-mini-project
-```
+> Semua endpoint yang membutuhkan autentikasi menggunakan header: `Authorization: Bearer <token>`.
 
-## License
+---
 
-MIT License
+## 🧰 Pengembangan & Struktur
+
+- Entry: `main.go`
+- Inisialisasi: `init/`
+- Logika bisnis: `internal/` (entities, handlers, usecases)
+- Frontend: `web/`
+- DB migration: `databases/migration`
+
+---
+
+## ⚙️ Variabel Lingkungan (penting)
+
+- DB_DSN (contoh: `root:root@tcp(localhost:3306)/cbt_test`)
+- GRPC_PORT (default: `6000`)
+- REST_PORT (default: `8080`)
+- JWT_SECRET
+- ELASTIC_APM_SERVER_URL
+
+---
+
+## 🙋 Kontribusi & Lisensi
+
+- Contributions: buka issue atau PR sederhana; sertakan deskripsi singkat.
+- Lisensi: MIT
+
+---
+
+Butuh versi lain (lebih ringkas atau lebih teknis)? Katakan preferensinya dan aku sesuaikan.
