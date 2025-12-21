@@ -54,9 +54,11 @@ export default React.memo(function SubjectsTab() {
   }, [searchQuery]);
 
   const filteredSubjects = useMemo(() => {
-    return subjects.filter((subject) =>
-      subject.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-    );
+    return subjects
+      .filter(subject => subject && subject.nama)
+      .filter((subject) =>
+        subject.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+      );
   }, [subjects, debouncedSearchQuery]);
 
   const { paginatedItems, currentPage, totalPages, nextPage, prevPage } =

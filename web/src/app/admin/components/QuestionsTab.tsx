@@ -38,6 +38,7 @@ import {
   Flex,
 } from '@chakra-ui/react';
 import { EditIcon, DeleteIcon, AddIcon, ChevronUpIcon, ChevronDownIcon } from '@chakra-ui/icons';
+import { Topic } from '../types';
 import { useQuestions } from '../hooks';
 
 const mapLetterToEnum = (val: string) => {
@@ -52,9 +53,9 @@ const mapLetterToEnum = (val: string) => {
 
 // Materi Select tetap memoized
 const MateriSelect = memo(({ value, onChange, topics }: {
-  value: number;
-  onChange: (topic: any) => void;
-  topics: any[];
+  value: number | undefined;
+  onChange: (topic: Topic | null) => void;
+  topics: Topic[];
 }) => {
   return (
     <Select
@@ -62,7 +63,7 @@ const MateriSelect = memo(({ value, onChange, topics }: {
       value={value || ''}
       onChange={(e) => {
         const topic = topics.find((t) => t.id === Number(e.target.value));
-        onChange(topic || { id: 0, nama: '' });
+        onChange(topic || null);
       }}
     >
       {topics.map((t) => (
@@ -207,7 +208,7 @@ export default function QuestionsTab() {
     opsiD: '',
     jawabanBenar: 'A',
     pembahasan: '',
-    materi: { id: 0, nama: '' },
+    materi: null as Topic | null,
   });
 
   const [localPertanyaan, setLocalPertanyaan] = useState('');
@@ -251,7 +252,7 @@ export default function QuestionsTab() {
       opsiD: '',
       jawabanBenar: 'A',
       pembahasan: '',
-      materi: materi || { id: 0, nama: '' },
+      materi: materi,
     });
     setLocalPertanyaan('');
     setLocalPembahasan('');

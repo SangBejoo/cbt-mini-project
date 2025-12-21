@@ -29,11 +29,13 @@ import {
 } from '@chakra-ui/react';
 import { useCRUD, useForm, usePagination } from '../hooks';
 import { Topic, Level, Subject } from '../types';
+import { useQuestions } from '../hooks';
 
 export default React.memo(function TopicsTab() {
   const { data: topics, create, update, remove } = useCRUD<Topic>('topics');
   const { data: levels } = useCRUD<Level>('levels');
   const { data: subjects } = useCRUD<Subject>('subjects');
+  const { questions } = useQuestions({ autoFetch: true });
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -47,8 +49,8 @@ export default React.memo(function TopicsTab() {
       idTingkat: '', 
       nama: '',
       isActive: true,
-      defaultDurasiMenit: 60,
-      defaultJumlahSoal: 20,
+      defaultDurasiMenit: '60',
+      defaultJumlahSoal: '20',
     },
     onSubmit: async (values) => {
       const data = {
@@ -74,6 +76,15 @@ export default React.memo(function TopicsTab() {
     const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  const questionCountByTopic = useMemo(() => {
+    const countMap: Record<number, number> = {};
+    questions.forEach((question) => {
+      const topicId = question.materi.id;
+      countMap[topicId] = (countMap[topicId] || 0) + 1;
+    });
+    return countMap;
+  }, [questions]);
 
   const filteredTopics = useMemo(() => {
     let filtered = topics.filter((topic) => {
@@ -194,7 +205,11 @@ export default React.memo(function TopicsTab() {
               <Td>{topic.nama}</Td>
               <Td>{topic.isActive ? '✓ Aktif' : '✗ Tidak Aktif'}</Td>
               <Td>{topic.defaultDurasiMenit ?? 60}</Td>
-              <Td>{topic.defaultJumlahSoal ?? 20}</Td>
+              <Td>
+                <Text color={(questionCountByTopic[topic.id] || 0) < (topic.defaultJumlahSoal ?? 20) ? 'red.500' : 'green.500'}>
+                  {questionCountByTopic[topic.id] || 0} / {topic.defaultJumlahSoal ?? 20}
+                </Text>
+              </Td>
               <Td>
                 <Button size="sm" mr={2} onClick={() => handleEdit(topic)}>
                   Edit
@@ -297,6 +312,11 @@ export default React.memo(function TopicsTab() {
                   placeholder="20"
                   min="1"
                 />
+                {editingTopic && (
+                  <Text fontSize="sm" color="gray.600" mt={1}>
+                    Soal saat ini: {questionCountByTopic[editingTopic.id] || 0}
+                  </Text>
+                )}
               </FormControl>
             </VStack>
           </ModalBody>
