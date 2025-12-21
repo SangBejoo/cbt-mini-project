@@ -44,9 +44,15 @@ export default function AdminHome() {
 
   if (isLoading) {
     return (
-      <Container maxW="container.xl" py={10}>
-        <Box textAlign="center">Loading...</Box>
-      </Container>
+      <Box
+        minH="100vh"
+        bgGradient="linear(135deg, #FFF5EB 0%, #FFE8D6 100%)"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+      >
+        <Text color="#FF6B35" fontSize="lg">Loading...</Text>
+      </Box>
     );
   }
 
@@ -55,49 +61,173 @@ export default function AdminHome() {
   }
 
   return (
-    <Container maxW="container.xl" py={10}>
-      <HStack justify="space-between" mb={6}>
-        <Box>
-          <Heading as="h1" size="xl">
-            Panel Admin CBT
-          </Heading>
-          <Text color="gray.600">Welcome, {user.nama}</Text>
-        </Box>
-        <Button colorScheme="red" onClick={handleLogout}>
-          Logout
-        </Button>
-      </HStack>
+    <Box
+      minH="100vh"
+      bgGradient="linear(135deg, #FFF5EB 0%, #FFE8D6 100%)"
+      py={10}
+    >
+      <Container maxW="container.xl">
+        <HStack justify="space-between" mb={8}>
+          <Box>
+            <Heading
+              as="h1"
+              size="xl"
+              color="#FF6B35"
+              mb={2}
+            >
+              Panel Admin CBT
+            </Heading>
+            <Text color="gray.600" fontSize="sm">
+              Selamat datang, <span style={{ fontWeight: 'bold', color: '#FF6B35' }}>{user.nama}</span>
+            </Text>
+          </Box>
+          <Button
+            bg="#FF6B35"
+            color="white"
+            onClick={handleLogout}
+            _hover={{
+              bg: '#E55A24',
+              transform: 'translateY(-2px)',
+              boxShadow: '0 8px 16px rgba(255, 107, 53, 0.3)',
+            }}
+            _active={{
+              bg: '#D94817',
+            }}
+            fontWeight="bold"
+            transition="all 0.3s ease"
+            borderRadius="lg"
+          >
+            Logout
+          </Button>
+        </HStack>
 
-      <Tabs variant="enclosed" colorScheme="blue" isLazy index={activeTab} onChange={handleTabChange}>
-        <TabList>
-          <Tab>Tingkat</Tab>
-          <Tab>Mata Pelajaran</Tab>
-          <Tab>Materi</Tab>
-          <Tab>Soal</Tab>
-          <Tab>Users</Tab>
-          <Tab>History</Tab>
-        </TabList>
-        <TabPanels>
-          <TabPanel>
-            <LevelsTab />
-          </TabPanel>
-          <TabPanel>
-            <SubjectsTab />
-          </TabPanel>
-          <TabPanel>
-            <TopicsTab />
-          </TabPanel>
-          <TabPanel>
-            <QuestionsTab />
-          </TabPanel>
-          <TabPanel>
-            <UsersTab />
-          </TabPanel>
-          <TabPanel>
-            <HistoryTab />
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
-    </Container>
+        <Box
+          bg="white"
+          borderRadius="2xl"
+          borderWidth="2px"
+          borderColor="#FFD4B8"
+          boxShadow="0 4px 20px rgba(255, 107, 53, 0.1)"
+          p={6}
+        >
+          <Tabs
+            variant="enclosed"
+            colorScheme="orange"
+            isLazy
+            index={activeTab}
+            onChange={handleTabChange}
+          >
+            <TabList
+              borderBottomColor="#FFD4B8"
+              borderBottomWidth="2px"
+            >
+              <Tab
+                _selected={{
+                  color: 'white',
+                  bg: '#FF6B35',
+                  borderColor: '#FF6B35',
+                }}
+                color="gray.600"
+                fontWeight="600"
+                _hover={{
+                  color: '#FF6B35',
+                }}
+              >
+                Tingkat
+              </Tab>
+              <Tab
+                _selected={{
+                  color: 'white',
+                  bg: '#FF6B35',
+                  borderColor: '#FF6B35',
+                }}
+                color="gray.600"
+                fontWeight="600"
+                _hover={{
+                  color: '#FF6B35',
+                }}
+              >
+                Mata Pelajaran
+              </Tab>
+              <Tab
+                _selected={{
+                  color: 'white',
+                  bg: '#FF6B35',
+                  borderColor: '#FF6B35',
+                }}
+                color="gray.600"
+                fontWeight="600"
+                _hover={{
+                  color: '#FF6B35',
+                }}
+              >
+                Materi
+              </Tab>
+              <Tab
+                _selected={{
+                  color: 'white',
+                  bg: '#FF6B35',
+                  borderColor: '#FF6B35',
+                }}
+                color="gray.600"
+                fontWeight="600"
+                _hover={{
+                  color: '#FF6B35',
+                }}
+              >
+                Soal
+              </Tab>
+              <Tab
+                _selected={{
+                  color: 'white',
+                  bg: '#FF6B35',
+                  borderColor: '#FF6B35',
+                }}
+                color="gray.600"
+                fontWeight="600"
+                _hover={{
+                  color: '#FF6B35',
+                }}
+              >
+                Users
+              </Tab>
+              <Tab
+                _selected={{
+                  color: 'white',
+                  bg: '#FF6B35',
+                  borderColor: '#FF6B35',
+                }}
+                color="gray.600"
+                fontWeight="600"
+                _hover={{
+                  color: '#FF6B35',
+                }}
+              >
+                History
+              </Tab>
+            </TabList>
+            <TabPanels pt={6}>
+              <TabPanel>
+                <LevelsTab />
+              </TabPanel>
+              <TabPanel>
+                <SubjectsTab />
+              </TabPanel>
+              <TabPanel>
+                <TopicsTab />
+              </TabPanel>
+              <TabPanel>
+                <QuestionsTab />
+              </TabPanel>
+              <TabPanel>
+                <UsersTab />
+              </TabPanel>
+              <TabPanel>
+                <HistoryTab />
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
+        </Box>
+      </Container>
+    </Box>
   );
 }

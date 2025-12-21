@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -81,6 +82,7 @@ func (r *userLimitRepository) IncrementUsageAtomic(ctx context.Context, userID i
 		return err
 	}
 
+	fmt.Printf("=== REPO: Executing atomic increment for user %d, type %s ===\n", userID, limitType)
 	// Atomic increment: update only if current_used < limit_value
 	result := r.db.WithContext(ctx).Model(&entity.UserLimit{}).
 		Where("user_id = ? AND limit_type = ? AND current_used < limit_value", userID, limitType).
@@ -90,12 +92,16 @@ func (r *userLimitRepository) IncrementUsageAtomic(ctx context.Context, userID i
 		})
 
 	if result.Error != nil {
+		fmt.Printf("=== REPO: Atomic increment failed: %v ===\n", result.Error)
 		return result.Error
 	}
 
 	if result.RowsAffected == 0 {
+		fmt.Printf("=== REPO: Atomic increment: no rows affected (limit exceeded) ===\n")
 		return gorm.ErrRecordNotFound // Indicates limit exceeded
 	}
+
+	fmt.Printf("=== REPO: Atomic increment success, rows affected: %d ===\n", result.RowsAffected)
 
 	// Record usage for analytics
 	usage := &entity.UserLimitUsage{

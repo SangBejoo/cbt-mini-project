@@ -25,6 +25,7 @@ import {
   useDisclosure,
   VStack,
   Text,
+  HStack,
 } from '@chakra-ui/react';
 import { useCRUD, useForm, usePagination } from '../hooks';
 import { Topic, Level, Subject } from '../types';
@@ -36,6 +37,8 @@ export default React.memo(function TopicsTab() {
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all'); // 'all', 'active', 'inactive'
+  const [levelFilter, setLevelFilter] = useState<string>('all'); // 'all' or level id
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const form = useForm({
@@ -73,14 +76,41 @@ export default React.memo(function TopicsTab() {
   }, [searchQuery]);
 
   const filteredTopics = useMemo(() => {
-    return topics.filter((topic) =>
-      topic.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-      topic.mataPelajaran.nama
-        .toLowerCase()
-        .includes(debouncedSearchQuery.toLowerCase()) ||
-      topic.tingkat.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-    );
-  }, [topics, debouncedSearchQuery]);
+    let filtered = topics.filter((topic) => {
+      // Search filter
+      const matchesSearch =
+        topic.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        topic.mataPelajaran.nama
+          .toLowerCase()
+          .includes(debouncedSearchQuery.toLowerCase()) ||
+        topic.tingkat.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+
+      // Status filter
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' && topic.isActive) ||
+        (statusFilter === 'inactive' && !topic.isActive);
+
+      // Level filter
+      const matchesLevel =
+        levelFilter === 'all' ||
+        topic.tingkat.id.toString() === levelFilter;
+
+      return matchesSearch && matchesStatus && matchesLevel;
+    });
+
+    // Sort: active items first, then inactive, both groups sorted by name ascending
+    filtered.sort((a, b) => {
+      // First sort by active status (active first)
+      if (a.isActive && !b.isActive) return -1;
+      if (!a.isActive && b.isActive) return 1;
+
+      // Then sort by name within each group
+      return a.nama.localeCompare(b.nama);
+    });
+
+    return filtered;
+  }, [topics, debouncedSearchQuery, statusFilter, levelFilter]);
 
   const { paginatedItems, currentPage, totalPages, nextPage, prevPage } =
     usePagination(filteredTopics, { itemsPerPage: 10 });
@@ -123,6 +153,27 @@ export default React.memo(function TopicsTab() {
         onChange={(e) => setSearchQuery(e.target.value)}
         mb={4}
       />
+      <HStack spacing={4} mb={4}>
+        <FormControl maxW="200px">
+          <FormLabel fontSize="sm">Filter Status</FormLabel>
+          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="all">Semua Status</option>
+            <option value="active">Aktif</option>
+            <option value="inactive">Tidak Aktif</option>
+          </Select>
+        </FormControl>
+        <FormControl maxW="200px">
+          <FormLabel fontSize="sm">Filter Tingkat</FormLabel>
+          <Select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}>
+            <option value="all">Semua Tingkat</option>
+            {levels.map((level) => (
+              <option key={level.id} value={level.id.toString()}>
+                {level.nama}
+              </option>
+            ))}
+          </Select>
+        </FormControl>
+      </HStack>
       <Table variant="simple">
         <Thead>
           <Tr>

@@ -158,15 +158,9 @@ export default function SessionsPage() {
       const timeSinceLastSubmit = now - lastSubmitTimeRef.current;
       
       if (loading || isCreatingSessionRef.current || timeSinceLastSubmit < 500) {
-        console.log('=== PREVENTING DOUBLE SUBMISSION ===', {
-          loading,
-          isCreating: isCreatingSessionRef.current,
-          timeSinceLastSubmit,
-        });
         return; // Prevent multiple submissions
       }
 
-      console.log('=== STARTING TEST CREATION ===');
       lastSubmitTimeRef.current = now;
       setLoading(true);
       isCreatingSessionRef.current = true;
@@ -189,11 +183,9 @@ export default function SessionsPage() {
           jumlah_soal: jumlahSoal,
         };
 
-        console.log('=== SENDING SESSION CREATION REQUEST ===', payload);
         const response = await axios.post(CREATE_SESSION_API, payload, {
           signal: abortControllerRef.current?.signal,
         });
-        console.log('=== SESSION CREATION SUCCESS ===', response.data);
         const sessionToken =
           response.data?.testSession?.sessionToken ||
           response.data?.test_session?.session_token ||

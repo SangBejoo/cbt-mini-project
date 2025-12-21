@@ -147,7 +147,6 @@ export default function TestPage() {
     // Check multiple possible field names for batas_waktu (protobuf JSON naming variations)
     const batasWaktuValue = sessionData?.batas_waktu || sessionData?.batasWaktu || sessionData?.BatasWaktu;
     if (!batasWaktuValue) {
-      console.log('No batas_waktu found in sessionData:', sessionData);
       return;
     }
 
@@ -160,17 +159,14 @@ export default function TestPage() {
 
       // Debug: log when time is running low
       if (remaining <= 10000 && remaining > 0) { // Last 10 seconds
-        console.log('=== TIME REMAINING ===', Math.floor(remaining / 1000), 'seconds');
       }
 
       if (remaining === 0 && !isAutoSubmitting && !submitting) {
         setIsTimeUp(true);
         setIsAutoSubmitting(true);
         clearInterval(timer);
-        console.log('=== AUTO-SUBMIT TRIGGERED ===');
         toast({ title: 'Waktu telah habis! Otomatis menyimpan...', status: 'warning' });
         setTimeout(() => {
-          console.log('=== EXECUTING AUTO-SUBMIT ===');
           confirmFinish(true);
         }, 1000);
       }
@@ -208,12 +204,6 @@ export default function TestPage() {
       
       const response = await axios.get(`${API_BASE}/${token}/questions`);
       const data = response.data;
-      console.log('=== DEBUG: Session data received ===');
-      console.log('batas_waktu:', data.batas_waktu || data.batasWaktu || data.BatasWaktu);
-      console.log('waktu_mulai:', data.waktu_mulai || data.waktuMulai || data.WaktuMulai);
-      console.log('durasi_menit:', data.durasi_menit || data.durasiMenit || data.DurasiMenit);
-      console.log('soal count:', data.soal?.length || 0);
-      console.log('Full response:', JSON.stringify(data, null, 2));
       setSessionData(data);
       
       // Load saved state from localStorage first
@@ -248,14 +238,7 @@ export default function TestPage() {
         answers: mergedAnswers,
       }));
     } catch (error) {
-      console.error('=== ERROR fetching questions ===');
-      if (axios.isAxiosError(error)) {
-        console.error('Response status:', error.response?.status);
-        console.error('Response data:', error.response?.data);
-        console.error('Error message:', error.message);
-      } else {
-        console.error('Full error:', error);
-      }
+      console.error('Error fetching questions:', error);
       toast({ title: 'Error loading questions', status: 'error' });
     } finally {
       setLoading(false);
@@ -303,20 +286,15 @@ export default function TestPage() {
   };
 
   const confirmFinish = async (isAutoSubmit = false) => {
-    console.log('=== CONFIRM FINISH STARTED ===', { isAutoSubmit, submitting });
     setSubmitting(true);
     try {
       // Ensure auth token is set before making request
       const authToken = localStorage.getItem('auth_token');
-      console.log('=== AUTH TOKEN CHECK ===', { hasToken: !!authToken, currentAuthHeader: !!axios.defaults.headers.common['Authorization'] });
       if (authToken && !axios.defaults.headers.common['Authorization']) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
-        console.log('=== AUTH TOKEN SET ===');
       }
       
-      console.log('=== MAKING COMPLETE REQUEST ===');
       await axios.post(`${API_BASE}/${token}/complete`);
-      console.log('=== COMPLETE REQUEST SUCCESS ===');
       if (!isAutoSubmit) {
         toast({ title: 'Tes selesai!', status: 'success' });
       }
@@ -329,25 +307,15 @@ export default function TestPage() {
       localStorage.removeItem(`test_session_${token}`);
       // Small delay before redirect
       setTimeout(() => {
-        console.log('=== REDIRECTING TO RESULTS ===');
         router.push(`/student/results/${token}`);
       }, 500);
     } catch (error) {
-      console.error('=== CONFIRM FINISH ERROR ===', error);
-      if (axios.isAxiosError(error)) {
-        console.error('Response status:', error.response?.status);
-        console.error('Response data:', error.response?.data);
-        console.error('Error message:', error.message);
-      } else {
-        console.error('Full error:', error);
-      }
+      console.error('Error completing test:', error);
       if (!isAutoSubmit) {
         toast({ title: 'Error menyelesaikan tes', status: 'error' });
       } else {
-        console.error('=== AUTO-SUBMIT FAILED ===');
         // For auto-submit, try again after a delay
         setTimeout(() => {
-          console.log('=== RETRYING AUTO-SUBMIT ===');
           confirmFinish(true);
         }, 2000);
       }

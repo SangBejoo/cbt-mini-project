@@ -87,9 +87,12 @@ func (h *testSessionHandler) CreateTestSession(ctx context.Context, req *base.Cr
 	}
 
 	// Check user limits after successful session creation
+	fmt.Printf("=== HANDLER: About to increment usage for user %d ===\n", userID)
 	if err := h.userLimitUsecase.IncrementUsage(ctx, int(userID), entity.LimitTypeTestSessionsPerDay, &session.ID); err != nil {
+		fmt.Printf("=== HANDLER: IncrementUsage failed: %v ===\n", err)
 		return nil, status.Error(codes.ResourceExhausted, "Daily test session limit exceeded. Please try again tomorrow.")
 	}
+	fmt.Printf("=== HANDLER: IncrementUsage success for user %d ===\n", userID)
 
 	return &base.TestSessionResponse{
 		TestSession: h.convertToProtoTestSession(session),

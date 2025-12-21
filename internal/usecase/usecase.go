@@ -61,15 +61,17 @@ func (u *userLimitUsecase) IncrementUsage(ctx context.Context, userID int, limit
 	span, ctx := apm.StartSpan(ctx, "increment_usage", "usecase")
 	defer span.End()
 
+	fmt.Printf("=== USECASE: IncrementUsage called for user %d, type %s ===\n", userID, limitType)
 	// Use atomic increment to prevent race conditions
 	err := u.userLimitRepo.IncrementUsageAtomic(ctx, userID, limitType, resourceID)
 	if err != nil {
+		fmt.Printf("=== USECASE: IncrementUsageAtomic failed: %v ===\n", err)
 		if err == gorm.ErrRecordNotFound {
 			return fmt.Errorf("limit exceeded for %s", limitType)
 		}
 		return err
 	}
-
+	fmt.Printf("=== USECASE: IncrementUsageAtomic success for user %d ===\n", userID)
 	return nil
 }
 

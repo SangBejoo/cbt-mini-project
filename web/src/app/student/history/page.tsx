@@ -189,7 +189,7 @@ export default function HistoryPage() {
           <HStack spacing={3} flex={1} maxW="600px">
             <Input
               size="sm"
-              placeholder="🔍 Cari nama peserta..."
+              placeholder="Cari nama peserta..."
               value={searchPeserta}
               onChange={(e) => setSearchPeserta(e.target.value)}
               borderColor="gray.300"
@@ -230,7 +230,7 @@ export default function HistoryPage() {
               <AccordionItem key={peserta}>
                 <AccordionButton>
                   <Box flex="1" textAlign="left" fontWeight="bold" fontSize="md">
-                    📚 Peserta: {peserta}
+                    Peserta: {peserta}
                   </Box>
                   <AccordionIcon />
                 </AccordionButton>
@@ -240,7 +240,7 @@ export default function HistoryPage() {
                       <AccordionItem key={subj} ml={4}>
                         <AccordionButton>
                           <Box flex="1" textAlign="left" fontWeight="bold" fontSize="sm">
-                            📖 Mata Pelajaran: {subj}
+                            Mata Pelajaran: {subj}
                           </Box>
                           <AccordionIcon />
                         </AccordionButton>
@@ -248,7 +248,7 @@ export default function HistoryPage() {
                           {Object.keys(filteredGroups[peserta][subj]).map(lvl => (
                             <Box key={lvl} mb={6}>
                               <Heading size="sm" mb={4} color="gray.700">
-                                🎓 Tingkat {lvl}
+                                Tingkat {lvl}
                               </Heading>
                               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                                 {filteredGroups[peserta][subj][lvl].map((item) => (
@@ -270,7 +270,7 @@ export default function HistoryPage() {
                                             Nilai CBT
                                           </Badge>
                                           <Text fontSize="xs" color="gray.500">
-                                            {item.totalSoal === 0 ? '⚠️ No Questions' : `${item.totalSoal} soal`}
+                                            {item.totalSoal === 0 ? 'No Questions' : `${item.totalSoal} soal`}
                                           </Text>
                                         </HStack>
 
@@ -285,15 +285,15 @@ export default function HistoryPage() {
 
                                         <VStack spacing={2} align="stretch" fontSize="xs" color="gray.600">
                                           <HStack>
-                                            <Text>⏰ Mulai:</Text>
+                                            <Text>Mulai:</Text>
                                             <Text fontSize="xs">{formatDateTime(item.waktuMulai)}</Text>
                                           </HStack>
                                           <HStack>
-                                            <Text>⏰ Selesai:</Text>
+                                            <Text>Selesai:</Text>
                                             <Text fontSize="xs">{formatDateTime(item.waktuSelesai)}</Text>
                                           </HStack>
                                           <HStack>
-                                            <Text>⌛ Durasi:</Text>
+                                            <Text>Durasi:</Text>
                                             <Text fontWeight="medium" fontSize="xs">{formatDuration(item.durasiPengerjaanDetik)}</Text>
                                           </HStack>
                                         </VStack>
