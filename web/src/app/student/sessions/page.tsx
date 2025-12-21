@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -55,6 +55,9 @@ export default function SessionsPage() {
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isLoadingTopics, setIsLoadingTopics] = useState(true);
+  const isCreatingSessionRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const lastSubmitTimeRef = useRef<number>(0);
 
   // Pagination and filter states
   const [currentPage, setCurrentPage] = useState(1);
@@ -151,7 +154,28 @@ export default function SessionsPage() {
         return;
       }
 
+      const now = Date.now();
+      const timeSinceLastSubmit = now - lastSubmitTimeRef.current;
+      
+      if (loading || isCreatingSessionRef.current || timeSinceLastSubmit < 500) {
+        console.log('=== PREVENTING DOUBLE SUBMISSION ===', {
+          loading,
+          isCreating: isCreatingSessionRef.current,
+          timeSinceLastSubmit,
+        });
+        return; // Prevent multiple submissions
+      }
+
+      console.log('=== STARTING TEST CREATION ===');
+      lastSubmitTimeRef.current = now;
       setLoading(true);
+      isCreatingSessionRef.current = true;
+      
+      // Cancel any previous request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
       try {
         // Use defaults from materi, or fallback to hardcoded defaults
         const durasiMenit = selectedTopic.defaultDurasiMenit || 60;
@@ -165,7 +189,11 @@ export default function SessionsPage() {
           jumlah_soal: jumlahSoal,
         };
 
-        const response = await axios.post(CREATE_SESSION_API, payload);
+        console.log('=== SENDING SESSION CREATION REQUEST ===', payload);
+        const response = await axios.post(CREATE_SESSION_API, payload, {
+          signal: abortControllerRef.current?.signal,
+        });
+        console.log('=== SESSION CREATION SUCCESS ===', response.data);
         const sessionToken =
           response.data?.testSession?.sessionToken ||
           response.data?.test_session?.session_token ||
@@ -185,6 +213,7 @@ export default function SessionsPage() {
         toast({ title: errorMessage, status: 'error', duration: 5000 });
       } finally {
         setLoading(false);
+        isCreatingSessionRef.current = false;
         onClose();
       }
     },
@@ -257,7 +286,17 @@ export default function SessionsPage() {
       loading: boolean;
       onStartTest: () => void;
     }) => {
+      const [isSubmitting, setIsSubmitting] = useState(false);
+
+      useEffect(() => {
+        if (!loading) {
+          setIsSubmitting(false);
+        }
+      }, [loading]);
+
       const handleSubmit = () => {
+        if (loading || isSubmitting) return; // Prevent multiple clicks
+        setIsSubmitting(true);
         onStartTest();
       };
 
@@ -315,7 +354,7 @@ export default function SessionsPage() {
               </VStack>
             </ModalBody>
             <ModalFooter>
-              <Button colorScheme="orange" mr={3} onClick={handleSubmit} isLoading={loading}>
+              <Button colorScheme="orange" mr={3} onClick={handleSubmit} isLoading={loading} isDisabled={isSubmitting}>
                 Mulai Tes
               </Button>
               <Button variant="ghost" onClick={onClose}>

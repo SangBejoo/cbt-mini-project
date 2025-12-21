@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.elastic.co/apm"
+	"gorm.io/gorm"
 
 	"cbt-test-mini-project/internal/entity"
 	"cbt-test-mini-project/internal/repository"
@@ -60,35 +61,13 @@ func (u *userLimitUsecase) IncrementUsage(ctx context.Context, userID int, limit
 	span, ctx := apm.StartSpan(ctx, "increment_usage", "usecase")
 	defer span.End()
 
-	// Check current limit
-	limit, err := u.CheckLimit(ctx, userID, limitType)
+	// Use atomic increment to prevent race conditions
+	err := u.userLimitRepo.IncrementUsageAtomic(ctx, userID, limitType, resourceID)
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return fmt.Errorf("limit exceeded for %s", limitType)
+		}
 		return err
-	}
-
-	// Check if limit would be exceeded
-	if limit.CurrentUsed >= limit.LimitValue {
-		return fmt.Errorf("limit exceeded for %s: %d/%d", limitType, limit.CurrentUsed, limit.LimitValue)
-	}
-
-	// Increment usage
-	limit.CurrentUsed++
-	if err := u.userLimitRepo.UpdateLimit(ctx, limit); err != nil {
-		return fmt.Errorf("failed to update limit: %w", err)
-	}
-
-	// Record usage for analytics
-	usage := &entity.UserLimitUsage{
-		UserID:     userID,
-		LimitType:  limitType,
-		Action:     "increment",
-		ResourceID: resourceID,
-		CreatedAt:  time.Now(),
-	}
-
-	if err := u.userLimitRepo.RecordUsage(ctx, usage); err != nil {
-		// Log error but don't fail the operation
-		apm.CaptureError(ctx, err).Send()
 	}
 
 	return nil

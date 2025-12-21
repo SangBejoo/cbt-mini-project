@@ -34,6 +34,7 @@ func NewRateLimitMiddleware(userLimitRepo repository.UserLimitRepository) *RateL
 func (m *RateLimitMiddleware) UnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	// Skip rate limiting for critical test operations to allow reloads
 	exemptMethods := []string{
+		"/base.TestSessionService/CreateTestSession", // Handler manages limit increment
 		"/base.TestSessionService/GetTestQuestions",
 		"/base.TestSessionService/GetTestSession",
 		"/base.TestSessionService/SubmitAnswer",

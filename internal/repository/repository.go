@@ -20,6 +20,7 @@ type userLimitRepository struct {
 type UserLimitRepository interface {
 	GetOrCreateLimit(ctx context.Context, userID int, limitType string) (*entity.UserLimit, error)
 	UpdateLimit(ctx context.Context, limit *entity.UserLimit) error
+	IncrementUsageAtomic(ctx context.Context, userID int, limitType string, resourceID *int) error
 	GetLimitsByUser(ctx context.Context, userID int) ([]*entity.UserLimit, error)
 	RecordUsage(ctx context.Context, usage *entity.UserLimitUsage) error
 	GetUsageHistory(ctx context.Context, userID int, limitType string, since time.Time) ([]*entity.UserLimitUsage, error)
@@ -70,6 +71,47 @@ func (r *userLimitRepository) GetOrCreateLimit(ctx context.Context, userID int, 
 func (r *userLimitRepository) UpdateLimit(ctx context.Context, limit *entity.UserLimit) error {
 	limit.UpdatedAt = time.Now()
 	return r.db.WithContext(ctx).Save(limit).Error
+}
+
+// IncrementUsageAtomic atomically increments usage if under limit
+func (r *userLimitRepository) IncrementUsageAtomic(ctx context.Context, userID int, limitType string, resourceID *int) error {
+	// First, ensure the limit exists
+	_, err := r.GetOrCreateLimit(ctx, userID, limitType)
+	if err != nil {
+		return err
+	}
+
+	// Atomic increment: update only if current_used < limit_value
+	result := r.db.WithContext(ctx).Model(&entity.UserLimit{}).
+		Where("user_id = ? AND limit_type = ? AND current_used < limit_value", userID, limitType).
+		Updates(map[string]interface{}{
+			"current_used": gorm.Expr("current_used + 1"),
+			"updated_at":   time.Now(),
+		})
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound // Indicates limit exceeded
+	}
+
+	// Record usage for analytics
+	usage := &entity.UserLimitUsage{
+		UserID:     userID,
+		LimitType:  limitType,
+		Action:     "increment",
+		ResourceID: resourceID,
+		CreatedAt:  time.Now(),
+	}
+
+	if err := r.RecordUsage(ctx, usage); err != nil {
+		// Log error but don't fail the operation
+		// Note: in a real app, you might want to log this
+	}
+
+	return nil
 }
 
 // GetLimitsByUser gets all limits for a user

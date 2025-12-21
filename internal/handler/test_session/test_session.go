@@ -63,11 +63,6 @@ func (h *testSessionHandler) CreateTestSession(ctx context.Context, req *base.Cr
 
 	userID := user.Id
 
-	// Check user limits before creating test session
-	if err := h.userLimitUsecase.IncrementUsage(ctx, int(userID), entity.LimitTypeTestSessionsPerDay, nil); err != nil {
-		return nil, status.Error(codes.ResourceExhausted, "Daily test session limit exceeded. Please try again tomorrow.")
-	}
-
 	// Get durasi_menit and jumlah_soal from materi if not provided (or use defaults if provided)
 	// For now we always use materi defaults - siswa tidak bisa custom durasi/jumlah soal
 	durasiMenit := int(req.DurasiMenit)
@@ -89,6 +84,11 @@ func (h *testSessionHandler) CreateTestSession(ctx context.Context, req *base.Cr
 		// For now, we'll rely on the rate limit middleware to handle this
 		// In a production system, you might want to implement a rollback mechanism
 		return nil, err
+	}
+
+	// Check user limits after successful session creation
+	if err := h.userLimitUsecase.IncrementUsage(ctx, int(userID), entity.LimitTypeTestSessionsPerDay, &session.ID); err != nil {
+		return nil, status.Error(codes.ResourceExhausted, "Daily test session limit exceeded. Please try again tomorrow.")
 	}
 
 	return &base.TestSessionResponse{
