@@ -55,6 +55,11 @@ func (r *testSessionRepositoryImpl) CompleteSession(token string, waktuSelesai t
 	}).Error
 }
 
+// UpdateSessionStatus updates only the status of a session
+func (r *testSessionRepositoryImpl) UpdateSessionStatus(token string, status entity.TestStatus) error {
+	return r.db.Model(&entity.TestSession{}).Where("session_token = ?", token).Update("status", status).Error
+}
+
 // List sessions with filters
 func (r *testSessionRepositoryImpl) List(tingkatan, idMataPelajaran *int, status *entity.TestStatus, limit, offset int) ([]entity.TestSession, int, error) {
 	var sessions []entity.TestSession

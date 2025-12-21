@@ -37,7 +37,7 @@ type UserLimitUsage struct {
 	LimitType  string    `json:"limit_type" gorm:"not null;size:50"`
 	Action     string    `json:"action" gorm:"not null;size:100"` // e.g., "create_test_session", "api_call"
 	ResourceID *int      `json:"resource_id"` // ID of the resource (test_session_id, question_id, etc.)
-	UsedAt     time.Time `json:"used_at" gorm:"autoCreateTime"`
+	CreatedAt  time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
 
 // TableName specifies the table name for GORM

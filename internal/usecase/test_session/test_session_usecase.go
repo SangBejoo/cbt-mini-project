@@ -73,9 +73,10 @@ func (u *testSessionUsecaseImpl) GetTestSession(sessionToken string) (*entity.Te
 		return nil, err
 	}
 
-	// Check timeout
-	if time.Now().After(session.BatasWaktu()) {
-		u.repo.CompleteSession(sessionToken, time.Now(), nil, nil, nil)
+	// Check timeout only if session is still ongoing
+	if session.Status == entity.TestStatusOngoing && time.Now().After(session.BatasWaktu()) {
+		// Just mark as timeout, don't complete yet (let auto-submit or manual completion handle scoring)
+		u.repo.UpdateSessionStatus(sessionToken, entity.TestStatusTimeout)
 		session.Status = entity.TestStatusTimeout
 	}
 
@@ -205,7 +206,7 @@ func (u *testSessionUsecaseImpl) CompleteSession(sessionToken string) (*entity.T
 		return nil, err
 	}
 
-	if session.Status != entity.TestStatusOngoing {
+	if session.Status != entity.TestStatusOngoing && session.Status != entity.TestStatusTimeout {
 		return nil, errors.New("session is already completed")
 	}
 

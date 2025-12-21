@@ -81,7 +81,7 @@ func (r *userLimitRepository) GetLimitsByUser(ctx context.Context, userID int) (
 
 // RecordUsage records a usage event
 func (r *userLimitRepository) RecordUsage(ctx context.Context, usage *entity.UserLimitUsage) error {
-	usage.UsedAt = time.Now()
+	usage.CreatedAt = time.Now()
 	return r.db.WithContext(ctx).Create(usage).Error
 }
 
@@ -89,8 +89,8 @@ func (r *userLimitRepository) RecordUsage(ctx context.Context, usage *entity.Use
 func (r *userLimitRepository) GetUsageHistory(ctx context.Context, userID int, limitType string, since time.Time) ([]*entity.UserLimitUsage, error) {
 	var usages []*entity.UserLimitUsage
 	err := r.db.WithContext(ctx).
-		Where("user_id = ? AND limit_type = ? AND used_at >= ?", userID, limitType, since).
-		Order("used_at DESC").
+		Where("user_id = ? AND limit_type = ? AND created_at >= ?", userID, limitType, since).
+		Order("created_at DESC").
 		Find(&usages).Error
 	return usages, err
 }

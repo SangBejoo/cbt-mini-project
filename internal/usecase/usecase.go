@@ -83,7 +83,7 @@ func (u *userLimitUsecase) IncrementUsage(ctx context.Context, userID int, limit
 		LimitType:  limitType,
 		Action:     "increment",
 		ResourceID: resourceID,
-		UsedAt:     time.Now(),
+		CreatedAt:  time.Now(),
 	}
 
 	if err := u.userLimitRepo.RecordUsage(ctx, usage); err != nil {

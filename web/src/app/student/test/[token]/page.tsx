@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Box,
@@ -85,6 +85,7 @@ export default function TestPage() {
   const token = params.token as string;
   const router = useRouter();
   const toast = useToast();
+  const hasFetchedRef = useRef(false);
 
   const [sessionData, setSessionData] = useState<TestSessionData | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -102,13 +103,43 @@ export default function TestPage() {
     setMounted(true);
   }, []);
 
+  // Load state from localStorage on mount
+  useEffect(() => {
+    if (mounted && token) {
+      const savedState = localStorage.getItem(`test_session_${token}`);
+      if (savedState) {
+        try {
+          const parsed = JSON.parse(savedState);
+          setCurrentQuestionIndex(parsed.currentQuestionIndex || 0);
+          setAnswers(parsed.answers || {});
+        } catch (error) {
+          console.error('Error loading saved state:', error);
+        }
+      }
+    }
+  }, [mounted, token]);
+
+  // Save state to localStorage when answers or currentQuestionIndex changes
+  useEffect(() => {
+    if (mounted && token && sessionData) {
+      localStorage.setItem(`test_session_${token}`, JSON.stringify({
+        currentQuestionIndex,
+        answers,
+      }));
+    }
+  }, [mounted, token, currentQuestionIndex, answers, sessionData]);
+
   useEffect(() => {
     if (!token) {
       toast({ title: 'Invalid session token', status: 'error' });
       router.push('/student');
       return;
     }
-    fetchAllQuestions();
+    // Only fetch once to prevent double calls
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      fetchAllQuestions();
+    }
   }, [token]);
 
   // Countdown timer effect - simplified
@@ -127,17 +158,26 @@ export default function TestPage() {
 
       setTimeRemaining(remaining);
 
-      if (remaining === 0 && !isAutoSubmitting) {
+      // Debug: log when time is running low
+      if (remaining <= 10000 && remaining > 0) { // Last 10 seconds
+        console.log('=== TIME REMAINING ===', Math.floor(remaining / 1000), 'seconds');
+      }
+
+      if (remaining === 0 && !isAutoSubmitting && !submitting) {
         setIsTimeUp(true);
         setIsAutoSubmitting(true);
         clearInterval(timer);
+        console.log('=== AUTO-SUBMIT TRIGGERED ===');
         toast({ title: 'Waktu telah habis! Otomatis menyimpan...', status: 'warning' });
-        setTimeout(() => confirmFinish(true), 1000);
+        setTimeout(() => {
+          console.log('=== EXECUTING AUTO-SUBMIT ===');
+          confirmFinish(true);
+        }, 1000);
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [sessionData?.batas_waktu, sessionData?.batasWaktu, sessionData?.BatasWaktu]);
+  }, [sessionData?.batas_waktu, sessionData?.batasWaktu, sessionData?.BatasWaktu, submitting, isAutoSubmitting]);
 
   // Format remaining time for display
   const formatTimeRemaining = (ms: number | null) => {
@@ -160,6 +200,12 @@ export default function TestPage() {
 
   const fetchAllQuestions = async () => {
     try {
+      // Ensure auth token is set before making request
+      const authToken = localStorage.getItem('auth_token');
+      if (authToken && !axios.defaults.headers.common['Authorization']) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      }
+      
       const response = await axios.get(`${API_BASE}/${token}/questions`);
       const data = response.data;
       console.log('=== DEBUG: Session data received ===');
@@ -169,14 +215,38 @@ export default function TestPage() {
       console.log('soal count:', data.soal?.length || 0);
       console.log('Full response:', JSON.stringify(data, null, 2));
       setSessionData(data);
-      // Set answers for all questions
-      const initialAnswers: Record<number, string> = {};
+      
+      // Load saved state from localStorage first
+      const savedState = localStorage.getItem(`test_session_${token}`);
+      let savedAnswers: Record<number, string> = {};
+      let savedIndex = 0;
+      
+      if (savedState) {
+        try {
+          const parsed = JSON.parse(savedState);
+          savedAnswers = parsed.answers || {};
+          savedIndex = parsed.currentQuestionIndex || 0;
+        } catch (e) {
+          console.error('Error parsing saved state:', e);
+        }
+      }
+      
+      // Merge server answers with saved answers (prefer saved answers)
+      const mergedAnswers: Record<number, string> = { ...savedAnswers };
       data.soal.forEach((q: Question) => {
-        if (q.jawabanDipilih && q.jawabanDipilih !== 'JAWABAN_INVALID') {
-          initialAnswers[q.nomorUrut] = q.jawabanDipilih;
+        if (q.jawabanDipilih && q.jawabanDipilih !== 'JAWABAN_INVALID' && !mergedAnswers[q.nomorUrut]) {
+          mergedAnswers[q.nomorUrut] = q.jawabanDipilih;
         }
       });
-      setAnswers(initialAnswers);
+      
+      setAnswers(mergedAnswers);
+      setCurrentQuestionIndex(savedIndex);
+      
+      // Save merged state
+      localStorage.setItem(`test_session_${token}`, JSON.stringify({
+        currentQuestionIndex: savedIndex,
+        answers: mergedAnswers,
+      }));
     } catch (error) {
       console.error('=== ERROR fetching questions ===');
       if (axios.isAxiosError(error)) {
@@ -196,6 +266,12 @@ export default function TestPage() {
     setAnswers({ ...answers, [questionId]: answer });
     // Submit answer immediately without refetching all
     try {
+      // Ensure auth token is set before making request
+      const authToken = localStorage.getItem('auth_token');
+      if (authToken && !axios.defaults.headers.common['Authorization']) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      }
+      
       await axios.post(`${API_BASE}/${token}/answers`, {
         nomor_urut: questionId,
         jawaban_dipilih: answer,
@@ -227,20 +303,53 @@ export default function TestPage() {
   };
 
   const confirmFinish = async (isAutoSubmit = false) => {
+    console.log('=== CONFIRM FINISH STARTED ===', { isAutoSubmit, submitting });
     setSubmitting(true);
     try {
+      // Ensure auth token is set before making request
+      const authToken = localStorage.getItem('auth_token');
+      console.log('=== AUTH TOKEN CHECK ===', { hasToken: !!authToken, currentAuthHeader: !!axios.defaults.headers.common['Authorization'] });
+      if (authToken && !axios.defaults.headers.common['Authorization']) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+        console.log('=== AUTH TOKEN SET ===');
+      }
+      
+      console.log('=== MAKING COMPLETE REQUEST ===');
       await axios.post(`${API_BASE}/${token}/complete`);
+      console.log('=== COMPLETE REQUEST SUCCESS ===');
       if (!isAutoSubmit) {
         toast({ title: 'Tes selesai!', status: 'success' });
       }
+      // Clear localStorage after completing test
+      localStorage.removeItem(`test_session_${token}`);
+      if (!isAutoSubmit) {
+        toast({ title: 'Tes selesai!', status: 'success' });
+      }
+      // Clear localStorage after completing test
+      localStorage.removeItem(`test_session_${token}`);
       // Small delay before redirect
       setTimeout(() => {
+        console.log('=== REDIRECTING TO RESULTS ===');
         router.push(`/student/results/${token}`);
       }, 500);
     } catch (error) {
-      console.error('Error completing test:', error);
+      console.error('=== CONFIRM FINISH ERROR ===', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Response status:', error.response?.status);
+        console.error('Response data:', error.response?.data);
+        console.error('Error message:', error.message);
+      } else {
+        console.error('Full error:', error);
+      }
       if (!isAutoSubmit) {
         toast({ title: 'Error menyelesaikan tes', status: 'error' });
+      } else {
+        console.error('=== AUTO-SUBMIT FAILED ===');
+        // For auto-submit, try again after a delay
+        setTimeout(() => {
+          console.log('=== RETRYING AUTO-SUBMIT ===');
+          confirmFinish(true);
+        }, 2000);
       }
     } finally {
       setSubmitting(false);

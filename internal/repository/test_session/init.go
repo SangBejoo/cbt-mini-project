@@ -22,6 +22,9 @@ type TestSessionRepository interface {
 	// Complete session
 	CompleteSession(token string, waktuSelesai time.Time, nilaiAkhir *float64, jumlahBenar, totalSoal *int) error
 
+	// Update session status
+	UpdateSessionStatus(token string, status entity.TestStatus) error
+
 	// Assign random questions to session
 	AssignRandomQuestions(sessionID, idMataPelajaran, tingkatan, jumlahSoal int) error
 

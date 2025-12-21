@@ -32,6 +32,19 @@ func NewRateLimitMiddleware(userLimitRepo repository.UserLimitRepository) *RateL
 
 // UnaryServerInterceptor implements rate limiting for unary gRPC calls
 func (m *RateLimitMiddleware) UnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	// Skip rate limiting for critical test operations to allow reloads
+	exemptMethods := []string{
+		"/base.TestSessionService/GetTestQuestions",
+		"/base.TestSessionService/GetTestSession",
+		"/base.TestSessionService/SubmitAnswer",
+	}
+	
+	for _, method := range exemptMethods {
+		if info.FullMethod == method {
+			return handler(ctx, req)
+		}
+	}
+
 	// Extract user from context (set by JWT middleware)
 	user, ok := ctx.Value("user").(*base.User)
 	if !ok {

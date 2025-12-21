@@ -212,6 +212,14 @@ func customHeaderMatcher(key string) (string, bool) {
 
 // Custom error handler for gRPC-Gateway
 func customErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, req *http.Request, err error) {
+	// Log the actual error with full details
+	slog.Error("=== gRPC Gateway Error ===",
+		"error", err,
+		"path", req.URL.Path,
+		"method", req.Method,
+		"remote_addr", req.RemoteAddr,
+	)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusInternalServerError)
 
@@ -219,6 +227,7 @@ func customErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler ru
 		"error":   "Internal Server Error",
 		"message": "Something went wrong",
 		"code":    500,
+		"details": err.Error(), // Add actual error message for debugging
 	}
 
 	if jsonErr := json.NewEncoder(w).Encode(response); jsonErr != nil {

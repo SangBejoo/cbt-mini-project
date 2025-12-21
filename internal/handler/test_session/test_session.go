@@ -136,6 +136,12 @@ func (h *testSessionHandler) GetTestSession(ctx context.Context, req *base.GetTe
 
 // GetTestQuestions gets all questions for the session
 func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.GetTestQuestionsRequest) (*base.TestQuestionsResponse, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("PANIC in GetTestQuestions: %v\n", r)
+		}
+	}()
+	
 	// Get user from JWT context
 	user, err := interceptor.GetUserFromContext(ctx)
 	if err != nil {
@@ -192,13 +198,25 @@ func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.Get
 	}
 
 	var protoSoals []*base.SoalForStudent
-	for _, s := range soals {
-		var jawabanDipilih base.JawabanOption
+	for i, s := range soals {
+		// Add more detailed logging
+		fmt.Printf("Processing soal %d: ID=%d, NomorUrut=%d, MateriID=%d\n", i, s.ID, s.NomorUrut, s.Materi.ID)
+		
+		var jawabanDipilih base.JawabanOption = base.JawabanOption_JAWABAN_INVALID
 		if s.JawabanDipilih != nil {
-			jawabanDipilih = base.JawabanOption(base.JawabanOption_value[string(*s.JawabanDipilih)])
+			if val, ok := base.JawabanOption_value[string(*s.JawabanDipilih)]; ok {
+				jawabanDipilih = base.JawabanOption(val)
+			}
 		}
 
-		protoSoals = append(protoSoals, &base.SoalForStudent{
+		// Ensure Materi fields are not nil or zero
+		if s.Materi.ID == 0 || s.Materi.MataPelajaran.ID == 0 || s.Materi.Tingkat.ID == 0 {
+			fmt.Printf("WARNING: Incomplete Materi data for soal ID %d, skipping\n", s.ID)
+			continue
+		}
+
+		// Create proto soal with error handling
+		protoSoal := &base.SoalForStudent{
 			Id:             int32(s.ID),
 			NomorUrut:      int32(s.NomorUrut),
 			Pertanyaan:     s.Pertanyaan,
@@ -208,25 +226,52 @@ func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.Get
 			OpsiD:          s.OpsiD,
 			JawabanDipilih: jawabanDipilih,
 			IsAnswered:     s.IsAnswered,
-			Materi: &base.Materi{
-				Id:             int32(s.Materi.ID),
-				Nama:           s.Materi.Nama,
-				MataPelajaran:  &base.MataPelajaran{Id: int32(s.Materi.MataPelajaran.ID), Nama: s.Materi.MataPelajaran.Nama},
-				Tingkat:        &base.Tingkat{Id: int32(s.Materi.Tingkat.ID), Nama: s.Materi.Tingkat.Nama},
-			},
-			Gambar:         convertSoalGambarToProto(s.Gambar),
-		})
+		}
+		
+		// Add Materi separately to catch any panic
+		protoSoal.Materi = &base.Materi{
+			Id:                 int32(s.Materi.ID),
+			MataPelajaran:      &base.MataPelajaran{Id: int32(s.Materi.MataPelajaran.ID), Nama: s.Materi.MataPelajaran.Nama},
+			Tingkat:            &base.Tingkat{Id: int32(s.Materi.Tingkat.ID), Nama: s.Materi.Tingkat.Nama},
+			Nama:               s.Materi.Nama,
+			IsActive:           s.Materi.IsActive,
+			DefaultDurasiMenit: int32(s.Materi.DefaultDurasiMenit),
+			DefaultJumlahSoal:  int32(s.Materi.DefaultJumlahSoal),
+		}
+		
+		// Add Gambar separately
+		protoSoal.Gambar = convertSoalGambarToProto(s.Gambar)
+		
+		protoSoals = append(protoSoals, protoSoal)
 	}
 
-	return &base.TestQuestionsResponse{
+	// Don't return error if no soals, just log warning
+	if len(protoSoals) == 0 {
+		fmt.Printf("WARNING: No valid soals found for session %s\n", req.SessionToken)
+	}
+
+	fmt.Printf("DEBUG: Creating response with %d soals\n", len(protoSoals))
+	
+	response := &base.TestQuestionsResponse{
 		SessionToken:      req.SessionToken,
 		Soal:              protoSoals,
 		TotalSoal:         int32(len(protoSoals)),
 		CurrentNomorUrut:  1, // Not used
 		DijawabCount:      int32(len(answers)),
 		IsAnsweredStatus:  isAnsweredStatus,
-		BatasWaktu:        timestamppb.New(session.BatasWaktu()),
-	}, nil
+	}
+	
+	// Add BatasWaktu carefully to avoid panic
+	if session.BatasWaktu() != (time.Time{}) {
+		response.BatasWaktu = timestamppb.New(session.BatasWaktu())
+	} else {
+		fmt.Printf("WARNING: Invalid BatasWaktu for session %s\n", req.SessionToken)
+		// Use current time + 1 hour as fallback
+		response.BatasWaktu = timestamppb.New(time.Now().Add(time.Hour))
+	}
+	
+	fmt.Printf("DEBUG: Response created successfully\n")
+	return response, nil
 }
 
 // SubmitAnswer submits an answer
@@ -592,10 +637,19 @@ func convertSoalGambarToProto(gambar []entity.SoalGambar) []*base.SoalGambar {
 	
 	var protoGambar []*base.SoalGambar
 	for _, g := range gambar {
+		keterangan := ""
+		if g.Keterangan != nil {
+			keterangan = *g.Keterangan
+		}
 		protoGambar = append(protoGambar, &base.SoalGambar{
-			Id:       int32(g.ID),
-			FilePath: g.FilePath,
-			Urutan:   int32(g.Urutan),
+			Id:        int32(g.ID),
+			NamaFile:  g.NamaFile,
+			FilePath:  g.FilePath,
+			FileSize:  int32(g.FileSize),
+			MimeType:  g.MimeType,
+			Urutan:    int32(g.Urutan),
+			Keterangan: keterangan,
+			CreatedAt: timestamppb.New(g.CreatedAt),
 		})
 	}
 	return protoGambar
