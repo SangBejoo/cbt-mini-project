@@ -84,13 +84,14 @@ func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, i
 	return u.repo.GetByID(m.ID)
 }
 
-// DeleteMateri deletes by ID
+// DeleteMateri soft deletes by setting is_active = false
 func (u *materiUsecaseImpl) DeleteMateri(id int) error {
-	_, err := u.repo.GetByID(id)
+	m, err := u.repo.GetByID(id)
 	if err != nil {
 		return err
 	}
-	return u.repo.Delete(id)
+	m.IsActive = false
+	return u.repo.Update(m)
 }
 
 // ListMateri lists with filters and pagination

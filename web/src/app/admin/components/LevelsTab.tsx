@@ -32,6 +32,7 @@ export default React.memo(function LevelsTab() {
   const [editingLevel, setEditingLevel] = useState<Level | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('active'); // 'all', 'active', 'inactive'
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const form = useForm({
@@ -54,10 +55,21 @@ export default React.memo(function LevelsTab() {
   }, [searchQuery]);
 
   const filteredLevels = useMemo(() => {
-    return levels.filter((level) =>
-      level.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-    );
-  }, [levels, debouncedSearchQuery]);
+    return levels
+      .filter(level => level && level.nama)
+      .filter((level) => {
+        // Search filter
+        const matchesSearch = level.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+
+        // Status filter
+        const matchesStatus =
+          statusFilter === 'all' ||
+          (statusFilter === 'active' && (level.is_active ?? true)) ||
+          (statusFilter === 'inactive' && !(level.is_active ?? true));
+
+        return matchesSearch && matchesStatus;
+      });
+  }, [levels, debouncedSearchQuery, statusFilter]);
 
   const { paginatedItems, currentPage, totalPages, goToPage, nextPage, prevPage } =
     usePagination(filteredLevels, { itemsPerPage: 10 });
@@ -95,10 +107,19 @@ export default React.memo(function LevelsTab() {
         onChange={(e) => setSearchQuery(e.target.value)}
         mb={4}
       />
+      <FormControl maxW="200px" mb={4}>
+        <FormLabel fontSize="sm">Filter Status</FormLabel>
+        <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="all">Semua Status</option>
+          <option value="active">Aktif</option>
+          <option value="inactive">Tidak Aktif</option>
+        </Select>
+      </FormControl>
       <Table variant="simple">
         <Thead>
           <Tr>
             <Th>Tingkat</Th>
+            <Th>Status</Th>
             <Th>Aksi</Th>
           </Tr>
         </Thead>
@@ -106,6 +127,7 @@ export default React.memo(function LevelsTab() {
           {paginatedItems.map((level) => (
             <Tr key={level.id}>
               <Td>{level.nama}</Td>
+              <Td>{(level.is_active ?? true) ? '✓ Aktif' : '✗ Tidak Aktif'}</Td>
               <Td>
                 <Button size="sm" mr={2} onClick={() => handleEdit(level)}>
                   Edit

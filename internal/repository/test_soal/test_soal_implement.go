@@ -24,7 +24,7 @@ func (r *soalRepositoryImpl) Create(soal *entity.Soal) error {
 // Get soal by ID
 func (r *soalRepositoryImpl) GetByID(id int) (*entity.Soal, error) {
 	var soal entity.Soal
-	err := r.db.Preload("Materi").Preload("Materi.MataPelajaran").Preload("Materi.Tingkat").Preload("Gambar", func(db *gorm.DB) *gorm.DB { return db.Order("urutan ASC") }).First(&soal, id).Error
+	err := r.db.Where("is_active = ?", true).Preload("Materi").Preload("Materi.MataPelajaran").Preload("Materi.Tingkat").Preload("Gambar", func(db *gorm.DB) *gorm.DB { return db.Order("urutan ASC") }).First(&soal, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -36,9 +36,9 @@ func (r *soalRepositoryImpl) Update(soal *entity.Soal) error {
 	return r.db.Save(soal).Error
 }
 
-// Delete soal by ID
+// Delete soal by ID (soft delete)
 func (r *soalRepositoryImpl) Delete(id int) error {
-	return r.db.Delete(&entity.Soal{}, id).Error
+	return r.db.Model(&entity.Soal{}).Where("id = ?", id).Update("is_active", false).Error
 }
 
 // List soal with filters
@@ -46,7 +46,7 @@ func (r *soalRepositoryImpl) List(idMateri, tingkatan, idMataPelajaran *int, lim
 	var soals []entity.Soal
 	var total int64
 
-	query := r.db.Model(&entity.Soal{}).Preload("Materi").Preload("Materi.MataPelajaran").Preload("Materi.Tingkat").Preload("Gambar", func(db *gorm.DB) *gorm.DB { return db.Order("urutan ASC") })
+	query := r.db.Model(&entity.Soal{}).Where("is_active = ?", true).Preload("Materi").Preload("Materi.MataPelajaran").Preload("Materi.Tingkat").Preload("Gambar", func(db *gorm.DB) *gorm.DB { return db.Order("urutan ASC") })
 
 	if idMateri != nil {
 		query = query.Where("id_materi = ?", *idMateri)
@@ -76,7 +76,7 @@ func (r *soalRepositoryImpl) List(idMateri, tingkatan, idMataPelajaran *int, lim
 // Get soal by materi ID
 func (r *soalRepositoryImpl) GetByMateriID(idMateri int) ([]entity.Soal, error) {
 	var soals []entity.Soal
-	err := r.db.Preload("Materi").Preload("Materi.MataPelajaran").Preload("Materi.Tingkat").Preload("Gambar", func(db *gorm.DB) *gorm.DB { return db.Order("urutan ASC") }).Where("id_materi = ?", idMateri).Find(&soals).Error
+	err := r.db.Where("is_active = ?", true).Preload("Materi").Preload("Materi.MataPelajaran").Preload("Materi.Tingkat").Preload("Gambar", func(db *gorm.DB) *gorm.DB { return db.Order("urutan ASC") }).Where("id_materi = ?", idMateri).Find(&soals).Error
 	return soals, err
 }
 

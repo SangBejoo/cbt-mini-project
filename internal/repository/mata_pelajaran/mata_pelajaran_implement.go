@@ -24,7 +24,7 @@ func (r *mataPelajaranRepositoryImpl) Create(mp *entity.MataPelajaran) error {
 // Get by ID
 func (r *mataPelajaranRepositoryImpl) GetByID(id int) (*entity.MataPelajaran, error) {
 	var mp entity.MataPelajaran
-	err := r.db.First(&mp, id).Error
+	err := r.db.Where("is_active = ?", true).First(&mp, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -36,9 +36,9 @@ func (r *mataPelajaranRepositoryImpl) Update(mp *entity.MataPelajaran) error {
 	return r.db.Save(mp).Error
 }
 
-// Delete by ID
+// Delete by ID (soft delete)
 func (r *mataPelajaranRepositoryImpl) Delete(id int) error {
-	return r.db.Delete(&entity.MataPelajaran{}, id).Error
+	return r.db.Model(&entity.MataPelajaran{}).Where("id = ?", id).Update("is_active", false).Error
 }
 
 // List all
@@ -46,7 +46,7 @@ func (r *mataPelajaranRepositoryImpl) List(limit, offset int) ([]entity.MataPela
 	var mps []entity.MataPelajaran
 	var total int64
 
-	query := r.db.Model(&entity.MataPelajaran{})
+	query := r.db.Model(&entity.MataPelajaran{}).Where("is_active = ?", true)
 
 	// Count total
 	if err := query.Count(&total).Error; err != nil {
@@ -64,7 +64,7 @@ func (r *mataPelajaranRepositoryImpl) List(limit, offset int) ([]entity.MataPela
 // Get by name
 func (r *mataPelajaranRepositoryImpl) GetByName(name string) (*entity.MataPelajaran, error) {
 	var mp entity.MataPelajaran
-	err := r.db.Where("nama = ?", name).First(&mp).Error
+	err := r.db.Where("nama = ? AND is_active = ?", name, true).First(&mp).Error
 	if err != nil {
 		return nil, err
 	}

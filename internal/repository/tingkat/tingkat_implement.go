@@ -24,7 +24,7 @@ func (r *tingkatRepositoryImpl) Create(t *entity.Tingkat) error {
 // Get by ID
 func (r *tingkatRepositoryImpl) GetByID(id int) (*entity.Tingkat, error) {
 	var t entity.Tingkat
-	err := r.db.First(&t, id).Error
+	err := r.db.Where("is_active = ?", true).First(&t, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -36,9 +36,9 @@ func (r *tingkatRepositoryImpl) Update(t *entity.Tingkat) error {
 	return r.db.Save(t).Error
 }
 
-// Delete by ID
+// Delete by ID (soft delete)
 func (r *tingkatRepositoryImpl) Delete(id int) error {
-	return r.db.Delete(&entity.Tingkat{}, id).Error
+	return r.db.Model(&entity.Tingkat{}).Where("id = ?", id).Update("is_active", false).Error
 }
 
 // List all
@@ -46,7 +46,7 @@ func (r *tingkatRepositoryImpl) List(limit, offset int) ([]entity.Tingkat, int, 
 	var tingkats []entity.Tingkat
 	var total int64
 
-	query := r.db.Model(&entity.Tingkat{})
+	query := r.db.Model(&entity.Tingkat{}).Where("is_active = ?", true)
 
 	// Get total count
 	if err := query.Count(&total).Error; err != nil {

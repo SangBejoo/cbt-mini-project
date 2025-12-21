@@ -150,13 +150,14 @@ func (u *soalUsecaseImpl) UpdateSoal(id, idMateri, idTingkat int, pertanyaan, op
 	return u.repo.GetByID(s.ID)
 }
 
-// DeleteSoal deletes by ID
+// DeleteSoal soft deletes by setting is_active = false
 func (u *soalUsecaseImpl) DeleteSoal(id int) error {
-	_, err := u.repo.GetByID(id)
+	s, err := u.repo.GetByID(id)
 	if err != nil {
 		return err
 	}
-	return u.repo.Delete(id)
+	s.IsActive = false
+	return u.repo.Update(s)
 }
 
 // ListSoal lists with filters and pagination

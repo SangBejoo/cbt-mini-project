@@ -23,6 +23,7 @@ type Soal struct {
 	OpsiD        string       `json:"opsi_d" gorm:"not null"`
 	JawabanBenar JawabanOption `json:"-" gorm:"type:char(1);not null"`
 	Pembahasan   *string      `json:"pembahasan,omitempty" gorm:"type:text"`
+	IsActive     bool         `json:"is_active" gorm:"default:true"`
 	Gambar       []SoalGambar `json:"gambar" gorm:"foreignKey:IDSoal;references:ID;constraint:OnDelete:CASCADE"`
 }
 

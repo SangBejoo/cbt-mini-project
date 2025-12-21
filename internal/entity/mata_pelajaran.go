@@ -2,8 +2,9 @@ package entity
 
 // MataPelajaran represents the mata_pelajaran table
 type MataPelajaran struct {
-	ID   int    `json:"id" gorm:"primaryKey;autoIncrement"`
-	Nama string `json:"nama" gorm:"unique;not null;type:varchar(50)"`
+	ID       int    `json:"id" gorm:"primaryKey;autoIncrement"`
+	Nama     string `json:"nama" gorm:"unique;not null;type:varchar(50)"`
+	IsActive bool   `json:"is_active" gorm:"default:true"`
 }
 
 // Paksa nama tabel jadi 'mata_pelajaran' (bukan mata_pelajarans)

@@ -32,6 +32,7 @@ export default React.memo(function SubjectsTab() {
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('active'); // 'all', 'active', 'inactive'
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const form = useForm({
@@ -56,10 +57,19 @@ export default React.memo(function SubjectsTab() {
   const filteredSubjects = useMemo(() => {
     return subjects
       .filter(subject => subject && subject.nama)
-      .filter((subject) =>
-        subject.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-      );
-  }, [subjects, debouncedSearchQuery]);
+      .filter((subject) => {
+        // Search filter
+        const matchesSearch = subject.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+
+        // Status filter
+        const matchesStatus =
+          statusFilter === 'all' ||
+          (statusFilter === 'active' && (subject.is_active ?? true)) ||
+          (statusFilter === 'inactive' && !(subject.is_active ?? true));
+
+        return matchesSearch && matchesStatus;
+      });
+  }, [subjects, debouncedSearchQuery, statusFilter]);
 
   const { paginatedItems, currentPage, totalPages, nextPage, prevPage } =
     usePagination(filteredSubjects, { itemsPerPage: 10 });
@@ -97,10 +107,19 @@ export default React.memo(function SubjectsTab() {
         onChange={(e) => setSearchQuery(e.target.value)}
         mb={4}
       />
+      <FormControl maxW="200px" mb={4}>
+        <FormLabel fontSize="sm">Filter Status</FormLabel>
+        <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="all">Semua Status</option>
+          <option value="active">Aktif</option>
+          <option value="inactive">Tidak Aktif</option>
+        </Select>
+      </FormControl>
       <Table variant="simple">
         <Thead>
           <Tr>
             <Th>Nama Mata Pelajaran</Th>
+            <Th>Status</Th>
             <Th>Aksi</Th>
           </Tr>
         </Thead>
@@ -108,6 +127,7 @@ export default React.memo(function SubjectsTab() {
           {paginatedItems.map((subject) => (
             <Tr key={subject.id}>
               <Td>{subject.nama}</Td>
+              <Td>{(subject.is_active ?? true) ? '✓ Aktif' : '✗ Tidak Aktif'}</Td>
               <Td>
                 <Button size="sm" mr={2} onClick={() => handleEdit(subject)}>
                   Edit

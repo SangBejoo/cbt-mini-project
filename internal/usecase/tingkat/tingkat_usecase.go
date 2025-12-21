@@ -62,13 +62,18 @@ func (u *tingkatUsecaseImpl) UpdateTingkat(id int, nama string) (*entity.Tingkat
 	return tingkat, nil
 }
 
-// DeleteTingkat deletes a tingkat
+// DeleteTingkat soft deletes by setting is_active = false
 func (u *tingkatUsecaseImpl) DeleteTingkat(id int) error {
 	if id <= 0 {
 		return errors.New("invalid ID")
 	}
 
-	return u.repo.Delete(id)
+	tingkat, err := u.repo.GetByID(id)
+	if err != nil {
+		return err
+	}
+	tingkat.IsActive = false
+	return u.repo.Update(tingkat)
 }
 
 // ListTingkat lists tingkat with pagination

@@ -60,13 +60,14 @@ func (u *mataPelajaranUsecaseImpl) UpdateMataPelajaran(id int, nama string) (*en
 	return mp, nil
 }
 
-// DeleteMataPelajaran deletes by ID
+// DeleteMataPelajaran soft deletes by setting is_active = false
 func (u *mataPelajaranUsecaseImpl) DeleteMataPelajaran(id int) error {
-	_, err := u.repo.GetByID(id)
+	mp, err := u.repo.GetByID(id)
 	if err != nil {
 		return err
 	}
-	return u.repo.Delete(id)
+	mp.IsActive = false
+	return u.repo.Update(mp)
 }
 
 // ListMataPelajaran lists with pagination

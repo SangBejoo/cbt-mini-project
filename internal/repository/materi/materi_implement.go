@@ -24,7 +24,7 @@ func (r *materiRepositoryImpl) Create(materi *entity.Materi) error {
 // Get by ID
 func (r *materiRepositoryImpl) GetByID(id int) (*entity.Materi, error) {
 	var materi entity.Materi
-	err := r.db.Preload("MataPelajaran").Preload("Tingkat").First(&materi, id).Error
+	err := r.db.Where("is_active = ?", true).Preload("MataPelajaran").Preload("Tingkat").First(&materi, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -36,9 +36,9 @@ func (r *materiRepositoryImpl) Update(materi *entity.Materi) error {
 	return r.db.Save(materi).Error
 }
 
-// Delete by ID
+// Delete by ID (soft delete)
 func (r *materiRepositoryImpl) Delete(id int) error {
-	return r.db.Delete(&entity.Materi{}, id).Error
+	return r.db.Model(&entity.Materi{}).Where("id = ?", id).Update("is_active", false).Error
 }
 
 // List with filters
@@ -46,7 +46,7 @@ func (r *materiRepositoryImpl) List(idMataPelajaran, idTingkat *int, limit, offs
 	var materis []entity.Materi
 	var total int64
 
-	query := r.db.Model(&entity.Materi{}).Preload("MataPelajaran").Preload("Tingkat")
+	query := r.db.Model(&entity.Materi{}).Where("is_active = ?", true).Preload("MataPelajaran").Preload("Tingkat")
 
 	if idMataPelajaran != nil {
 		query = query.Where("id_mata_pelajaran = ?", *idMataPelajaran)
@@ -71,6 +71,6 @@ func (r *materiRepositoryImpl) List(idMataPelajaran, idTingkat *int, limit, offs
 // Get by mata pelajaran ID
 func (r *materiRepositoryImpl) GetByMataPelajaranID(idMataPelajaran int) ([]entity.Materi, error) {
 	var materis []entity.Materi
-	err := r.db.Preload("MataPelajaran").Preload("Tingkat").Where("id_mata_pelajaran = ?", idMataPelajaran).Find(&materis).Error
+	err := r.db.Preload("MataPelajaran").Preload("Tingkat").Where("id_mata_pelajaran = ? AND is_active = ?", idMataPelajaran, true).Find(&materis).Error
 	return materis, err
 }

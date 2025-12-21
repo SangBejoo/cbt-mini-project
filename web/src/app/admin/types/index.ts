@@ -4,10 +4,12 @@ export interface BaseEntity {
 
 export interface Level extends BaseEntity {
   nama: string;
+  is_active?: boolean;
 }
 
 export interface Subject extends BaseEntity {
   nama: string;
+  is_active?: boolean;
 }
 
 export interface Topic extends BaseEntity {
