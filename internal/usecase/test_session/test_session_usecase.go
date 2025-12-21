@@ -73,11 +73,6 @@ func (u *testSessionUsecaseImpl) GetTestSession(sessionToken string) (*entity.Te
 		return nil, err
 	}
 
-	// Check if session is still active
-	if session.Status != entity.TestStatusOngoing {
-		return nil, errors.New("session is not active")
-	}
-
 	// Check timeout
 	if time.Now().After(session.BatasWaktu()) {
 		u.repo.CompleteSession(sessionToken, time.Now(), nil, nil, nil)

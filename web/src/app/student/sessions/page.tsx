@@ -40,6 +40,9 @@ interface Topic {
   mataPelajaran: { id: number; nama: string };
   tingkat: { id: number; nama: string };
   nama: string;
+  isActive?: boolean;
+  defaultDurasiMenit?: number;
+  defaultJumlahSoal?: number;
 }
 
 const TOPICS_API = process.env.NEXT_PUBLIC_API_BASE + '/v1/topics';
@@ -115,16 +118,18 @@ export default function SessionsPage() {
 
   // Filter and search logic - memoized to prevent unnecessary recalculations
   const filteredTopics = useMemo(() => {
-    return topics.filter((topic) => {
-      const matchesSearch =
-        debouncedSearchQuery === '' ||
-        topic.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        topic.mataPelajaran.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+    return topics
+      .filter((topic) => topic.isActive !== false) // Only show active topics
+      .filter((topic) => {
+        const matchesSearch =
+          debouncedSearchQuery === '' ||
+          topic.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+          topic.mataPelajaran.nama.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
 
-      const matchesTingkat = selectedTingkat === '' || topic.tingkat.id.toString() === selectedTingkat;
+        const matchesTingkat = selectedTingkat === '' || topic.tingkat.id.toString() === selectedTingkat;
 
-      return matchesSearch && matchesTingkat;
-    });
+        return matchesSearch && matchesTingkat;
+      });
   }, [topics, debouncedSearchQuery, selectedTingkat]);
 
   // Pagination
@@ -148,12 +153,16 @@ export default function SessionsPage() {
 
       setLoading(true);
       try {
+        // Use defaults from materi, or fallback to hardcoded defaults
+        const durasiMenit = selectedTopic.defaultDurasiMenit || 60;
+        const jumlahSoal = selectedTopic.defaultJumlahSoal || 20;
+
         const payload = {
           nama_peserta: user.nama,
           id_tingkat: selectedTopic.tingkat.id,
           id_mata_pelajaran: selectedTopic.mataPelajaran.id,
-          durasi_menit: 60,
-          jumlah_soal: 20,
+          durasi_menit: durasiMenit,
+          jumlah_soal: jumlahSoal,
         };
 
         const response = await axios.post(CREATE_SESSION_API, payload);
@@ -280,6 +289,26 @@ export default function SessionsPage() {
                       <Text fontSize="lg" fontWeight="bold" color="blue.600">
                         {user?.nama}
                       </Text>
+                    </Box>
+                    <Box bg="green.50" p={4} borderRadius="md" w="full">
+                      <VStack spacing={2} align="flex-start">
+                        <Box>
+                          <Text fontSize="sm" fontWeight="bold" color="gray.600">
+                            ⏱️ Waktu Pengerjaan
+                          </Text>
+                          <Text fontSize="lg" fontWeight="bold" color="green.600">
+                            {selectedTopic.defaultDurasiMenit || 60} Menit
+                          </Text>
+                        </Box>
+                        <Box>
+                          <Text fontSize="sm" fontWeight="bold" color="gray.600">
+                            📝 Jumlah Soal
+                          </Text>
+                          <Text fontSize="lg" fontWeight="bold" color="green.600">
+                            {selectedTopic.defaultJumlahSoal || 20} Soal
+                          </Text>
+                        </Box>
+                      </VStack>
                     </Box>
                   </>
                 )}

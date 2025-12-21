@@ -71,7 +71,11 @@ interface TestSessionData {
   current_nomor_urut: number;
   dijawab_count: number;
   is_answered_status: boolean[];
-  batas_waktu: string;
+  batas_waktu?: string;
+  batasWaktu?: string;
+  BatasWaktu?: string;
+  durasi_menit?: number;
+  waktu_mulai?: string;
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1/sessions';
@@ -90,6 +94,9 @@ export default function TestPage() {
   const [mounted, setMounted] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  const [isAutoSubmitting, setIsAutoSubmitting] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -104,10 +111,63 @@ export default function TestPage() {
     fetchAllQuestions();
   }, [token]);
 
+  // Countdown timer effect - simplified
+  useEffect(() => {
+    // Check multiple possible field names for batas_waktu (protobuf JSON naming variations)
+    const batasWaktuValue = sessionData?.batas_waktu || sessionData?.batasWaktu || sessionData?.BatasWaktu;
+    if (!batasWaktuValue) {
+      console.log('No batas_waktu found in sessionData:', sessionData);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const batasWaktu = new Date(batasWaktuValue).getTime();
+      const remaining = Math.max(0, batasWaktu - now);
+
+      setTimeRemaining(remaining);
+
+      if (remaining === 0 && !isAutoSubmitting) {
+        setIsTimeUp(true);
+        setIsAutoSubmitting(true);
+        clearInterval(timer);
+        toast({ title: 'Waktu telah habis! Otomatis menyimpan...', status: 'warning' });
+        setTimeout(() => confirmFinish(true), 1000);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [sessionData?.batas_waktu, sessionData?.batasWaktu, sessionData?.BatasWaktu]);
+
+  // Format remaining time for display
+  const formatTimeRemaining = (ms: number | null) => {
+    if (ms === null || ms === 0) return '00:00:00';
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  };
+
+  // Get timer color based on remaining time
+  const getTimerColor = () => {
+    if (!timeRemaining) return 'red';
+    const totalSeconds = Math.floor(timeRemaining / 1000);
+    if (totalSeconds <= 60) return 'red';
+    if (totalSeconds <= 300) return 'orange'; // 5 minutes
+    return 'green';
+  };
+
   const fetchAllQuestions = async () => {
     try {
       const response = await axios.get(`${API_BASE}/${token}/questions`);
       const data = response.data;
+      console.log('=== DEBUG: Session data received ===');
+      console.log('batas_waktu:', data.batas_waktu || data.batasWaktu || data.BatasWaktu);
+      console.log('waktu_mulai:', data.waktu_mulai || data.waktuMulai || data.WaktuMulai);
+      console.log('durasi_menit:', data.durasi_menit || data.durasiMenit || data.DurasiMenit);
+      console.log('soal count:', data.soal?.length || 0);
+      console.log('Full response:', JSON.stringify(data, null, 2));
       setSessionData(data);
       // Set answers for all questions
       const initialAnswers: Record<number, string> = {};
@@ -118,7 +178,14 @@ export default function TestPage() {
       });
       setAnswers(initialAnswers);
     } catch (error) {
-      console.error('Error fetching questions:', error);
+      console.error('=== ERROR fetching questions ===');
+      if (axios.isAxiosError(error)) {
+        console.error('Response status:', error.response?.status);
+        console.error('Response data:', error.response?.data);
+        console.error('Error message:', error.message);
+      } else {
+        console.error('Full error:', error);
+      }
       toast({ title: 'Error loading questions', status: 'error' });
     } finally {
       setLoading(false);
@@ -127,14 +194,19 @@ export default function TestPage() {
 
   const handleAnswerChange = async (questionId: number, answer: string) => {
     setAnswers({ ...answers, [questionId]: answer });
-    // Submit answer immediately
+    // Submit answer immediately without refetching all
     try {
       await axios.post(`${API_BASE}/${token}/answers`, {
         nomor_urut: questionId,
         jawaban_dipilih: answer,
       });
-      // Refresh data to update answered count
-      fetchAllQuestions();
+      // Update dijawab_count locally
+      if (sessionData) {
+        setSessionData({
+          ...sessionData,
+          dijawab_count: Object.keys({ ...answers, [questionId]: answer }).length,
+        });
+      }
     } catch (error) {
       console.error('Error submitting answer:', error);
       toast({ title: 'Error menyimpan jawaban', status: 'error' });
@@ -154,15 +226,22 @@ export default function TestPage() {
     setShowConfirmModal(false);
   };
 
-  const confirmFinish = async () => {
+  const confirmFinish = async (isAutoSubmit = false) => {
     setSubmitting(true);
     try {
       await axios.post(`${API_BASE}/${token}/complete`);
-      toast({ title: 'Tes selesai!', status: 'success' });
-      router.push(`/student/results/${token}`);
+      if (!isAutoSubmit) {
+        toast({ title: 'Tes selesai!', status: 'success' });
+      }
+      // Small delay before redirect
+      setTimeout(() => {
+        router.push(`/student/results/${token}`);
+      }, 500);
     } catch (error) {
       console.error('Error completing test:', error);
-      toast({ title: 'Error menyelesaikan tes', status: 'error' });
+      if (!isAutoSubmit) {
+        toast({ title: 'Error menyelesaikan tes', status: 'error' });
+      }
     } finally {
       setSubmitting(false);
       onClose();
@@ -227,7 +306,13 @@ export default function TestPage() {
       const newAnswers = { ...answers };
       delete newAnswers[currentQuestion.nomorUrut];
       setAnswers(newAnswers);
-      fetchAllQuestions();
+      // Update dijawab_count locally
+      if (sessionData) {
+        setSessionData({
+          ...sessionData,
+          dijawab_count: Object.keys(newAnswers).length,
+        });
+      }
     } catch (error) {
       console.error('Error clearing answer:', error);
       toast({ title: 'Error membatalkan jawaban', status: 'error' });
@@ -236,6 +321,14 @@ export default function TestPage() {
 
   return (
     <Container maxW="container.xl" py={6}>
+      {/* Timer Display - Simple */}
+      <Box textAlign="center" mb={4} p={4} bg={isTimeUp ? 'red.50' : 'blue.50'} borderRadius="md" borderWidth="2px" borderColor={isTimeUp ? 'red.200' : 'blue.200'}>
+        <Text fontSize="sm" color="gray.600" mb={1}>Sisa Waktu</Text>
+        <Text fontSize="2xl" fontFamily="mono" fontWeight="bold" color={getTimerColor()}>
+          {isTimeUp ? '⏰ WAKTU HABIS!' : formatTimeRemaining(timeRemaining)}
+        </Text>
+      </Box>
+
       <Flex gap={6} direction={{ base: 'column', lg: 'row' }}>
         {/* Main Question Area */}
         <Box flex="1">

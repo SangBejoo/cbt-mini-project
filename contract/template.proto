@@ -285,12 +285,18 @@ message Materi {
     MataPelajaran mata_pelajaran = 2;  // Nested, bukan hanya ID
     Tingkat tingkat = 3;
     string nama = 4;
+    bool is_active = 5;
+    int32 default_durasi_menit = 6;
+    int32 default_jumlah_soal = 7;
 }
 
 message CreateMateriRequest {
     int32 id_mata_pelajaran = 1;
     int32 id_tingkat = 2;
     string nama = 3;
+    bool is_active = 4;
+    int32 default_durasi_menit = 5;
+    int32 default_jumlah_soal = 6;
 }
 
 message GetMateriRequest {
@@ -302,6 +308,9 @@ message UpdateMateriRequest {
     int32 id_mata_pelajaran = 2;
     int32 id_tingkat = 3;
     string nama = 4;
+    bool is_active = 5;
+    int32 default_durasi_menit = 6;
+    int32 default_jumlah_soal = 7;
 }
 
 message DeleteMateriRequest {

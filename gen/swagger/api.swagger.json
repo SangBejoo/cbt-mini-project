@@ -1547,6 +1547,17 @@
         },
         "nama": {
           "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "defaultDurasiMenit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "defaultJumlahSoal": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -1691,6 +1702,17 @@
         },
         "nama": {
           "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "defaultDurasiMenit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "defaultJumlahSoal": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -2076,6 +2098,17 @@
         },
         "nama": {
           "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "defaultDurasiMenit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "defaultJumlahSoal": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },

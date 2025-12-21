@@ -14,6 +14,9 @@ export interface Topic extends BaseEntity {
   mataPelajaran: { id: number; nama: string };
   tingkat: { id: number; nama: string };
   nama: string;
+  isActive?: boolean;
+  defaultDurasiMenit?: number;
+  defaultJumlahSoal?: number;
 }
 
 export interface Question extends BaseEntity {

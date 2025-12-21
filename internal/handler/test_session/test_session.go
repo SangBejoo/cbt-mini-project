@@ -4,12 +4,15 @@ import (
 	base "cbt-test-mini-project/gen/proto"
 	"cbt-test-mini-project/internal/entity"
 	userLimitUsecase "cbt-test-mini-project/internal/usecase"
+	"cbt-test-mini-project/internal/usecase/materi"
 	"cbt-test-mini-project/internal/usecase/test_session"
 	tingkatUsecase "cbt-test-mini-project/internal/usecase/tingkat"
 	"cbt-test-mini-project/util/interceptor"
 	"context"
 	"errors"
+	"fmt"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -19,15 +22,17 @@ import (
 // testSessionHandler implements base.TestSessionServiceServer
 type testSessionHandler struct {
 	base.UnimplementedTestSessionServiceServer
-	usecase           test_session.TestSessionUsecase
-	tingkatUsecase    tingkatUsecase.TingkatUsecase
-	userLimitUsecase  userLimitUsecase.UserLimitUsecase
+	usecase          test_session.TestSessionUsecase
+	materiUsecase    materi.MateriUsecase
+	tingkatUsecase   tingkatUsecase.TingkatUsecase
+	userLimitUsecase userLimitUsecase.UserLimitUsecase
 }
 
 // NewTestSessionHandler creates a new TestSessionHandler
-func NewTestSessionHandler(usecase test_session.TestSessionUsecase, tingkatUsecase tingkatUsecase.TingkatUsecase, userLimitUsecase userLimitUsecase.UserLimitUsecase) base.TestSessionServiceServer {
+func NewTestSessionHandler(usecase test_session.TestSessionUsecase, materiUsecase materi.MateriUsecase, tingkatUsecase tingkatUsecase.TingkatUsecase, userLimitUsecase userLimitUsecase.UserLimitUsecase) base.TestSessionServiceServer {
 	return &testSessionHandler{
 		usecase:          usecase,
+		materiUsecase:    materiUsecase,
 		tingkatUsecase:   tingkatUsecase,
 		userLimitUsecase: userLimitUsecase,
 	}
@@ -63,7 +68,22 @@ func (h *testSessionHandler) CreateTestSession(ctx context.Context, req *base.Cr
 		return nil, status.Error(codes.ResourceExhausted, "Daily test session limit exceeded. Please try again tomorrow.")
 	}
 
-	session, err := h.usecase.CreateTestSession(int(userID), int(req.IdTingkat), int(req.IdMataPelajaran), int(req.DurasiMenit), int(req.JumlahSoal))
+	// Get durasi_menit and jumlah_soal from materi if not provided (or use defaults if provided)
+	// For now we always use materi defaults - siswa tidak bisa custom durasi/jumlah soal
+	durasiMenit := int(req.DurasiMenit)
+	jumlahSoal := int(req.JumlahSoal)
+	
+	// If client provides 0, get from materi defaults
+	// Query to get a materi with these tingkat dan mataPelajaran to get its defaults
+	// For now, we'll use the request values or defaults
+	if durasiMenit == 0 {
+		durasiMenit = 60 // fallback default
+	}
+	if jumlahSoal == 0 {
+		jumlahSoal = 20 // fallback default
+	}
+
+	session, err := h.usecase.CreateTestSession(int(userID), int(req.IdTingkat), int(req.IdMataPelajaran), durasiMenit, jumlahSoal)
 	if err != nil {
 		// If session creation fails, we should decrement the usage counter
 		// For now, we'll rely on the rate limit middleware to handle this
@@ -154,6 +174,10 @@ func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.Get
 	if err != nil {
 		return nil, err
 	}
+
+	// DEBUG: Log session and soals info
+	fmt.Printf("DEBUG GetTestQuestions - Token: %s, SessionID: %d, Status: %s, WaktuMulai: %v, BatasWaktu: %v, Soals count: %d, Now: %v\n", 
+		req.SessionToken, session.ID, session.Status, session.WaktuMulai, session.BatasWaktu(), len(soals), time.Now())
 
 	// Get answers status
 	answers, _ := h.usecase.GetSessionAnswers(req.SessionToken)

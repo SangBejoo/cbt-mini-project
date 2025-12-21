@@ -2,6 +2,7 @@ package materi
 
 import (
 	base "cbt-test-mini-project/gen/proto"
+	"cbt-test-mini-project/internal/entity"
 	"cbt-test-mini-project/internal/usecase/materi"
 	"context"
 )
@@ -17,20 +18,28 @@ func NewMateriHandler(usecase materi.MateriUsecase) base.MateriServiceServer {
 	return &materiHandler{usecase: usecase}
 }
 
+// Helper function to convert entity.Materi to proto.Materi
+func (h *materiHandler) convertToProtoMateri(m *entity.Materi) *base.Materi {
+	return &base.Materi{
+		Id:                    int32(m.ID),
+		MataPelajaran:         &base.MataPelajaran{Id: int32(m.MataPelajaran.ID), Nama: m.MataPelajaran.Nama},
+		Tingkat:               &base.Tingkat{Id: int32(m.Tingkat.ID), Nama: m.Tingkat.Nama},
+		Nama:                  m.Nama,
+		IsActive:              m.IsActive,
+		DefaultDurasiMenit:    int32(m.DefaultDurasiMenit),
+		DefaultJumlahSoal:     int32(m.DefaultJumlahSoal),
+	}
+}
+
 // CreateMateri creates a new materi
 func (h *materiHandler) CreateMateri(ctx context.Context, req *base.CreateMateriRequest) (*base.MateriResponse, error) {
-	m, err := h.usecase.CreateMateri(int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat))
+	m, err := h.usecase.CreateMateri(int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat), req.IsActive, int(req.DefaultDurasiMenit), int(req.DefaultJumlahSoal))
 	if err != nil {
 		return nil, err
 	}
 
 	return &base.MateriResponse{
-		Materi: &base.Materi{
-			Id:            int32(m.ID),
-			MataPelajaran: &base.MataPelajaran{Id: int32(m.MataPelajaran.ID), Nama: m.MataPelajaran.Nama},
-			Tingkat:       &base.Tingkat{Id: int32(m.Tingkat.ID), Nama: m.Tingkat.Nama},
-			Nama:          m.Nama,
-		},
+		Materi: h.convertToProtoMateri(m),
 	}, nil
 }
 
@@ -42,29 +51,19 @@ func (h *materiHandler) GetMateri(ctx context.Context, req *base.GetMateriReques
 	}
 
 	return &base.MateriResponse{
-		Materi: &base.Materi{
-			Id:            int32(m.ID),
-			MataPelajaran: &base.MataPelajaran{Id: int32(m.MataPelajaran.ID), Nama: m.MataPelajaran.Nama},
-			Tingkat:       &base.Tingkat{Id: int32(m.Tingkat.ID), Nama: m.Tingkat.Nama},
-			Nama:          m.Nama,
-		},
+		Materi: h.convertToProtoMateri(m),
 	}, nil
 }
 
 // UpdateMateri updates materi
 func (h *materiHandler) UpdateMateri(ctx context.Context, req *base.UpdateMateriRequest) (*base.MateriResponse, error) {
-	m, err := h.usecase.UpdateMateri(int(req.Id), int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat))
+	m, err := h.usecase.UpdateMateri(int(req.Id), int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat), req.IsActive, int(req.DefaultDurasiMenit), int(req.DefaultJumlahSoal))
 	if err != nil {
 		return nil, err
 	}
 
 	return &base.MateriResponse{
-		Materi: &base.Materi{
-			Id:            int32(m.ID),
-			MataPelajaran: &base.MataPelajaran{Id: int32(m.MataPelajaran.ID), Nama: m.MataPelajaran.Nama},
-			Tingkat:       &base.Tingkat{Id: int32(m.Tingkat.ID), Nama: m.Tingkat.Nama},
-			Nama:          m.Nama,
-		},
+		Materi: h.convertToProtoMateri(m),
 	}, nil
 }
 
@@ -107,12 +106,7 @@ func (h *materiHandler) ListMateri(ctx context.Context, req *base.ListMateriRequ
 
 	var materiList []*base.Materi
 	for _, m := range materis {
-		materiList = append(materiList, &base.Materi{
-			Id:            int32(m.ID),
-			MataPelajaran: &base.MataPelajaran{Id: int32(m.MataPelajaran.ID), Nama: m.MataPelajaran.Nama},
-			Tingkat:       &base.Tingkat{Id: int32(m.Tingkat.ID), Nama: m.Tingkat.Nama},
-			Nama:          m.Nama,
-		})
+		materiList = append(materiList, h.convertToProtoMateri(&m))
 	}
 
 	return &base.ListMateriResponse{

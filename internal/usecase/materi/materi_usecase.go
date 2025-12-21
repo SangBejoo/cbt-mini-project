@@ -17,18 +17,27 @@ func NewMateriUsecase(repo materi.MateriRepository) MateriUsecase {
 }
 
 // CreateMateri creates a new materi
-func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, idTingkat int) (*entity.Materi, error) {
+func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, idTingkat int, isActive bool, defaultDurasiMenit, defaultJumlahSoal int) (*entity.Materi, error) {
 	if nama == "" {
 		return nil, errors.New("nama cannot be empty")
 	}
 	if idTingkat < 1 {
 		return nil, errors.New("idTingkat must be positive")
 	}
+	if defaultDurasiMenit < 1 {
+		defaultDurasiMenit = 60
+	}
+	if defaultJumlahSoal < 1 {
+		defaultJumlahSoal = 20
+	}
 
 	m := &entity.Materi{
-		IDMataPelajaran: idMataPelajaran,
-		IDTingkat:       idTingkat,
-		Nama:            nama,
+		IDMataPelajaran:    idMataPelajaran,
+		IDTingkat:          idTingkat,
+		Nama:               nama,
+		IsActive:           isActive,
+		DefaultDurasiMenit: defaultDurasiMenit,
+		DefaultJumlahSoal:  defaultJumlahSoal,
 	}
 	err := u.repo.Create(m)
 	if err != nil {
@@ -43,12 +52,18 @@ func (u *materiUsecaseImpl) GetMateri(id int) (*entity.Materi, error) {
 }
 
 // UpdateMateri updates existing
-func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, idTingkat int) (*entity.Materi, error) {
+func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, idTingkat int, isActive bool, defaultDurasiMenit, defaultJumlahSoal int) (*entity.Materi, error) {
 	if nama == "" {
 		return nil, errors.New("nama cannot be empty")
 	}
 	if idTingkat < 1 {
 		return nil, errors.New("idTingkat must be positive")
+	}
+	if defaultDurasiMenit < 1 {
+		defaultDurasiMenit = 60
+	}
+	if defaultJumlahSoal < 1 {
+		defaultJumlahSoal = 20
 	}
 
 	m, err := u.repo.GetByID(id)
@@ -59,6 +74,9 @@ func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, i
 	m.IDMataPelajaran = idMataPelajaran
 	m.IDTingkat = idTingkat
 	m.Nama = nama
+	m.IsActive = isActive
+	m.DefaultDurasiMenit = defaultDurasiMenit
+	m.DefaultJumlahSoal = defaultJumlahSoal
 	err = u.repo.Update(m)
 	if err != nil {
 		return nil, err

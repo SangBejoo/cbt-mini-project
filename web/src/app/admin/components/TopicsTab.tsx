@@ -39,12 +39,22 @@ export default React.memo(function TopicsTab() {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const form = useForm({
-    initialValues: { idMataPelajaran: '', idTingkat: '', nama: '' },
+    initialValues: { 
+      idMataPelajaran: '', 
+      idTingkat: '', 
+      nama: '',
+      isActive: true,
+      defaultDurasiMenit: 60,
+      defaultJumlahSoal: 20,
+    },
     onSubmit: async (values) => {
       const data = {
         id_mata_pelajaran: parseInt(values.idMataPelajaran),
         id_tingkat: parseInt(values.idTingkat),
         nama: values.nama,
+        is_active: values.isActive,
+        default_durasi_menit: parseInt(values.defaultDurasiMenit),
+        default_jumlah_soal: parseInt(values.defaultJumlahSoal),
       } as any;
       if (editingTopic) {
         await update(editingTopic.id, data);
@@ -87,6 +97,9 @@ export default React.memo(function TopicsTab() {
       form.setFieldValue('idMataPelajaran', topic.mataPelajaran.id.toString());
       form.setFieldValue('idTingkat', topic.tingkat.id.toString());
       form.setFieldValue('nama', topic.nama);
+      form.setFieldValue('isActive', topic.isActive ?? true);
+      form.setFieldValue('defaultDurasiMenit', (topic.defaultDurasiMenit ?? 60).toString());
+      form.setFieldValue('defaultJumlahSoal', (topic.defaultJumlahSoal ?? 20).toString());
       onOpen();
     },
     [form, onOpen]
@@ -116,6 +129,9 @@ export default React.memo(function TopicsTab() {
             <Th>Mata Pelajaran</Th>
             <Th>Tingkat</Th>
             <Th>Nama Materi</Th>
+            <Th>Status</Th>
+            <Th>Durasi (menit)</Th>
+            <Th>Jumlah Soal</Th>
             <Th>Aksi</Th>
           </Tr>
         </Thead>
@@ -125,6 +141,9 @@ export default React.memo(function TopicsTab() {
               <Td>{topic.mataPelajaran.nama}</Td>
               <Td>{topic.tingkat.nama}</Td>
               <Td>{topic.nama}</Td>
+              <Td>{topic.isActive ? '✓ Aktif' : '✗ Tidak Aktif'}</Td>
+              <Td>{topic.defaultDurasiMenit ?? 60}</Td>
+              <Td>{topic.defaultJumlahSoal ?? 20}</Td>
               <Td>
                 <Button size="sm" mr={2} onClick={() => handleEdit(topic)}>
                   Edit
@@ -193,6 +212,39 @@ export default React.memo(function TopicsTab() {
                   value={form.values.nama}
                   onChange={form.handleChange}
                   placeholder="Masukkan nama materi"
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Status</FormLabel>
+                <Select
+                  name="isActive"
+                  value={form.values.isActive ? 'true' : 'false'}
+                  onChange={(e) => form.setFieldValue('isActive', e.target.value === 'true')}
+                >
+                  <option value="true">✓ Aktif (Tampilkan ke Siswa)</option>
+                  <option value="false">✗ Tidak Aktif (Sembunyikan dari Siswa)</option>
+                </Select>
+              </FormControl>
+              <FormControl>
+                <FormLabel>Durasi Pengerjaan (menit)</FormLabel>
+                <Input
+                  name="defaultDurasiMenit"
+                  type="number"
+                  value={form.values.defaultDurasiMenit}
+                  onChange={form.handleChange}
+                  placeholder="60"
+                  min="1"
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Jumlah Soal</FormLabel>
+                <Input
+                  name="defaultJumlahSoal"
+                  type="number"
+                  value={form.values.defaultJumlahSoal}
+                  onChange={form.handleChange}
+                  placeholder="20"
+                  min="1"
                 />
               </FormControl>
             </VStack>
