@@ -389,199 +389,617 @@ Authorization: Bearer <jwt_token>
 
 Berikut adalah sequence diagrams terpisah untuk berbagai flow interaksi siswa dalam sistem CBT:
 
-### 1. Login Flow
+
+# CBT System - Sequence Diagrams
+
+Dokumentasi lengkap sequence diagram untuk semua fitur CBT System.
+
+----------
+
+## 1. AUTENTIKASI
+
+### 1.1 Login Flow
 
 ```mermaid
 sequenceDiagram
-    participant Student
-    participant Backend
-    participant Database
+    participant Student as Student (Browser)
+    participant API as API Server
+    participant DB as Database
+    
+    Student->>API: POST /v1/auth/login
+    Note right of Student: Body: {email, password}
+    
+    API->>DB: Query user by email
+    DB-->>API: User data + password hash
+    
+    API->>API: Verify password hash
+    
+    alt Password Valid
+        API->>API: Generate JWT Token
+        API->>API: Generate Refresh Token
+        API-->>Student: 200 OK
+        Note left of API: {token, refreshToken,<br/>user, expiresAt}
+        Student->>Student: Store tokens in localStorage
+    else Password Invalid
+        API-->>Student: 401 Unauthorized
+        Note left of API: {error: "Invalid credentials"}
+    end
 
-    Student->>Backend: POST /v1/auth/login (email, password)
-    Backend->>Database: Validate user credentials
-    Database-->>Backend: User data & role
-    Backend-->>Student: JWT token & user info
 ```
 
-### 2. View Available Test Sessions Flow
+----------
+
+### 1.2 Refresh Token Flow
 
 ```mermaid
 sequenceDiagram
-    participant Student
-    participant Backend
-    participant Database
+    participant Student as Student (Browser)
+    participant API as API Server
+    participant DB as Database
+    
+    Note over Student: JWT Token expired
+    
+    Student->>API: POST /v1/auth/refresh
+    Note right of Student: Body: {refreshToken}
+    
+    API->>DB: Validate refresh token
+    DB-->>API: Token valid
+    
+    alt Token Valid
+        API->>API: Generate new JWT Token
+        API->>API: Generate new Refresh Token
+        API-->>Student: 200 OK
+        Note left of API: {token, refreshToken,<br/>expiresAt}
+        Student->>Student: Update tokens in localStorage
+    else Token Invalid/Expired
+        API-->>Student: 401 Unauthorized
+        Note left of API: {error: "Invalid refresh token"}
+        Student->>Student: Redirect to login page
+    end
 
-    Student->>Backend: GET /v1/test-sessions (Authorization: Bearer <token>)
-    Backend->>Database: Fetch available test sessions
-    Database-->>Backend: List of test sessions
-    Backend-->>Student: Test sessions list
 ```
 
-### 3. Take Test Session Flow (Get Questions, Submit, Result & Discussion)
+----------
+
+### 1.3 Get Profile Flow
 
 ```mermaid
 sequenceDiagram
-    participant Student
-    participant Backend
-    participant Database
+    participant Student as Student (Browser)
+    participant API as API Server
+    participant DB as Database
+    
+    Student->>API: GET /v1/auth/profile
+    Note right of Student: Header: Authorization: Bearer {token}
+    
+    API->>API: Verify JWT Token
+    API->>API: Extract user ID from token
+    
+    API->>DB: Query user by ID
+    DB-->>API: User data
+    
+    API-->>Student: 200 OK
+    Note left of API: {user: {id, email, nama,<br/>role, isActive, ...}}
 
-    %% Get Session Details
-    Student->>Backend: GET /v1/test-sessions/{id} (Authorization: Bearer <token>)
-    Backend->>Database: Fetch session details
-    Database-->>Backend: Session details
-    Backend-->>Student: Session details
-
-    %% Get Questions for Session
-    Student->>Backend: GET /v1/test-sessions/{id}/questions (Authorization: Bearer <token>)
-    Backend->>Database: Fetch questions for session
-    Database-->>Backend: Questions data (including discussion if available)
-    Backend-->>Student: Questions list
-
-    %% Submit Answers
-    Student->>Backend: POST /v1/test-sessions/{id}/submit (answers) (Authorization: Bearer <token>)
-    Backend->>Database: Save student answers & calculate score
-    Database-->>Backend: Save confirmation & score
-    Backend-->>Student: Submission result, score & discussion
 ```
 
-### 4. View Test History Flow
+----------
+
+## 2. TEST SESSION MANAGEMENT
+
+### 2.1 Create Test Session (Start Exam)
 
 ```mermaid
 sequenceDiagram
-    participant Student
-    participant Backend
-    participant Database
+    participant Student as Student (Browser)
+    participant API as API Server
+    participant DB as Database
+    
+    Note over Student: Student clicks "Mulai Ujian"
+    
+    Student->>API: POST /v1/sessions
+    Note right of Student: Header: Authorization: Bearer {token}<br/>Body: {idTingkat, idMataPelajaran,<br/>durasiMenit, jumlahSoal}
+    
+    API->>API: Verify JWT Token
+    API->>API: Extract user ID
+    
+    API->>DB: Generate unique session token
+    API->>DB: Fetch random questions<br/>based on criteria
+    DB-->>API: List of questions
+    
+    API->>DB: Create test session record
+    API->>DB: Create session_soal records<br/>(link questions to session)
+    DB-->>API: Session created
+    
+    API->>API: Calculate batasWaktu<br/>(waktuMulai + durasiMenit)
+    
+    API-->>Student: 200 OK
+    Note left of API: {testSession: {id, sessionToken,<br/>user, tingkat, mataPelajaran,<br/>waktuMulai, batasWaktu,<br/>durasiMenit, totalSoal,<br/>status: "ONGOING"}}
+    
+    Student->>Student: Store sessionToken
+    Student->>Student: Navigate to exam page
 
-    Student->>Backend: GET /v1/history (Authorization: Bearer <token>)
-    Backend->>Database: Fetch test history
-    Database-->>Backend: History data (scores, results, discussions)
-    Backend-->>Student: Test history
 ```
 
----
+----------
 
-## 📊 Sequence Diagrams - Feature Flows
-
-Berikut adalah sequence diagrams terpisah untuk fitur-fitur utama dalam sistem CBT:
-
-### Auth Feature
-
-#### 1. Login Flow
+### 2.2 Get Test Session Details
 
 ```mermaid
 sequenceDiagram
-    participant Student
-    participant Backend
-    participant Database
+    participant Student as Student (Browser)
+    participant API as API Server
+    participant DB as Database
+    
+    Note over Student: Resume exam or check status
+    
+    Student->>API: GET /v1/sessions/{sessionToken}
+    Note right of Student: Header: Authorization: Bearer {token}
+    
+    API->>API: Verify JWT Token
+    
+    API->>DB: Query session by sessionToken
+    DB-->>API: Session data with relations<br/>(user, tingkat, mataPelajaran)
+    
+    alt Session exists & belongs to user
+        API-->>Student: 200 OK
+        Note left of API: {testSession: {id, sessionToken,<br/>waktuMulai, batasWaktu,<br/>nilaiAkhir, jumlahBenar,<br/>totalSoal, status}}
+        
+        Student->>Student: Check status & batasWaktu
+        
+        alt Time expired
+            Student->>API: POST /v1/sessions/{sessionToken}/complete
+            Note right of Student: Auto-complete on timeout
+        else Still ongoing
+            Student->>Student: Continue exam
+        end
+    else Session not found or unauthorized
+        API-->>Student: 404 Not Found / 403 Forbidden
+    end
 
-    Student->>Backend: POST /v1/auth/login (email, password)
-    Backend->>Database: Validate user credentials
-    Database-->>Backend: User data & role
-    Backend-->>Student: JWT token & user info
 ```
 
-#### 2. Logout Flow
+----------
+
+### 2.3 Get Questions
 
 ```mermaid
 sequenceDiagram
-    participant Student
-    participant Backend
+    participant Student as Student (Browser)
+    participant API as API Server
+    participant DB as Database
+    
+    Note over Student: Load exam page
+    
+    Student->>API: GET /v1/sessions/{sessionToken}/questions
+    Note right of Student: Header: Authorization: Bearer {token}<br/>Query: ?nomorUrut=1 (optional)
+    
+    API->>API: Verify JWT Token
+    
+    API->>DB: Query session by sessionToken
+    DB-->>API: Session data
+    
+    API->>DB: Query all session_soal<br/>with soal details (no answer key!)
+    DB-->>API: List of questions with:<br/>- id, nomorUrut, pertanyaan<br/>- opsiA, opsiB, opsiC, opsiD<br/>- jawabanDipilih, isAnswered<br/>- materi, gambar
+    
+    API->>DB: Count answered questions
+    DB-->>API: dijawabCount
+    
+    API->>API: Build isAnsweredStatus array<br/>[true, false, true, false, ...]
+    
+    API-->>Student: 200 OK
+    Note left of API: {sessionToken, soal: [...],<br/>totalSoal, currentNomorUrut,<br/>dijawabCount, isAnsweredStatus,<br/>batasWaktu}
+    
+    Student->>Student: Render questions
+    Student->>Student: Show navigation sidebar<br/>with answered status
+    Student->>Student: Start countdown timer<br/>using batasWaktu
 
-    Student->>Backend: POST /v1/auth/logout (Authorization: Bearer <token>)
-    Backend-->>Student: Logout confirmation (invalidate token)
 ```
 
-*(Note: Logout mungkin dilakukan client-side dengan menghapus token, tapi diasumsikan ada endpoint untuk invalidate.)*
+----------
 
-### Test Session Feature
-
-#### 1. List Available Test Sessions Flow
+### 2.4 Submit Answer (Realtime)
 
 ```mermaid
 sequenceDiagram
-    participant Student
-    participant Backend
-    participant Database
+    participant Student as Student (Browser)
+    participant API as API Server
+    participant DB as Database
+    
+    Note over Student: Student clicks option A/B/C/D
+    
+    Student->>API: POST /v1/sessions/{sessionToken}/answers
+    Note right of Student: Header: Authorization: Bearer {token}<br/>Body: {nomorUrut: 1,<br/>jawabanDipilih: "B"}
+    
+    API->>API: Verify JWT Token
+    
+    API->>DB: Query session by sessionToken
+    DB-->>API: Session data
+    
+    alt Session status = ONGOING
+        API->>DB: Query session_soal by<br/>sessionToken & nomorUrut
+        DB-->>API: Question data with correct answer
+        
+        API->>API: Compare jawabanDipilih<br/>with jawabanBenar
+        
+        API->>DB: Update session_soal:<br/>- Set jawabanDipilih<br/>- Set isCorrect<br/>- Set dijawabPada timestamp
+        DB-->>API: Updated
+        
+        API-->>Student: 200 OK
+        Note left of API: {sessionToken, nomorUrut,<br/>jawabanDipilih, isCorrect,<br/>dijawabPada}
+        
+        Student->>Student: Update UI:<br/>- Mark question as answered<br/>- Show feedback (optional)<br/>- Update sidebar status
+        
+        Student->>Student: Auto-save indicator:<br/>"Jawaban tersimpan ✓"
+    else Session already COMPLETED
+        API-->>Student: 400 Bad Request
+        Note left of API: {error: "Session already completed"}
+    end
 
-    Student->>Backend: GET /v1/test-sessions (Authorization: Bearer <token>)
-    Backend->>Database: Fetch available test sessions
-    Database-->>Backend: List of test sessions
-    Backend-->>Student: Test sessions list
 ```
 
-#### 2. Get Test Session Details Flow
+----------
+
+### 2.5 Clear Answer
 
 ```mermaid
 sequenceDiagram
-    participant Student
-    participant Backend
-    participant Database
+    participant Student as Student (Browser)
+    participant API as API Server
+    participant DB as Database
+    
+    Note over Student: Student clicks "Batalkan Jawaban"
+    
+    Student->>API: POST /v1/sessions/{sessionToken}/clear-answer
+    Note right of Student: Header: Authorization: Bearer {token}<br/>Body: {nomorUrut: 1}
+    
+    API->>API: Verify JWT Token
+    
+    API->>DB: Query session by sessionToken
+    DB-->>API: Session data
+    
+    alt Session status = ONGOING
+        API->>DB: Update session_soal:<br/>- Set jawabanDipilih = "JAWABAN_INVALID"<br/>- Set isCorrect = false<br/>- Set dijawabPada = NULL
+        DB-->>API: Updated
+        
+        API-->>Student: 200 OK
+        Note left of API: {sessionToken, nomorUrut,<br/>dibatalkanPada}
+        
+        Student->>Student: Update UI:<br/>- Clear selected option<br/>- Mark as unanswered<br/>- Update sidebar (gray)
+    else Session already COMPLETED
+        API-->>Student: 400 Bad Request
+        Note left of API: {error: "Cannot clear answer"}
+    end
 
-    Student->>Backend: GET /v1/test-sessions/{session_token} (Authorization: Bearer <token>)
-    Backend->>Database: Fetch session details
-    Database-->>Backend: Session details
-    Backend-->>Student: Session details
 ```
 
-#### 3. Get Questions for Session Flow
+----------
+
+### 2.6 Complete Session (Finish Exam)
 
 ```mermaid
 sequenceDiagram
-    participant Student
-    participant Backend
-    participant Database
+    participant Student as Student (Browser)
+    participant API as API Server
+    participant DB as Database
+    
+    Note over Student: Student clicks "Selesai" or timeout
+    
+    Student->>API: POST /v1/sessions/{sessionToken}/complete
+    Note right of Student: Header: Authorization: Bearer {token}<br/>Body: {}
+    
+    API->>API: Verify JWT Token
+    
+    API->>DB: Query session by sessionToken
+    DB-->>API: Session data
+    
+    alt Session status = ONGOING
+        API->>DB: Count correct answers<br/>from session_soal
+        DB-->>API: jumlahBenar count
+        
+        API->>API: Calculate nilaiAkhir:<br/>(jumlahBenar / totalSoal) * 100
+        
+        API->>DB: Update test_session:<br/>- Set status = "COMPLETED"<br/>- Set waktuSelesai = NOW()<br/>- Set nilaiAkhir<br/>- Set jumlahBenar
+        DB-->>API: Updated
+        
+        API-->>Student: 200 OK
+        Note left of API: {testSession: {id, sessionToken,<br/>waktuSelesai, nilaiAkhir,<br/>jumlahBenar, totalSoal,<br/>status: "COMPLETED"}}
+        
+        Student->>Student: Show completion message
+        Student->>Student: Navigate to result page
+    else Session already COMPLETED
+        API-->>Student: 400 Bad Request
+        Note left of API: {error: "Session already completed"}
+    end
 
-    Student->>Backend: GET /v1/test-sessions/{session_token}/questions (Authorization: Bearer <token>)
-    Backend->>Database: Fetch questions for session
-    Database-->>Backend: Questions data
-    Backend-->>Student: Questions list
 ```
 
-#### 4. Submit Answers Flow
+----------
+
+### 2.7 Get Test Result
 
 ```mermaid
 sequenceDiagram
-    participant Student
-    participant Backend
-    participant Database
+    participant Student as Student (Browser)
+    participant API as API Server
+    participant DB as Database
+    
+    Note over Student: After completing exam
+    
+    Student->>API: GET /v1/sessions/{sessionToken}/result
+    Note right of Student: Header: Authorization: Bearer {token}
+    
+    API->>API: Verify JWT Token
+    
+    API->>DB: Query session by sessionToken
+    DB-->>API: Session data
+    
+    alt Session status = COMPLETED
+        API->>DB: Query all session_soal<br/>WITH answer key & pembahasan
+        DB-->>API: Complete question data:<br/>- pertanyaan, opsi A/B/C/D<br/>- jawabanDipilih (student's answer)<br/>- jawabanBenar (correct answer)<br/>- isCorrect, pembahasan<br/>- gambar
+        
+        API-->>Student: 200 OK
+        Note left of API: {sessionInfo: {...},<br/>detailJawaban: [{nomorUrut,<br/>pertanyaan, opsi, jawabanDipilih,<br/>jawabanBenar, isCorrect,<br/>pembahasan, gambar}, ...]}
+        
+        Student->>Student: Display result page:<br/>- Score summary<br/>- Question review<br/>- Correct/wrong indicators<br/>- Pembahasan for each question
+    else Session not COMPLETED yet
+        API-->>Student: 400 Bad Request
+        Note left of API: {error: "Session not completed yet"}
+    end
 
-    Student->>Backend: POST /v1/test-sessions/{session_token}/answers (answers) (Authorization: Bearer <token>)
-    Backend->>Database: Save student answers & calculate score
-    Database-->>Backend: Save confirmation & score
-    Backend-->>Student: Submission result
 ```
 
-### History Feature
+----------
 
-#### 1. Get Test History Flow
+## 3. HISTORY
+
+### 3.1 Get Student History
 
 ```mermaid
 sequenceDiagram
-    participant Student
-    participant Backend
-    participant Database
+    participant Student as Student (Browser)
+    participant API as API Server
+    participant DB as Database
+    
+    Note over Student: Navigate to History page
+    
+    Student->>API: GET /v1/history/student
+    Note right of Student: Header: Authorization: Bearer {token}<br/>Query: ?tingkatan=1&idMataPelajaran=2<br/>&page=1&pageSize=10
+    
+    API->>API: Verify JWT Token
+    API->>API: Extract user ID from token
+    
+    API->>DB: Query test_sessions<br/>WHERE user_id = {userId}<br/>AND status = "COMPLETED"<br/>WITH filters & pagination
+    DB-->>API: List of completed sessions
+    
+    API->>DB: Calculate aggregate stats:<br/>- AVG(nilaiAkhir)<br/>- COUNT(COMPLETED sessions)
+    DB-->>API: rataRataNilai, totalTestCompleted
+    
+    API-->>Student: 200 OK
+    Note left of API: {history: [{id, sessionToken,<br/>mataPelajaran, tingkat,<br/>waktuMulai, waktuSelesai,<br/>durasiPengerjaanDetik,<br/>nilaiAkhir, jumlahBenar,<br/>totalSoal, status}, ...],<br/>pagination: {...},<br/>rataRataNilai,<br/>totalTestCompleted, user}
+    
+    Student->>Student: Display history table:<br/>- Date, Subject, Grade<br/>- Score, Time spent<br/>- View Detail button
 
-    Student->>Backend: GET /v1/history (Authorization: Bearer <token>)
-    Backend->>Database: Fetch test history
-    Database-->>Backend: History data
-    Backend-->>Student: Test history
 ```
 
-#### 2. Get Test Answer Key Flow
+----------
+
+### 3.2 Get History Detail
 
 ```mermaid
 sequenceDiagram
-    participant Student
-    participant Backend
-    participant Database
+    participant Student as Student (Browser)
+    participant API as API Server
+    participant DB as Database
+    
+    Note over Student: Click "Lihat Detail" on history item
+    
+    Student->>API: GET /v1/history/{sessionToken}/detail
+    Note right of Student: Header: Authorization: Bearer {token}
+    
+    API->>API: Verify JWT Token
+    
+    API->>DB: Query session by sessionToken
+    DB-->>API: Session info
+    
+    API->>DB: Query all session_soal<br/>with complete data
+    DB-->>API: Detail jawaban (all questions)
+    
+    API->>DB: Calculate breakdown per materi:<br/>GROUP BY materi.id<br/>- COUNT(soal)<br/>- SUM(isCorrect)<br/>- Calculate percentage
+    DB-->>API: Breakdown data
+    
+    API-->>Student: 200 OK
+    Note left of API: {sessionInfo: {...},<br/>detailJawaban: [...],<br/>breakdownMateri: [{<br/>  namaMateri,<br/>  jumlahSoal,<br/>  jumlahBenar,<br/>  persentaseBenar<br/>}, ...]}
+    
+    Student->>Student: Display detailed analysis:<br/>- Overall score<br/>- Time breakdown<br/>- Per-question review<br/>- Per-materi performance chart<br/>- Identify weak topics
 
-    Student->>Backend: GET /v1/history/{session_token}/detail (Authorization: Bearer <token>)
-    Backend->>Database: Fetch history detail with answer key
-    Database-->>Backend: Detail data including correct answers
-    Backend-->>Student: History detail with answer key
 ```
 
----
+----------
+
+## 4. COMPLETE USER JOURNEY
+
+```mermaid
+sequenceDiagram
+    participant Student as Student (Browser)
+    participant API as API Server
+    participant DB as Database
+    
+    rect rgb(200, 220, 240)
+    Note over Student,DB: PHASE 1: Authentication
+    Student->>API: POST /v1/auth/login
+    API-->>Student: {token, refreshToken}
+    end
+    
+    rect rgb(220, 240, 200)
+    Note over Student,DB: PHASE 2: Start Exam
+    Student->>API: POST /v1/sessions
+    API->>DB: Create session + assign questions
+    API-->>Student: {sessionToken, batasWaktu}
+    end
+    
+    rect rgb(240, 220, 200)
+    Note over Student,DB: PHASE 3: Take Exam (Loop)
+    Student->>API: GET /v1/sessions/{token}/questions
+    API-->>Student: {soal: [...], isAnsweredStatus}
+    
+    loop For each question
+        Student->>API: POST /v1/sessions/{token}/answers
+        API->>DB: Save answer + check correctness
+        API-->>Student: {isCorrect}
+        
+        opt Student changes mind
+            Student->>API: POST /v1/sessions/{token}/clear-answer
+            API-->>Student: Answer cleared
+            Student->>API: POST /v1/sessions/{token}/answers
+            API-->>Student: New answer saved
+        end
+    end
+    end
+    
+    rect rgb(240, 200, 220)
+    Note over Student,DB: PHASE 4: Complete Exam
+    Student->>API: POST /v1/sessions/{token}/complete
+    API->>DB: Calculate final score
+    API-->>Student: {nilaiAkhir, jumlahBenar}
+    end
+    
+    rect rgb(220, 200, 240)
+    Note over Student,DB: PHASE 5: Review Result
+    Student->>API: GET /v1/sessions/{token}/result
+    API-->>Student: {detailJawaban with pembahasan}
+    end
+    
+    rect rgb(200, 240, 220)
+    Note over Student,DB: PHASE 6: View History (Anytime)
+    Student->>API: GET /v1/history/student
+    API-->>Student: {history: [...], stats}
+    
+    Student->>API: GET /v1/history/{token}/detail
+    API-->>Student: {breakdown per materi}
+    end
+
+```
+
+----------
+
+## 5. ERROR HANDLING FLOWS
+
+### 5.1 Token Expired During Exam
+
+```mermaid
+sequenceDiagram
+    participant Student as Student (Browser)
+    participant API as API Server
+    
+    Note over Student: Taking exam, token expires
+    
+    Student->>API: POST /v1/sessions/{token}/answers
+    API-->>Student: 401 Unauthorized
+    
+    Student->>Student: Detect 401 error
+    Student->>API: POST /v1/auth/refresh<br/>{refreshToken}
+    
+    alt Refresh successful
+        API-->>Student: {new token}
+        Student->>Student: Update token in localStorage
+        Student->>API: Retry: POST /v1/sessions/{token}/answers
+        API-->>Student: 200 OK (answer saved)
+    else Refresh failed
+        API-->>Student: 401 Unauthorized
+        Student->>Student: Redirect to login
+        Note over Student: User can resume exam<br/>after login using same sessionToken
+    end
+
+```
+
+----------
+
+### 5.2 Timeout During Exam
+
+```mermaid
+sequenceDiagram
+    participant Student as Student (Browser)
+    participant Timer as Countdown Timer
+    participant API as API Server
+    participant DB as Database
+    
+    Note over Student: Exam in progress
+    
+    loop Every second
+        Timer->>Timer: Countdown batasWaktu
+    end
+    
+    Timer->>Timer: Time reaches 00:00
+    
+    Timer->>Student: Trigger timeout event
+    
+    Student->>API: POST /v1/sessions/{token}/complete
+    Note right of Student: Auto-complete on timeout
+    
+    API->>DB: Set status = "TIMEOUT"
+    API->>DB: Calculate score with<br/>answered questions only
+    
+    API-->>Student: 200 OK
+    Note left of API: {status: "TIMEOUT",<br/>nilaiAkhir, jumlahBenar}
+    
+    Student->>Student: Show timeout message
+    Student->>Student: Navigate to result page
+
+```
+
+----------
+
+### 5.3 Network Error During Submit
+
+```mermaid
+sequenceDiagram
+    participant Student as Student (Browser)
+    participant API as API Server
+    
+    Note over Student: Submitting answer
+    
+    Student->>API: POST /v1/sessions/{token}/answers
+    Note right of Student: Network error / timeout
+    
+    API--XStudent: Connection failed
+    
+    Student->>Student: Show error notification
+    Student->>Student: Store answer locally<br/>(localStorage backup)
+    
+    Note over Student: Wait for network to recover
+    
+    Student->>Student: Detect network back online
+    
+    Student->>API: Retry: POST /v1/sessions/{token}/answers
+    API-->>Student: 200 OK
+    
+    Student->>Student: Clear local backup
+    Student->>Student: Show success notification
+
+```
+
+----------
+
+## CATATAN IMPLEMENTASI
+
+### Best Practices:
+
+1.  **Auto-save answers**: Submit immediately saat user pilih opsi
+2.  **Offline backup**: Simpan jawaban di localStorage sebagai backup
+3.  **Token refresh**: Handle 401 errors dengan auto-refresh
+4.  **Timer synchronization**: Sync timer dengan server time (batasWaktu)
+5.  **Optimistic UI**: Update UI dulu, rollback jika error
+6.  **Error recovery**: Retry mechanism untuk network errors
+7.  **Session persistence**: Gunakan sessionToken untuk resume exam
+
+### Security Considerations:
+
+1.  Semua endpoints kecuali login butuh JWT token
+2.  Verify sessionToken belongs to authenticated user
+3.  Prevent answer submission after timeout/complete
+4.  Hide correct answers until session completed
+5.  Rate limiting untuk prevent spam submissions
 
 ## 🧰 Pengembangan & Struktur
 
