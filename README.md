@@ -4,14 +4,42 @@ Sistem Computer-Based Test (CBT) sederhana untuk institusi pendidikan — fokus 
 
 ---
 
-## 🔧 Teknologi (Tech Stack)
+## 📖 Deskripsi Singkat Aplikasi CBT
 
-- **Backend**: Go 1.21+, gRPC, REST Gateway
-- **Database**: MySQL (GORM)
-- **Frontend**: Next.js + TypeScript
-- **Auth**: JWT
-- **Monitoring**: Elastic APM (Elasticsearch, Kibana)
-- **Deploy**: Docker & Docker Compose
+Aplikasi CBT (Computer-Based Test) ini dirancang untuk memfasilitasi ujian berbasis komputer di lingkungan pendidikan. Sistem ini memungkinkan administrator untuk mengelola soal, sesi tes, dan materi pelajaran, sementara siswa dapat mengikuti tes secara online dengan autentikasi yang aman. Fitur utama meliputi pembuatan soal pilihan ganda, pengumpulan jawaban otomatis, penilaian dasar, dan pelaporan hasil tes.
+
+---
+
+## 🔧 Tech Stack yang Digunakan
+
+### Frontend
+- **Next.js 14+**: Framework React untuk web aplikasi dengan SSR/SSG
+- **TypeScript**: Untuk type safety dan pengembangan yang lebih robust
+- **Chakra UI**: Komponen UI yang accessible dan responsif
+- **React Hooks**: State management dan lifecycle management
+
+### Backend
+- **Go 1.21+**: Bahasa pemrograman utama untuk performa tinggi
+- **gRPC**: Protokol komunikasi antar layanan dengan protobuf
+- **REST Gateway**: Gateway untuk API RESTful dari gRPC
+- **JWT**: Autentikasi berbasis token
+- **GORM**: ORM untuk interaksi dengan database MySQL
+
+### Database
+- **MySQL**: Sistem manajemen basis data relasional
+- **GORM**: Object-Relational Mapping untuk Go
+
+---
+
+## 🏗️ Arsitektur Sistem
+
+Sistem ini menggunakan arsitektur **monolith** dengan komponen utama:
+- **Backend Monolith**: Aplikasi Go tunggal yang menangani semua logika bisnis, API gRPC, dan REST gateway
+- **Database Layer**: MySQL sebagai penyimpanan data utama
+- **Frontend Layer**: Aplikasi Next.js yang berkomunikasi dengan backend via REST API
+- **Deployment**: Containerized dengan Docker dan Docker Compose untuk kemudahan deployment
+
+Arsitektur ini dipilih untuk kesederhanaan dalam pengembangan dan deployment pada skala kecil hingga menengah.
 
 ---
 
