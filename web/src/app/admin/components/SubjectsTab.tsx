@@ -21,6 +21,7 @@ import {
   FormControl,
   FormLabel,
   Input,
+  Select,
   useDisclosure,
   Text,
 } from '@chakra-ui/react';

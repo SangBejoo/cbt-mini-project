@@ -31,8 +31,10 @@ import {
   StatLabel,
   StatNumber,
   StatGroup,
+  Spinner,
 } from '@chakra-ui/react';
 import axios from 'axios';
+import { useAuth } from '../../../auth-context';
 
 interface Question {
   id: number;
@@ -86,6 +88,7 @@ export default function TestPage() {
   const router = useRouter();
   const toast = useToast();
   const hasFetchedRef = useRef(false);
+  const { isLoading: isAuthLoading } = useAuth();
 
   const [sessionData, setSessionData] = useState<TestSessionData | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -136,11 +139,11 @@ export default function TestPage() {
       return;
     }
     // Only fetch once to prevent double calls
-    if (!hasFetchedRef.current) {
+    if (!hasFetchedRef.current && !isAuthLoading) {
       hasFetchedRef.current = true;
       fetchAllQuestions();
     }
-  }, [token]);
+  }, [token, isAuthLoading]);
 
   // Countdown timer effect - simplified
   useEffect(() => {
@@ -349,7 +352,7 @@ export default function TestPage() {
     );
   }
 
-  if (loading) {
+  if (loading || isAuthLoading) {
     return (
       <Container maxW="container.md" py={10}>
         <Text>Loading question...</Text>

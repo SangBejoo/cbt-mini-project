@@ -23,8 +23,10 @@ import {
   AccordionButton,
   AccordionPanel,
   AccordionIcon,
+  Spinner,
 } from '@chakra-ui/react';
 import axios from 'axios';
+import { useAuth } from '../../auth-context';
 
 interface HistoryItem {
   id: number;
@@ -53,6 +55,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1/history/student';
 export default function HistoryPage() {
   const toast = useToast();
   const router = useRouter();
+  const { isLoading: isAuthLoading } = useAuth();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchPeserta, setSearchPeserta] = useState<string>('');
@@ -60,8 +63,10 @@ export default function HistoryPage() {
   const [selectedLevel, setSelectedLevel] = useState<string>('Semua');
 
   useEffect(() => {
-    fetchHistory();
-  }, []);
+    if (!isAuthLoading) {
+      fetchHistory();
+    }
+  }, [isAuthLoading]);
 
   const fetchHistory = async () => {
     try {
@@ -160,7 +165,7 @@ export default function HistoryPage() {
     return `${secs}s`;
   };
 
-  if (loading) {
+  if (loading || isAuthLoading) {
     return (
       <Container maxW="container.xl" py={10}>
         <Text>Memuat riwayat...</Text>

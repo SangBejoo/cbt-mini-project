@@ -20,165 +20,50 @@ http:
       post: /v1/auth/refresh
       body: "*"
 
-    - selector: base.AuthService.GetProfile
-      get: /v1/auth/profile
-
-    - selector: base.AuthService.ListUsers
-      get: /v1/auth/users
-
-    - selector: base.AuthService.GetUser
-      get: /v1/auth/users/{id}
-
-    - selector: base.AuthService.CreateUser
-      post: /v1/auth/users
-      body: "*"
-
-    - selector: base.AuthService.UpdateUser
-      put: /v1/auth/users/{id}
-      body: "*"
-
-    - selector: base.AuthService.DeleteUser
-      delete: /v1/auth/users/{id}
-
-    # ==================================================
-    # MATA PELAJARAN SERVICE (Master Data)
-    # ==================================================
-    - selector: base.MataPelajaranService.ListMataPelajaran
-      get: /v1/subjects
-
-    - selector: base.MataPelajaranService.GetMataPelajaran
-      get: /v1/subjects/{id}
-
-    - selector: base.MataPelajaranService.CreateMataPelajaran
-      post: /v1/subjects
-      body: "*"
-
-    - selector: base.MataPelajaranService.UpdateMataPelajaran
-      put: /v1/subjects/{id}
-      body: "*"
-
-    - selector: base.MataPelajaranService.DeleteMataPelajaran
-      delete: /v1/subjects/{id}
-
-    # ==================================================
-    # MATERI SERVICE
-    # ==================================================
-    - selector: base.MateriService.ListMateri
-      get: /v1/topics
-
-    - selector: base.MateriService.GetMateri
-      get: /v1/topics/{id}
-
-    - selector: base.MateriService.CreateMateri
-      post: /v1/topics
-      body: "*"
-
-    - selector: base.MateriService.UpdateMateri
-      put: /v1/topics/{id}
-      body: "*"
-
-    - selector: base.MateriService.DeleteMateri
-      delete: /v1/topics/{id}
-
-    # ==================================================
-    # TINGKAT SERVICE
-    # ==================================================
-    - selector: base.TingkatService.ListTingkat
-      get: /v1/levels
-
-    - selector: base.TingkatService.GetTingkat
-      get: /v1/levels/{id}
-
-    - selector: base.TingkatService.CreateTingkat
-      post: /v1/levels
-      body: "*"
-
-    - selector: base.TingkatService.UpdateTingkat
-      put: /v1/levels/{id}
-      body: "*"
-
-    - selector: base.TingkatService.DeleteTingkat
-      delete: /v1/levels/{id}
-
-    # ==================================================
-    # SOAL SERVICE (Bank Soal)
-    # ==================================================
-    - selector: base.SoalService.ListSoal
-      get: /v1/questions
-
-    - selector: base.SoalService.GetSoal
-      get: /v1/questions/{id}
-
-    - selector: base.SoalService.CreateSoal
-      post: /v1/questions
-      body: "*"
-
-    - selector: base.SoalService.UpdateSoal
-      put: /v1/questions/{id}
-      body: "*"
-
-    - selector: base.SoalService.DeleteSoal
-      delete: /v1/questions/{id}
-
-    - selector: base.SoalService.UploadImageToSoal
-      post: /v1/questions/{id_soal}/images
-      body: "*"
-
-    - selector: base.SoalService.DeleteImageFromSoal
-      delete: /v1/questions/images/{id_gambar}
-
-    - selector: base.SoalService.UpdateImageInSoal
-      put: /v1/questions/images/{id_gambar}
-      body: "*"
-
     # ==================================================
     # TEST SESSION SERVICE (Student Flow - The Core)
     # ==================================================
 
     # 1. Start Exam (Create Session)
     - selector: base.TestSessionService.CreateTestSession
-      post: /v1/sessions
+      post: /v1/test-sessions
       body: "*"
 
     # 2. Get Session Info (Resume)
     - selector: base.TestSessionService.GetTestSession
-      get: /v1/sessions/{session_token}
+      get: /v1/test-sessions/{session_token}
 
     # 3. Get Questions (Fetch Soal) -> Critical - Single Question at a Time
-    # nomor_urut is a query param: /v1/sessions/{token}/questions?nomor_urut=1
+    # nomor_urut is a query param: /v1/test-sessions/{token}/questions?nomor_urut=1
     - selector: base.TestSessionService.GetTestQuestions
-      get: /v1/sessions/{session_token}/questions
+      get: /v1/test-sessions/{session_token}/questions
 
     # 4. Submit Answer (Realtime)
     # Payload JSON body hanya perlu: { "nomor_urut": 1, "jawaban_dipilih": 1 }
     # session_token diambil dari URL
     - selector: base.TestSessionService.SubmitAnswer
-      post: /v1/sessions/{session_token}/answers
+      post: /v1/test-sessions/{session_token}/answers
       body: "*"
 
     # 4.5. Clear Answer (Batalkan Jawaban)
     - selector: base.TestSessionService.ClearAnswer
-      post: /v1/sessions/{session_token}/clear-answer
+      post: /v1/test-sessions/{session_token}/clear-answer
       body: "*"
 
     # 5. Finish Exam
     - selector: base.TestSessionService.CompleteSession
-      post: /v1/sessions/{session_token}/complete
+      post: /v1/test-sessions/{session_token}/complete
       body: "*"
 
     # 6. Review Result
     - selector: base.TestSessionService.GetTestResult
-      get: /v1/sessions/{session_token}/result
-
-    # 7. Admin List Sessions
-    - selector: base.TestSessionService.ListTestSessions
-      get: /v1/admin/sessions
+      get: /v1/test-sessions/{session_token}/result
 
     # ==================================================
     # HISTORY SERVICE
     # ==================================================
     - selector: base.HistoryService.GetStudentHistory
-      get: /v1/history/student
+      get: /v1/history
 
     - selector: base.HistoryService.GetHistoryDetail
       get: /v1/history/{session_token}/detail

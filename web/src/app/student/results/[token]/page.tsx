@@ -34,8 +34,10 @@ import {
   FormControl,
   FormLabel,
   Input,
+  Spinner,
 } from '@chakra-ui/react';
 import axios from 'axios';
+import { useAuth } from '../../../auth-context';
 
 interface TestResultResponse {
   sessionInfo: {
@@ -95,6 +97,7 @@ export default function ResultsPage() {
   const token = params.token as string;
   const router = useRouter();
   const toast = useToast();
+  const { isLoading: isAuthLoading } = useAuth();
 
   const [result, setResult] = useState<TestResultResponse | null>(null);
   const [materi, setMateri] = useState<{id: number; nama: string} | null>(null);
@@ -114,8 +117,10 @@ export default function ResultsPage() {
   const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
-    fetchResult();
-  }, [token]);
+    if (!isAuthLoading) {
+      fetchResult();
+    }
+  }, [token, isAuthLoading]);
 
   const fetchResult = async () => {
     try {
@@ -332,7 +337,7 @@ export default function ResultsPage() {
     }
   };
 
-  if (loading) {
+  if (loading || isAuthLoading) {
     return (
       <Container maxW="container.lg" py={10}>
         <VStack spacing={6}>

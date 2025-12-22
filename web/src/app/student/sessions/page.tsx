@@ -68,7 +68,7 @@ export default function SessionsPage() {
   const router = useRouter();
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
 
   useEffect(() => {
     setMounted(true);
@@ -84,10 +84,10 @@ export default function SessionsPage() {
   }, [searchQuery]);
 
   useEffect(() => {
-    if (mounted) {
+    if (mounted && !isAuthLoading) {
       fetchTopics();
     }
-  }, [mounted]);
+  }, [mounted, isAuthLoading]);
 
   const fetchTopics = async () => {
     try {

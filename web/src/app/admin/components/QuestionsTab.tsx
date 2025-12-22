@@ -75,9 +75,192 @@ const MateriSelect = memo(({ value, onChange, topics }: {
   );
 });
 
+const QuestionFormModal = memo(({
+  isOpen,
+  onClose,
+  question,
+  defaultMateri,
+  topics,
+  onSubmit,
+  onDeleteImage
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  question: any;
+  defaultMateri: Topic | null;
+  topics: Topic[];
+  onSubmit: (data: any, files: FileList | null) => Promise<void>;
+  onDeleteImage: (imageId: number) => Promise<void>;
+}) => {
+  const [formValues, setFormValues] = useState({
+    pertanyaan: '',
+    opsiA: '',
+    opsiB: '',
+    opsiC: '',
+    opsiD: '',
+    jawabanBenar: 'A',
+    pembahasan: '',
+    materi: null as Topic | null,
+  });
+  const [localPertanyaan, setLocalPertanyaan] = useState('');
+  const [localPembahasan, setLocalPembahasan] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const toast = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormValues({
+        pertanyaan: question?.pertanyaan || '',
+        opsiA: question?.opsiA || '',
+        opsiB: question?.opsiB || '',
+        opsiC: question?.opsiC || '',
+        opsiD: question?.opsiD || '',
+        jawabanBenar: question?.jawabanBenar || 'A',
+        pembahasan: question?.pembahasan || '',
+        materi: question?.materi || defaultMateri || null,
+      });
+      setLocalPertanyaan(question?.pertanyaan || '');
+      setLocalPembahasan(question?.pembahasan || '');
+      setSelectedFiles(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }, [isOpen, question, defaultMateri]);
+
+  const deferredPertanyaan = useDeferredValue(localPertanyaan);
+  const deferredPembahasan = useDeferredValue(localPembahasan);
+
+  useEffect(() => {
+    setFormValues(prev => ({ ...prev, pertanyaan: deferredPertanyaan }));
+  }, [deferredPertanyaan]);
+
+  useEffect(() => {
+    setFormValues(prev => ({ ...prev, pembahasan: deferredPembahasan }));
+  }, [deferredPembahasan]);
+
+  const updateFormField = useCallback((field: string, value: any) => {
+    setFormValues(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleSubmit = async () => {
+    if (!formValues.pertanyaan || !formValues.opsiA || !formValues.opsiB || !formValues.opsiC || !formValues.opsiD || !formValues.materi?.id) {
+      toast({ title: 'Harap isi semua field', status: 'warning' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formValues, selectedFiles);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteImage = async (imageId: number) => {
+    try {
+      await onDeleteImage(imageId);
+    } catch (error) {
+      // Error handled in parent
+    }
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="2xl"
+      scrollBehavior="inside"
+      motionPreset="none"
+      trapFocus={false}
+      blockScrollOnMount={false}
+    >
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>{question?.id ? 'Edit Soal' : 'Tambah Soal Baru'}</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody py={6}>
+          <VStack spacing={4} align="stretch">
+            <FormControl isRequired>
+              <FormLabel>Materi</FormLabel>
+              <MateriSelect value={formValues.materi?.id} onChange={(topic) => updateFormField('materi', topic)} topics={topics} />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel>Pertanyaan</FormLabel>
+              <Textarea
+                value={localPertanyaan}
+                onChange={(e) => setLocalPertanyaan(e.target.value)}
+                placeholder="Masukkan pertanyaan"
+                rows={3}
+              />
+            </FormControl>
+
+            <FormControl isRequired><FormLabel>Opsi A</FormLabel><Input value={formValues.opsiA} onChange={(e) => updateFormField('opsiA', e.target.value)} /></FormControl>
+            <FormControl isRequired><FormLabel>Opsi B</FormLabel><Input value={formValues.opsiB} onChange={(e) => updateFormField('opsiB', e.target.value)} /></FormControl>
+            <FormControl isRequired><FormLabel>Opsi C</FormLabel><Input value={formValues.opsiC} onChange={(e) => updateFormField('opsiC', e.target.value)} /></FormControl>
+            <FormControl isRequired><FormLabel>Opsi D</FormLabel><Input value={formValues.opsiD} onChange={(e) => updateFormField('opsiD', e.target.value)} /></FormControl>
+
+            <FormControl isRequired>
+              <FormLabel>Jawaban Benar</FormLabel>
+              <Select value={formValues.jawabanBenar} onChange={(e) => updateFormField('jawabanBenar', e.target.value)}>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+              </Select>
+            </FormControl>
+
+            <FormControl>
+              <FormLabel>Pembahasan (Opsional)</FormLabel>
+              <Textarea
+                value={localPembahasan}
+                onChange={(e) => setLocalPembahasan(e.target.value)}
+                placeholder="Masukkan pembahasan"
+                rows={3}
+              />
+            </FormControl>
+
+            <FormControl>
+              <FormLabel>Upload Gambar (Opsional)</FormLabel>
+              <Input ref={fileInputRef} type="file" multiple accept="image/*" onChange={(e) => setSelectedFiles(e.target.files)} />
+              <Text fontSize="xs" color="gray.500" mt={2}>Pilih satu atau lebih file gambar</Text>
+            </FormControl>
+
+            {question?.gambar && question.gambar.length > 0 && (
+              <>
+                <Heading size="sm">Gambar yang Ada</Heading>
+                <VStack spacing={2} align="stretch">
+                  {question.gambar.map((img: any) => (
+                    <HStack key={img.id} p={3} border="1px solid" borderColor="gray.200" borderRadius="md" justify="space-between">
+                      <VStack align="start" spacing={1}>
+                        <Text fontWeight="bold" fontSize="sm">{img.namaFile}</Text>
+                        <Text fontSize="xs" color="gray.600">{(img.fileSize / 1024).toFixed(2)} KB</Text>
+                      </VStack>
+                      <IconButton aria-label="Delete image" icon={<DeleteIcon />} size="sm" colorScheme="red" onClick={() => handleDeleteImage(img.id)} />
+                    </HStack>
+                  ))}
+                </VStack>
+              </>
+            )}
+          </VStack>
+        </ModalBody>
+
+        <ModalFooter gap={2}>
+          <Button variant="outline" onClick={onClose} isDisabled={isSubmitting}>
+            Batal
+          </Button>
+          <Button colorScheme="blue" onClick={handleSubmit} isLoading={isSubmitting}>
+            Simpan Soal
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+});
+
 export default function QuestionsTab() {
   const toast = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     questions,
@@ -93,9 +276,8 @@ export default function QuestionsTab() {
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
 
   const [currentQuestion, setCurrentQuestion] = useState<any>({});
-  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentDeleteId, setCurrentDeleteId] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // State untuk single open level
   const [openLevelName, setOpenLevelName] = useState<string | null>(null);
@@ -199,82 +381,19 @@ export default function QuestionsTab() {
     return topics.find(t => t.nama === addContext.topic && t.mataPelajaran.nama === addContext.subject && t.tingkat.nama === addContext.level) || null;
   }, [topics, addContext]);
 
-  // Form state
-  const [formValues, setFormValues] = useState({
-    pertanyaan: '',
-    opsiA: '',
-    opsiB: '',
-    opsiC: '',
-    opsiD: '',
-    jawabanBenar: 'A',
-    pembahasan: '',
-    materi: null as Topic | null,
-  });
-
-  const [localPertanyaan, setLocalPertanyaan] = useState('');
-  const [localPembahasan, setLocalPembahasan] = useState('');
-
-  const deferredPertanyaan = useDeferredValue(localPertanyaan);
-  const deferredPembahasan = useDeferredValue(localPembahasan);
-
-  useEffect(() => {
-    setFormValues(prev => ({ ...prev, pertanyaan: deferredPertanyaan }));
-  }, [deferredPertanyaan]);
-
-  useEffect(() => {
-    setFormValues(prev => ({ ...prev, pembahasan: deferredPembahasan }));
-  }, [deferredPembahasan]);
-
-  useEffect(() => {
-    if (preselectedMateri) {
-      setFormValues(prev => ({ ...prev, materi: preselectedMateri }));
-    }
-  }, [preselectedMateri]);
-
   useEffect(() => {
     setCurrentLevelPage(1);
   }, [searchTerm, selectedLevelFilter]);
-
-  const updateFormField = useCallback((field: string, value: any) => {
-    setFormValues(prev => ({ ...prev, [field]: value }));
-  }, []);
 
   // Handler buka modal tambah soal dengan context
   const handleOpenNewQuestion = useCallback((context?: { level?: string; subject?: string; topic?: string }) => {
     setAddContext(context || null);
     setCurrentQuestion({});
-    const materi = preselectedMateri;
-    setFormValues({
-      pertanyaan: '',
-      opsiA: '',
-      opsiB: '',
-      opsiC: '',
-      opsiD: '',
-      jawabanBenar: 'A',
-      pembahasan: '',
-      materi: materi,
-    });
-    setLocalPertanyaan('');
-    setLocalPembahasan('');
-    setSelectedFiles(null);
     onQuestionOpen();
-  }, [preselectedMateri, onQuestionOpen]);
+  }, [onQuestionOpen]);
 
   const handleEditQuestion = useCallback((question: any) => {
     setCurrentQuestion(question);
-    setFormValues({
-      pertanyaan: question.pertanyaan || '',
-      opsiA: question.opsiA || '',
-      opsiB: question.opsiB || '',
-      opsiC: question.opsiC || '',
-      opsiD: question.opsiD || '',
-      jawabanBenar: question.jawabanBenar || 'A',
-      pembahasan: question.pembahasan || '',
-      materi: question.materi || { id: 0, nama: '' },
-    });
-    setLocalPertanyaan(question.pertanyaan || '');
-    setLocalPembahasan(question.pembahasan || '');
-    setSelectedFiles(null);
     onQuestionOpen();
   }, [onQuestionOpen]);
 
@@ -285,6 +404,7 @@ export default function QuestionsTab() {
 
   const handleConfirmDelete = useCallback(async () => {
     if (currentDeleteId !== null) {
+      setIsSubmitting(true);
       try {
         await deleteQuestion(currentDeleteId);
         toast({ title: 'Soal dihapus', status: 'success' });
@@ -292,17 +412,13 @@ export default function QuestionsTab() {
         setCurrentDeleteId(null);
       } catch (error) {
         toast({ title: 'Error menghapus soal', status: 'error' });
+      } finally {
+        setIsSubmitting(false);
       }
     }
   }, [currentDeleteId, deleteQuestion, toast, onDeleteClose]);
 
-  const handleSubmitQuestion = useCallback(async () => {
-    if (!formValues.pertanyaan || !formValues.opsiA || !formValues.opsiB || !formValues.opsiC || !formValues.opsiD || !formValues.materi?.id) {
-      toast({ title: 'Harap isi semua field', status: 'warning' });
-      return;
-    }
-
-    setIsSubmitting(true);
+  const handleSubmitQuestion = useCallback(async (formValues: any, selectedFiles: FileList | null) => {
     try {
       let imageBytes: string[] = [];
       if (selectedFiles && selectedFiles.length > 0) {
@@ -350,40 +466,27 @@ export default function QuestionsTab() {
       // Auto open the level accordion to show the question
       setOpenLevelName(result.materi?.tingkat?.nama);
 
-      onQuestionClose();
+      // onQuestionClose is handled by the modal component upon success
     } catch (error) {
       toast({ title: 'Error menyimpan soal', status: 'error' });
-    } finally {
-      setIsSubmitting(false);
+      throw error; // Re-throw so modal knows it failed
     }
-  }, [formValues, selectedFiles, currentQuestion, createQuestion, updateQuestion, toast, onQuestionClose]);
-
-  const handleUploadImages = useCallback(async () => {
-    if (!selectedFiles || selectedFiles.length === 0 || !currentQuestion?.id) {
-      toast({ title: 'Tidak ada file untuk diupload', status: 'warning' });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await uploadImage(currentQuestion.id, selectedFiles);
-      toast({ title: 'Gambar berhasil diupload', status: 'success' });
-      onQuestionClose();
-    } catch (error) {
-      toast({ title: 'Error mengupload gambar', status: 'error' });
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [selectedFiles, currentQuestion, uploadImage, toast, onQuestionClose]);
+  }, [currentQuestion, createQuestion, updateQuestion, toast, onQuestionClose]);
 
   const handleDeleteImage = useCallback(async (imageId: number) => {
     try {
       if (currentQuestion?.id) {
         await deleteImage(currentQuestion.id, imageId);
         toast({ title: 'Gambar dihapus', status: 'success' });
+        // Update current question to reflect image deletion
+        setCurrentQuestion((prev: any) => ({
+          ...prev,
+          gambar: prev.gambar.filter((img: any) => img.id !== imageId)
+        }));
       }
     } catch (error) {
       toast({ title: 'Error menghapus gambar', status: 'error' });
+      throw error;
     }
   }, [currentQuestion?.id, deleteImage, toast]);
 
@@ -628,96 +731,15 @@ export default function QuestionsTab() {
         )}
 
         {/* Modal dengan semua optimasi anti-lag */}
-        <Modal
+        <QuestionFormModal
           isOpen={isQuestionOpen}
           onClose={onQuestionClose}
-          size="2xl"
-          scrollBehavior="inside"
-          motionPreset="none"
-          trapFocus={false}
-          blockScrollOnMount={false}
-        >
-          <ModalOverlay />
-          <ModalContent>
-            <ModalHeader>{currentQuestion?.id ? 'Edit Soal' : 'Tambah Soal Baru'}</ModalHeader>
-            <ModalCloseButton />
-            <ModalBody py={6}>
-              <VStack spacing={4} align="stretch">
-                <FormControl isRequired>
-                  <FormLabel>Materi</FormLabel>
-                  <MateriSelect value={formValues.materi?.id} onChange={(topic) => updateFormField('materi', topic)} topics={filteredTopics} />
-                </FormControl>
-
-                <FormControl isRequired>
-                  <FormLabel>Pertanyaan</FormLabel>
-                  <Textarea
-                    value={localPertanyaan}
-                    onChange={(e) => setLocalPertanyaan(e.target.value)}
-                    placeholder="Masukkan pertanyaan"
-                    rows={3}
-                  />
-                </FormControl>
-
-                <FormControl isRequired><FormLabel>Opsi A</FormLabel><Input value={formValues.opsiA} onChange={(e) => updateFormField('opsiA', e.target.value)} /></FormControl>
-                <FormControl isRequired><FormLabel>Opsi B</FormLabel><Input value={formValues.opsiB} onChange={(e) => updateFormField('opsiB', e.target.value)} /></FormControl>
-                <FormControl isRequired><FormLabel>Opsi C</FormLabel><Input value={formValues.opsiC} onChange={(e) => updateFormField('opsiC', e.target.value)} /></FormControl>
-                <FormControl isRequired><FormLabel>Opsi D</FormLabel><Input value={formValues.opsiD} onChange={(e) => updateFormField('opsiD', e.target.value)} /></FormControl>
-
-                <FormControl isRequired>
-                  <FormLabel>Jawaban Benar</FormLabel>
-                  <Select value={formValues.jawabanBenar} onChange={(e) => updateFormField('jawabanBenar', e.target.value)}>
-                    <option value="A">A</option>
-                    <option value="B">B</option>
-                    <option value="C">C</option>
-                    <option value="D">D</option>
-                  </Select>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>Pembahasan (Opsional)</FormLabel>
-                  <Textarea
-                    value={localPembahasan}
-                    onChange={(e) => setLocalPembahasan(e.target.value)}
-                    placeholder="Masukkan pembahasan"
-                    rows={3}
-                  />
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>Upload Gambar (Opsional)</FormLabel>
-                  <Input ref={fileInputRef} type="file" multiple accept="image/*" onChange={(e) => setSelectedFiles(e.target.files)} />
-                  <Text fontSize="xs" color="gray.500" mt={2}>Pilih satu atau lebih file gambar</Text>
-                </FormControl>
-
-                {currentQuestion?.gambar && currentQuestion.gambar.length > 0 && (
-                  <>
-                    <Heading size="sm">Gambar yang Ada</Heading>
-                    <VStack spacing={2} align="stretch">
-                      {currentQuestion.gambar.map((img: any) => (
-                        <HStack key={img.id} p={3} border="1px solid" borderColor="gray.200" borderRadius="md" justify="space-between">
-                          <VStack align="start" spacing={1}>
-                            <Text fontWeight="bold" fontSize="sm">{img.namaFile}</Text>
-                            <Text fontSize="xs" color="gray.600">{(img.fileSize / 1024).toFixed(2)} KB</Text>
-                          </VStack>
-                          <IconButton aria-label="Delete image" icon={<DeleteIcon />} size="sm" colorScheme="red" onClick={() => handleDeleteImage(img.id)} />
-                        </HStack>
-                      ))}
-                    </VStack>
-                  </>
-                )}
-              </VStack>
-            </ModalBody>
-
-            <ModalFooter gap={2}>
-              <Button variant="outline" onClick={onQuestionClose} isDisabled={isSubmitting}>
-                Batal
-              </Button>
-              <Button colorScheme="blue" onClick={handleSubmitQuestion} isLoading={isSubmitting}>
-                Simpan Soal
-              </Button>
-            </ModalFooter>
-          </ModalContent>
-        </Modal>
+          question={currentQuestion}
+          defaultMateri={preselectedMateri}
+          topics={filteredTopics}
+          onSubmit={handleSubmitQuestion}
+          onDeleteImage={handleDeleteImage}
+        />
 
         {/* Delete Confirmation */}
         <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} size="sm">

@@ -57,6 +57,7 @@ CREATE TABLE `test_session` (
     `nama_peserta` varchar(100) NOT NULL,
     `id_tingkat` int NOT NULL,
     `id_mata_pelajaran` int NOT NULL,
+    `user_id` int NULL COMMENT 'ID of the user who started the session (NULL for anonymous)',
     `waktu_mulai` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `waktu_selesai` timestamp NULL,
     `durasi_menit` int NOT NULL,
@@ -137,9 +138,6 @@ ALTER TABLE `test_session_soal` ADD FOREIGN KEY (`id_soal`) REFERENCES `soal` (`
 -- Jawaban Siswa
 ALTER TABLE `jawaban_siswa` ADD FOREIGN KEY (`id_test_session_soal`) REFERENCES `test_session_soal` (`id`) ON DELETE CASCADE;
 
--- Add image_path column to soal table (for optional images)
-ALTER TABLE `soal` ADD COLUMN `image_path` varchar(255) NULL COMMENT 'Path gambar opsional (filesystem)';
-
 -- =============================================
 -- USER AUTHENTICATION TABLES (Added for Login System)
 -- =============================================
@@ -157,7 +155,6 @@ CREATE TABLE `users` (
 ) COMMENT='User accounts for login system with roles';
 
 -- Add user_id to test_session to link sessions to logged-in users
-ALTER TABLE `test_session` ADD COLUMN `user_id` int NULL COMMENT 'ID of the user who started the session (NULL for anonymous)';
 ALTER TABLE `test_session` ADD FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 -- =============================================
