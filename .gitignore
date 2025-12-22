@@ -4,3 +4,6 @@ web/node_modules
 
 .env
 logs
+.github
+.idea
+.vscode
