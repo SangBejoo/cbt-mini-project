@@ -24,7 +24,7 @@ func (r *mataPelajaranRepositoryImpl) Create(mp *entity.MataPelajaran) error {
 // Get by ID
 func (r *mataPelajaranRepositoryImpl) GetByID(id int) (*entity.MataPelajaran, error) {
 	var mp entity.MataPelajaran
-	err := r.db.Where("is_active = ?", true).First(&mp, id).Error
+	err := r.db.First(&mp, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (r *mataPelajaranRepositoryImpl) List(limit, offset int) ([]entity.MataPela
 	var mps []entity.MataPelajaran
 	var total int64
 
-	query := r.db.Model(&entity.MataPelajaran{}).Where("is_active = ?", true)
+	query := r.db.Model(&entity.MataPelajaran{})
 
 	// Count total
 	if err := query.Count(&total).Error; err != nil {

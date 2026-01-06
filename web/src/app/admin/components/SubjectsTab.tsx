@@ -36,7 +36,7 @@ export default React.memo(function SubjectsTab() {
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('active'); // 'all', 'active', 'inactive'
+  const [statusFilter, setStatusFilter] = useState<string>('all'); // 'all', 'active', 'inactive'
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const form = useForm({

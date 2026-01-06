@@ -24,7 +24,7 @@ func (r *materiRepositoryImpl) Create(materi *entity.Materi) error {
 // Get by ID
 func (r *materiRepositoryImpl) GetByID(id int) (*entity.Materi, error) {
 	var materi entity.Materi
-	err := r.db.Where("is_active = ?", true).Preload("MataPelajaran").Preload("Tingkat").First(&materi, id).Error
+	err := r.db.Preload("MataPelajaran").Preload("Tingkat").First(&materi, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +50,7 @@ func (r *materiRepositoryImpl) List(idMataPelajaran, idTingkat *int, limit, offs
 	query := r.db.Model(&entity.Materi{}).
 		Select("materi.*, mata_pelajaran.nama as mata_pelajaran_nama, tingkat.nama as tingkat_nama").
 		Joins("LEFT JOIN mata_pelajaran ON materi.id_mata_pelajaran = mata_pelajaran.id").
-		Joins("LEFT JOIN tingkat ON materi.id_tingkat = tingkat.id").
-		Where("materi.is_active = ? AND mata_pelajaran.is_active = ? AND tingkat.is_active = ?", true, true, true)
+		Joins("LEFT JOIN tingkat ON materi.id_tingkat = tingkat.id")
 
 	if idMataPelajaran != nil {
 		query = query.Where("materi.id_mata_pelajaran = ?", *idMataPelajaran)
@@ -63,8 +62,7 @@ func (r *materiRepositoryImpl) List(idMataPelajaran, idTingkat *int, limit, offs
 	// Count total with optimized query
 	countQuery := r.db.Model(&entity.Materi{}).
 		Joins("LEFT JOIN mata_pelajaran ON materi.id_mata_pelajaran = mata_pelajaran.id").
-		Joins("LEFT JOIN tingkat ON materi.id_tingkat = tingkat.id").
-		Where("materi.is_active = ? AND mata_pelajaran.is_active = ? AND tingkat.is_active = ?", true, true, true)
+		Joins("LEFT JOIN tingkat ON materi.id_tingkat = tingkat.id")
 	
 	if idMataPelajaran != nil {
 		countQuery = countQuery.Where("materi.id_mata_pelajaran = ?", *idMataPelajaran)
@@ -78,8 +76,8 @@ func (r *materiRepositoryImpl) List(idMataPelajaran, idTingkat *int, limit, offs
 	}
 
 	// Get paginated results with preloads
-	if err := query.Preload("MataPelajaran", "is_active = ?", true).
-		Preload("Tingkat", "is_active = ?", true).
+	if err := query.Preload("MataPelajaran").
+		Preload("Tingkat").
 		Order("materi.id DESC").
 		Limit(limit).Offset(offset).
 		Find(&materis).Error; err != nil {
@@ -92,6 +90,6 @@ func (r *materiRepositoryImpl) List(idMataPelajaran, idTingkat *int, limit, offs
 // Get by mata pelajaran ID
 func (r *materiRepositoryImpl) GetByMataPelajaranID(idMataPelajaran int) ([]entity.Materi, error) {
 	var materis []entity.Materi
-	err := r.db.Preload("MataPelajaran").Preload("Tingkat").Where("id_mata_pelajaran = ? AND is_active = ?", idMataPelajaran, true).Find(&materis).Error
+	err := r.db.Preload("MataPelajaran").Preload("Tingkat").Where("id_mata_pelajaran = ?", idMataPelajaran).Find(&materis).Error
 	return materis, err
 }
