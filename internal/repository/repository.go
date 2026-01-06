@@ -103,19 +103,20 @@ func (r *userLimitRepository) IncrementUsageAtomic(ctx context.Context, userID i
 
 	fmt.Printf("=== REPO: Atomic increment success, rows affected: %d ===\n", result.RowsAffected)
 
-	// Record usage for analytics
-	usage := &entity.UserLimitUsage{
-		UserID:     userID,
-		LimitType:  limitType,
-		Action:     "increment",
-		ResourceID: resourceID,
-		CreatedAt:  time.Now(),
-	}
+	// Record usage for analytics - DISABLED FOR PERFORMANCE
+	// usage := &entity.UserLimitUsage{
+	// 	UserID:     userID,
+	// 	LimitType:  limitType,
+	// 	Action:     "increment",
+	// 	ResourceID: resourceID,
+	// 	CreatedAt:  time.Now(),
+	// }
 
-	if err := r.RecordUsage(ctx, usage); err != nil {
-		// Log error but don't fail the operation
-		// Note: in a real app, you might want to log this
-	}
+	// Optimization: Disable detailed usage logging to prevent DB write bottlenecks on every request
+	// if err := r.RecordUsage(ctx, usage); err != nil {
+	// 	// Log error but don't fail the operation
+	// 	// Note: in a real app, you might want to log this
+	// }
 
 	return nil
 }

@@ -26,22 +26,36 @@ import {
   VStack,
   Text,
   HStack,
+  Skeleton,
+  Spinner,
+  Center,
 } from '@chakra-ui/react';
 import { useCRUD, useForm, usePagination } from '../hooks';
-import { Topic, Level, Subject } from '../types';
-import { useQuestions } from '../hooks';
+import { Topic } from '../types';
+import useSWR from 'swr';
+import apiClient from '../services/api';
+import { useSharedData } from '../context';
 
 export default React.memo(function TopicsTab() {
-  const { data: topics, create, update, remove } = useCRUD<Topic>('topics');
-  const { data: levels } = useCRUD<Level>('levels');
-  const { data: subjects } = useCRUD<Subject>('subjects');
-  const { questions } = useQuestions({ autoFetch: true });
+  const { data: topics, loading, create, update, remove } = useCRUD<Topic>('topics');
+  const { levels, subjects } = useSharedData();
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all'); // 'all', 'active', 'inactive'
   const [levelFilter, setLevelFilter] = useState<string>('all'); // 'all' or level id
   const { isOpen, onOpen, onClose } = useDisclosure();
+
+  const fetcher = useCallback(async (url: string) => {
+    const response = await apiClient.get<any>(url);
+    return response.data?.counts || [];
+  }, []);
+
+  const { data: questionCounts } = useSWR('/question-counts', fetcher, { 
+    revalidateOnFocus: false, 
+    revalidateOnReconnect: false,
+    dedupingInterval: 60000, // 1 minute cache
+  });
 
   const form = useForm({
     initialValues: { 
@@ -79,12 +93,13 @@ export default React.memo(function TopicsTab() {
 
   const questionCountByTopic = useMemo(() => {
     const countMap: Record<number, number> = {};
-    questions.forEach((question) => {
-      const topicId = question.materi.id;
-      countMap[topicId] = (countMap[topicId] || 0) + 1;
-    });
+    if (questionCounts) {
+      questionCounts.forEach((count: any) => {
+        countMap[count.topic_id] = count.count;
+      });
+    }
     return countMap;
-  }, [questions]);
+  }, [questionCounts]);
 
   const filteredTopics = useMemo(() => {
     let filtered = topics.filter((topic) => {
@@ -155,6 +170,16 @@ export default React.memo(function TopicsTab() {
 
   return (
     <Box>
+      {loading && (
+        <Center py={8}>
+          <VStack spacing={4}>
+            <Spinner size="xl" color="purple.500" thickness="4px" />
+            <Text color="gray.500">Memuat data materi...</Text>
+          </VStack>
+        </Center>
+      )}
+      {!loading && (
+        <>
       <Button colorScheme="purple" onClick={handleCreate} mb={4}>
         Tambah Materi
       </Button>
@@ -206,8 +231,8 @@ export default React.memo(function TopicsTab() {
               <Td>{topic.isActive ? '✓ Aktif' : '✗ Tidak Aktif'}</Td>
               <Td>{topic.defaultDurasiMenit ?? 60}</Td>
               <Td>
-                <Text color={(questionCountByTopic[topic.id] || 0) < (topic.defaultJumlahSoal ?? 20) ? 'red.500' : 'green.500'}>
-                  {questionCountByTopic[topic.id] || 0} / {topic.defaultJumlahSoal ?? 20}
+                <Text color={(topic.jumlahSoalReal || 0) < (topic.defaultJumlahSoal ?? 20) ? 'red.500' : 'green.500'}>
+                  {topic.jumlahSoalReal || 0} / {topic.defaultJumlahSoal ?? 20}
                 </Text>
               </Td>
               <Td>
@@ -342,6 +367,8 @@ export default React.memo(function TopicsTab() {
           </ModalFooter>
         </ModalContent>
       </Modal>
+      </>
+      )}
     </Box>
   );
 })

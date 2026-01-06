@@ -4,22 +4,24 @@ import (
 	base "cbt-test-mini-project/gen/proto"
 	"cbt-test-mini-project/internal/entity"
 	"cbt-test-mini-project/internal/usecase/materi"
+	"cbt-test-mini-project/internal/usecase/soal"
 	"context"
 )
 
 // materiHandler implements base.MateriServiceServer
 type materiHandler struct {
 	base.UnimplementedMateriServiceServer
-	usecase materi.MateriUsecase
+	usecase     materi.MateriUsecase
+	soalUsecase soal.SoalUsecase
 }
 
 // NewMateriHandler creates a new MateriHandler
-func NewMateriHandler(usecase materi.MateriUsecase) base.MateriServiceServer {
-	return &materiHandler{usecase: usecase}
+func NewMateriHandler(usecase materi.MateriUsecase, soalUsecase soal.SoalUsecase) base.MateriServiceServer {
+	return &materiHandler{usecase: usecase, soalUsecase: soalUsecase}
 }
 
 // Helper function to convert entity.Materi to proto.Materi
-func (h *materiHandler) convertToProtoMateri(m *entity.Materi) *base.Materi {
+func (h *materiHandler) convertToProtoMateri(m *entity.Materi, questionCount int) *base.Materi {
 	return &base.Materi{
 		Id:                    int32(m.ID),
 		MataPelajaran:         &base.MataPelajaran{Id: int32(m.MataPelajaran.ID), Nama: m.MataPelajaran.Nama},
@@ -28,6 +30,7 @@ func (h *materiHandler) convertToProtoMateri(m *entity.Materi) *base.Materi {
 		IsActive:              m.IsActive,
 		DefaultDurasiMenit:    int32(m.DefaultDurasiMenit),
 		DefaultJumlahSoal:     int32(m.DefaultJumlahSoal),
+		JumlahSoalReal:        int32(questionCount),
 	}
 }
 
@@ -39,7 +42,7 @@ func (h *materiHandler) CreateMateri(ctx context.Context, req *base.CreateMateri
 	}
 
 	return &base.MateriResponse{
-		Materi: h.convertToProtoMateri(m),
+		Materi: h.convertToProtoMateri(m, 0),
 	}, nil
 }
 
@@ -50,8 +53,15 @@ func (h *materiHandler) GetMateri(ctx context.Context, req *base.GetMateriReques
 		return nil, err
 	}
 
+	// Get question count for this materi
+	counts, _ := h.soalUsecase.GetQuestionCountsByTopic()
+	questionCount := 0
+	if counts != nil {
+		questionCount = counts[m.ID]
+	}
+
 	return &base.MateriResponse{
-		Materi: h.convertToProtoMateri(m),
+		Materi: h.convertToProtoMateri(m, questionCount),
 	}, nil
 }
 
@@ -62,8 +72,15 @@ func (h *materiHandler) UpdateMateri(ctx context.Context, req *base.UpdateMateri
 		return nil, err
 	}
 
+	// Get question count for this materi
+	counts, _ := h.soalUsecase.GetQuestionCountsByTopic()
+	questionCount := 0
+	if counts != nil {
+		questionCount = counts[m.ID]
+	}
+
 	return &base.MateriResponse{
-		Materi: h.convertToProtoMateri(m),
+		Materi: h.convertToProtoMateri(m, questionCount),
 	}, nil
 }
 
@@ -104,9 +121,16 @@ func (h *materiHandler) ListMateri(ctx context.Context, req *base.ListMateriRequ
 		return nil, err
 	}
 
+	// Get all question counts in one query
+	counts, _ := h.soalUsecase.GetQuestionCountsByTopic()
+	if counts == nil {
+		counts = make(map[int]int)
+	}
+
 	var materiList []*base.Materi
 	for _, m := range materis {
-		materiList = append(materiList, h.convertToProtoMateri(&m))
+		questionCount := counts[m.ID]
+		materiList = append(materiList, h.convertToProtoMateri(&m, questionCount))
 	}
 
 	return &base.ListMateriResponse{

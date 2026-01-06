@@ -14,4 +14,5 @@ type SoalUsecase interface {
 	UploadImageToSoal(idSoal int, imageBytes []byte, namaFile string, urutan int, keterangan *string) (*entity.SoalGambar, error)
 	DeleteImageFromSoal(idGambar int) error
 	UpdateImageInSoal(idGambar int, urutan int, keterangan *string) error
+	GetQuestionCountsByTopic() (map[int]int, error)
 }

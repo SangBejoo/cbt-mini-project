@@ -80,7 +80,7 @@ interface TestSessionData {
   waktu_mulai?: string;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1/sessions';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1/test-sessions';
 
 export default function TestPage() {
   const params = useParams();
@@ -462,7 +462,7 @@ export default function TestPage() {
                         .map((img) => (
                           <Box key={img.id} borderWidth="1px" borderRadius="md" p={2} bg="gray.50">
                             <Image
-                              src={img.filePath ? `${process.env.NEXT_PUBLIC_API_BASE}/${img.filePath.replace(/\\/g, '/')}` : ''}
+                              src={img.filePath || ''}
                               alt={img.keterangan || 'Gambar soal'}
                               maxH="300px"
                               objectFit="contain"

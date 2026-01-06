@@ -46,6 +46,27 @@ func (r *soalRepositoryImpl) List(idMateri, tingkatan, idMataPelajaran *int, lim
 	var soals []entity.Soal
 	var total int64
 
+	// Build base query for count (without preloads for performance)
+	countQuery := r.db.Model(&entity.Soal{}).Where("is_active = ?", true)
+
+	if idMateri != nil {
+		countQuery = countQuery.Where("id_materi = ?", *idMateri)
+	}
+	if tingkatan != nil {
+		countQuery = countQuery.Joins("JOIN materi ON soal.id_materi = materi.id").Where("materi.tingkatan = ?", *tingkatan)
+	}
+	if idMataPelajaran != nil {
+		countQuery = countQuery.Joins("JOIN materi ON soal.id_materi = materi.id").
+			Joins("JOIN mata_pelajaran ON materi.id_mata_pelajaran = mata_pelajaran.id").
+			Where("mata_pelajaran.id = ?", *idMataPelajaran)
+	}
+
+	// Count total
+	if err := countQuery.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Build query for data with preloads
 	query := r.db.Model(&entity.Soal{}).Where("is_active = ?", true).Preload("Materi").Preload("Materi.MataPelajaran").Preload("Materi.Tingkat").Preload("Gambar", func(db *gorm.DB) *gorm.DB { return db.Order("urutan ASC") })
 
 	if idMateri != nil {
@@ -58,11 +79,6 @@ func (r *soalRepositoryImpl) List(idMateri, tingkatan, idMataPelajaran *int, lim
 		query = query.Joins("JOIN materi ON soal.id_materi = materi.id").
 			Joins("JOIN mata_pelajaran ON materi.id_mata_pelajaran = mata_pelajaran.id").
 			Where("mata_pelajaran.id = ?", *idMataPelajaran)
-	}
-
-	// Count total
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
 	}
 
 	// Get paginated results
@@ -106,4 +122,21 @@ func (r *soalRepositoryImpl) UpdateGambar(id int, urutan int, keterangan *string
 // DeleteGambar deletes gambar by ID
 func (r *soalRepositoryImpl) DeleteGambar(id int) error {
 	return r.db.Delete(&entity.SoalGambar{}, id).Error
+}
+
+// GetQuestionCountsByTopic returns the count of questions per topic
+func (r *soalRepositoryImpl) GetQuestionCountsByTopic() (map[int]int, error) {
+	var results []struct {
+		IdMateri int
+		Count    int
+	}
+	err := r.db.Model(&entity.Soal{}).Select("id_materi, count(*) as count").Where("is_active = ?", true).Group("id_materi").Scan(&results).Error
+	if err != nil {
+		return nil, err
+	}
+	counts := make(map[int]int)
+	for _, result := range results {
+		counts[result.IdMateri] = result.Count
+	}
+	return counts, nil
 }

@@ -76,32 +76,6 @@ func local_request_AuthService_Login_0(ctx context.Context, marshaler runtime.Ma
 
 }
 
-func request_AuthService_RefreshToken_0(ctx context.Context, marshaler runtime.Marshaler, client AuthServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq RefreshTokenRequest
-	var metadata runtime.ServerMetadata
-
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && err != io.EOF {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := client.RefreshToken(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
-func local_request_AuthService_RefreshToken_0(ctx context.Context, marshaler runtime.Marshaler, server AuthServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq RefreshTokenRequest
-	var metadata runtime.ServerMetadata
-
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && err != io.EOF {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := server.RefreshToken(ctx, &protoReq)
-	return msg, metadata, err
-
-}
-
 func request_AuthService_GetProfile_0(ctx context.Context, marshaler runtime.Marshaler, client AuthServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
@@ -554,6 +528,42 @@ func local_request_MataPelajaranService_ListMataPelajaran_0(ctx context.Context,
 
 }
 
+func request_MataPelajaranService_ListMataPelajaran_1(ctx context.Context, marshaler runtime.Marshaler, client MataPelajaranServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq emptypb.Empty
+	var metadata runtime.ServerMetadata
+
+	msg, err := client.ListMataPelajaran(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_MataPelajaranService_ListMataPelajaran_1(ctx context.Context, marshaler runtime.Marshaler, server MataPelajaranServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq emptypb.Empty
+	var metadata runtime.ServerMetadata
+
+	msg, err := server.ListMataPelajaran(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+func request_MataPelajaranService_ListMataPelajaran_2(ctx context.Context, marshaler runtime.Marshaler, client MataPelajaranServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq emptypb.Empty
+	var metadata runtime.ServerMetadata
+
+	msg, err := client.ListMataPelajaran(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_MataPelajaranService_ListMataPelajaran_2(ctx context.Context, marshaler runtime.Marshaler, server MataPelajaranServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq emptypb.Empty
+	var metadata runtime.ServerMetadata
+
+	msg, err := server.ListMataPelajaran(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
 func request_MateriService_CreateMateri_0(ctx context.Context, marshaler runtime.Marshaler, client MateriServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq CreateMateriRequest
 	var metadata runtime.ServerMetadata
@@ -988,6 +998,24 @@ func local_request_TingkatService_ListTingkat_0(ctx context.Context, marshaler r
 
 }
 
+func request_TingkatService_ListTingkat_1(ctx context.Context, marshaler runtime.Marshaler, client TingkatServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq emptypb.Empty
+	var metadata runtime.ServerMetadata
+
+	msg, err := client.ListTingkat(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_TingkatService_ListTingkat_1(ctx context.Context, marshaler runtime.Marshaler, server TingkatServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq emptypb.Empty
+	var metadata runtime.ServerMetadata
+
+	msg, err := server.ListTingkat(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
 func request_SoalService_CreateSoal_0(ctx context.Context, marshaler runtime.Marshaler, client SoalServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq CreateSoalRequest
 	var metadata runtime.ServerMetadata
@@ -1002,6 +1030,32 @@ func request_SoalService_CreateSoal_0(ctx context.Context, marshaler runtime.Mar
 }
 
 func local_request_SoalService_CreateSoal_0(ctx context.Context, marshaler runtime.Marshaler, server SoalServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq CreateSoalRequest
+	var metadata runtime.ServerMetadata
+
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := server.CreateSoal(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+func request_SoalService_CreateSoal_1(ctx context.Context, marshaler runtime.Marshaler, client SoalServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq CreateSoalRequest
+	var metadata runtime.ServerMetadata
+
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := client.CreateSoal(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_SoalService_CreateSoal_1(ctx context.Context, marshaler runtime.Marshaler, server SoalServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq CreateSoalRequest
 	var metadata runtime.ServerMetadata
 
@@ -1041,6 +1095,58 @@ func request_SoalService_GetSoal_0(ctx context.Context, marshaler runtime.Marsha
 }
 
 func local_request_SoalService_GetSoal_0(ctx context.Context, marshaler runtime.Marshaler, server SoalServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq GetSoalRequest
+	var metadata runtime.ServerMetadata
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+	}
+
+	protoReq.Id, err = runtime.Int32(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+	}
+
+	msg, err := server.GetSoal(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+func request_SoalService_GetSoal_1(ctx context.Context, marshaler runtime.Marshaler, client SoalServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq GetSoalRequest
+	var metadata runtime.ServerMetadata
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+	}
+
+	protoReq.Id, err = runtime.Int32(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+	}
+
+	msg, err := client.GetSoal(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_SoalService_GetSoal_1(ctx context.Context, marshaler runtime.Marshaler, server SoalServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetSoalRequest
 	var metadata runtime.ServerMetadata
 
@@ -1126,6 +1232,66 @@ func local_request_SoalService_UpdateSoal_0(ctx context.Context, marshaler runti
 
 }
 
+func request_SoalService_UpdateSoal_1(ctx context.Context, marshaler runtime.Marshaler, client SoalServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq UpdateSoalRequest
+	var metadata runtime.ServerMetadata
+
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+	}
+
+	protoReq.Id, err = runtime.Int32(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+	}
+
+	msg, err := client.UpdateSoal(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_SoalService_UpdateSoal_1(ctx context.Context, marshaler runtime.Marshaler, server SoalServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq UpdateSoalRequest
+	var metadata runtime.ServerMetadata
+
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+	}
+
+	protoReq.Id, err = runtime.Int32(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+	}
+
+	msg, err := server.UpdateSoal(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
 func request_SoalService_DeleteSoal_0(ctx context.Context, marshaler runtime.Marshaler, client SoalServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq DeleteSoalRequest
 	var metadata runtime.ServerMetadata
@@ -1153,6 +1319,58 @@ func request_SoalService_DeleteSoal_0(ctx context.Context, marshaler runtime.Mar
 }
 
 func local_request_SoalService_DeleteSoal_0(ctx context.Context, marshaler runtime.Marshaler, server SoalServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq DeleteSoalRequest
+	var metadata runtime.ServerMetadata
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+	}
+
+	protoReq.Id, err = runtime.Int32(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+	}
+
+	msg, err := server.DeleteSoal(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+func request_SoalService_DeleteSoal_1(ctx context.Context, marshaler runtime.Marshaler, client SoalServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq DeleteSoalRequest
+	var metadata runtime.ServerMetadata
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+	}
+
+	protoReq.Id, err = runtime.Int32(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+	}
+
+	msg, err := client.DeleteSoal(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_SoalService_DeleteSoal_1(ctx context.Context, marshaler runtime.Marshaler, server SoalServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq DeleteSoalRequest
 	var metadata runtime.ServerMetadata
 
@@ -1206,6 +1424,42 @@ func local_request_SoalService_ListSoal_0(ctx context.Context, marshaler runtime
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_SoalService_ListSoal_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := server.ListSoal(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+var (
+	filter_SoalService_ListSoal_1 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+)
+
+func request_SoalService_ListSoal_1(ctx context.Context, marshaler runtime.Marshaler, client SoalServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq ListSoalRequest
+	var metadata runtime.ServerMetadata
+
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_SoalService_ListSoal_1); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := client.ListSoal(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_SoalService_ListSoal_1(ctx context.Context, marshaler runtime.Marshaler, server SoalServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq ListSoalRequest
+	var metadata runtime.ServerMetadata
+
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_SoalService_ListSoal_1); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
@@ -1382,6 +1636,24 @@ func local_request_SoalService_UpdateImageInSoal_0(ctx context.Context, marshale
 	}
 
 	msg, err := server.UpdateImageInSoal(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+func request_SoalService_GetQuestionCountsByTopic_0(ctx context.Context, marshaler runtime.Marshaler, client SoalServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq emptypb.Empty
+	var metadata runtime.ServerMetadata
+
+	msg, err := client.GetQuestionCountsByTopic(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_SoalService_GetQuestionCountsByTopic_0(ctx context.Context, marshaler runtime.Marshaler, server SoalServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq emptypb.Empty
+	var metadata runtime.ServerMetadata
+
+	msg, err := server.GetQuestionCountsByTopic(ctx, &protoReq)
 	return msg, metadata, err
 
 }
@@ -1838,6 +2110,42 @@ func local_request_HistoryService_GetStudentHistory_0(ctx context.Context, marsh
 
 }
 
+var (
+	filter_HistoryService_GetStudentHistory_1 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+)
+
+func request_HistoryService_GetStudentHistory_1(ctx context.Context, marshaler runtime.Marshaler, client HistoryServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq StudentHistoryRequest
+	var metadata runtime.ServerMetadata
+
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_HistoryService_GetStudentHistory_1); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := client.GetStudentHistory(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_HistoryService_GetStudentHistory_1(ctx context.Context, marshaler runtime.Marshaler, server HistoryServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq StudentHistoryRequest
+	var metadata runtime.ServerMetadata
+
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_HistoryService_GetStudentHistory_1); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := server.GetStudentHistory(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
 func request_HistoryService_GetHistoryDetail_0(ctx context.Context, marshaler runtime.Marshaler, client HistoryServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetHistoryDetailRequest
 	var metadata runtime.ServerMetadata
@@ -1954,31 +2262,6 @@ func RegisterAuthServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		}
 
 		forward_AuthService_Login_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
-	mux.Handle("POST", pattern_AuthService_RefreshToken_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.AuthService/RefreshToken", runtime.WithHTTPPathPattern("/v1/auth/refresh"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_AuthService_RefreshToken_0(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_AuthService_RefreshToken_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -2150,7 +2433,7 @@ func RegisterMataPelajaranServiceHandlerServer(ctx context.Context, mux *runtime
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MataPelajaranService/CreateMataPelajaran", runtime.WithHTTPPathPattern("/v1/subjects"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MataPelajaranService/CreateMataPelajaran", runtime.WithHTTPPathPattern("/v1/mata-pelajaran"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2175,7 +2458,7 @@ func RegisterMataPelajaranServiceHandlerServer(ctx context.Context, mux *runtime
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MataPelajaranService/GetMataPelajaran", runtime.WithHTTPPathPattern("/v1/subjects/{id}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MataPelajaranService/GetMataPelajaran", runtime.WithHTTPPathPattern("/v1/mata-pelajaran/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2200,7 +2483,7 @@ func RegisterMataPelajaranServiceHandlerServer(ctx context.Context, mux *runtime
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MataPelajaranService/UpdateMataPelajaran", runtime.WithHTTPPathPattern("/v1/subjects/{id}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MataPelajaranService/UpdateMataPelajaran", runtime.WithHTTPPathPattern("/v1/mata-pelajaran/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2225,7 +2508,7 @@ func RegisterMataPelajaranServiceHandlerServer(ctx context.Context, mux *runtime
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MataPelajaranService/DeleteMataPelajaran", runtime.WithHTTPPathPattern("/v1/subjects/{id}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MataPelajaranService/DeleteMataPelajaran", runtime.WithHTTPPathPattern("/v1/mata-pelajaran/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2250,7 +2533,7 @@ func RegisterMataPelajaranServiceHandlerServer(ctx context.Context, mux *runtime
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MataPelajaranService/ListMataPelajaran", runtime.WithHTTPPathPattern("/v1/subjects"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MataPelajaranService/ListMataPelajaran", runtime.WithHTTPPathPattern("/v1/mata-pelajaran"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2264,6 +2547,56 @@ func RegisterMataPelajaranServiceHandlerServer(ctx context.Context, mux *runtime
 		}
 
 		forward_MataPelajaranService_ListMataPelajaran_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("GET", pattern_MataPelajaranService_ListMataPelajaran_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MataPelajaranService/ListMataPelajaran", runtime.WithHTTPPathPattern("/v1/topics"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_MataPelajaranService_ListMataPelajaran_1(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_MataPelajaranService_ListMataPelajaran_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("GET", pattern_MataPelajaranService_ListMataPelajaran_2, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MataPelajaranService/ListMataPelajaran", runtime.WithHTTPPathPattern("/v1/subjects"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_MataPelajaranService_ListMataPelajaran_2(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_MataPelajaranService_ListMataPelajaran_2(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -2285,7 +2618,7 @@ func RegisterMateriServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MateriService/CreateMateri", runtime.WithHTTPPathPattern("/v1/topics"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MateriService/CreateMateri", runtime.WithHTTPPathPattern("/v1/materi"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2310,7 +2643,7 @@ func RegisterMateriServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MateriService/GetMateri", runtime.WithHTTPPathPattern("/v1/topics/{id}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MateriService/GetMateri", runtime.WithHTTPPathPattern("/v1/materi/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2335,7 +2668,7 @@ func RegisterMateriServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MateriService/UpdateMateri", runtime.WithHTTPPathPattern("/v1/topics/{id}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MateriService/UpdateMateri", runtime.WithHTTPPathPattern("/v1/materi/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2360,7 +2693,7 @@ func RegisterMateriServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MateriService/DeleteMateri", runtime.WithHTTPPathPattern("/v1/topics/{id}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MateriService/DeleteMateri", runtime.WithHTTPPathPattern("/v1/materi/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2385,7 +2718,7 @@ func RegisterMateriServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MateriService/ListMateri", runtime.WithHTTPPathPattern("/v1/topics"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.MateriService/ListMateri", runtime.WithHTTPPathPattern("/v1/materi"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2420,7 +2753,7 @@ func RegisterTingkatServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TingkatService/CreateTingkat", runtime.WithHTTPPathPattern("/v1/levels"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TingkatService/CreateTingkat", runtime.WithHTTPPathPattern("/v1/tingkat"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2445,7 +2778,7 @@ func RegisterTingkatServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TingkatService/GetTingkat", runtime.WithHTTPPathPattern("/v1/levels/{id}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TingkatService/GetTingkat", runtime.WithHTTPPathPattern("/v1/tingkat/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2470,7 +2803,7 @@ func RegisterTingkatServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TingkatService/UpdateTingkat", runtime.WithHTTPPathPattern("/v1/levels/{id}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TingkatService/UpdateTingkat", runtime.WithHTTPPathPattern("/v1/tingkat/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2495,7 +2828,7 @@ func RegisterTingkatServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TingkatService/DeleteTingkat", runtime.WithHTTPPathPattern("/v1/levels/{id}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TingkatService/DeleteTingkat", runtime.WithHTTPPathPattern("/v1/tingkat/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2520,7 +2853,7 @@ func RegisterTingkatServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TingkatService/ListTingkat", runtime.WithHTTPPathPattern("/v1/levels"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TingkatService/ListTingkat", runtime.WithHTTPPathPattern("/v1/tingkat"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2534,6 +2867,31 @@ func RegisterTingkatServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		}
 
 		forward_TingkatService_ListTingkat_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("GET", pattern_TingkatService_ListTingkat_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TingkatService/ListTingkat", runtime.WithHTTPPathPattern("/v1/levels"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_TingkatService_ListTingkat_1(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_TingkatService_ListTingkat_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -2555,7 +2913,7 @@ func RegisterSoalServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/CreateSoal", runtime.WithHTTPPathPattern("/v1/questions"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/CreateSoal", runtime.WithHTTPPathPattern("/v1/soal"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2572,6 +2930,31 @@ func RegisterSoalServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 
 	})
 
+	mux.Handle("POST", pattern_SoalService_CreateSoal_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/CreateSoal", runtime.WithHTTPPathPattern("/v1/questions"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_SoalService_CreateSoal_1(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SoalService_CreateSoal_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	mux.Handle("GET", pattern_SoalService_GetSoal_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -2580,7 +2963,7 @@ func RegisterSoalServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/GetSoal", runtime.WithHTTPPathPattern("/v1/questions/{id}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/GetSoal", runtime.WithHTTPPathPattern("/v1/soal/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2597,6 +2980,31 @@ func RegisterSoalServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 
 	})
 
+	mux.Handle("GET", pattern_SoalService_GetSoal_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/GetSoal", runtime.WithHTTPPathPattern("/v1/questions/{id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_SoalService_GetSoal_1(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SoalService_GetSoal_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	mux.Handle("PUT", pattern_SoalService_UpdateSoal_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -2605,7 +3013,7 @@ func RegisterSoalServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/UpdateSoal", runtime.WithHTTPPathPattern("/v1/questions/{id}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/UpdateSoal", runtime.WithHTTPPathPattern("/v1/soal/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2622,6 +3030,31 @@ func RegisterSoalServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 
 	})
 
+	mux.Handle("PUT", pattern_SoalService_UpdateSoal_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/UpdateSoal", runtime.WithHTTPPathPattern("/v1/questions/{id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_SoalService_UpdateSoal_1(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SoalService_UpdateSoal_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	mux.Handle("DELETE", pattern_SoalService_DeleteSoal_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -2630,7 +3063,7 @@ func RegisterSoalServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/DeleteSoal", runtime.WithHTTPPathPattern("/v1/questions/{id}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/DeleteSoal", runtime.WithHTTPPathPattern("/v1/soal/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2647,6 +3080,31 @@ func RegisterSoalServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 
 	})
 
+	mux.Handle("DELETE", pattern_SoalService_DeleteSoal_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/DeleteSoal", runtime.WithHTTPPathPattern("/v1/questions/{id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_SoalService_DeleteSoal_1(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SoalService_DeleteSoal_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	mux.Handle("GET", pattern_SoalService_ListSoal_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -2655,7 +3113,7 @@ func RegisterSoalServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/ListSoal", runtime.WithHTTPPathPattern("/v1/questions"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/ListSoal", runtime.WithHTTPPathPattern("/v1/soal"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2669,6 +3127,31 @@ func RegisterSoalServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		}
 
 		forward_SoalService_ListSoal_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("GET", pattern_SoalService_ListSoal_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/ListSoal", runtime.WithHTTPPathPattern("/v1/questions"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_SoalService_ListSoal_1(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SoalService_ListSoal_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -2747,6 +3230,31 @@ func RegisterSoalServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 
 	})
 
+	mux.Handle("GET", pattern_SoalService_GetQuestionCountsByTopic_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.SoalService/GetQuestionCountsByTopic", runtime.WithHTTPPathPattern("/v1/question-counts"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_SoalService_GetQuestionCountsByTopic_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SoalService_GetQuestionCountsByTopic_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	return nil
 }
 
@@ -2765,7 +3273,7 @@ func RegisterTestSessionServiceHandlerServer(ctx context.Context, mux *runtime.S
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TestSessionService/CreateTestSession", runtime.WithHTTPPathPattern("/v1/sessions"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TestSessionService/CreateTestSession", runtime.WithHTTPPathPattern("/v1/test-sessions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2790,7 +3298,7 @@ func RegisterTestSessionServiceHandlerServer(ctx context.Context, mux *runtime.S
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TestSessionService/GetTestSession", runtime.WithHTTPPathPattern("/v1/sessions/{session_token}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TestSessionService/GetTestSession", runtime.WithHTTPPathPattern("/v1/test-sessions/{session_token}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2815,7 +3323,7 @@ func RegisterTestSessionServiceHandlerServer(ctx context.Context, mux *runtime.S
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TestSessionService/GetTestQuestions", runtime.WithHTTPPathPattern("/v1/sessions/{session_token}/questions"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TestSessionService/GetTestQuestions", runtime.WithHTTPPathPattern("/v1/test-sessions/{session_token}/questions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2840,7 +3348,7 @@ func RegisterTestSessionServiceHandlerServer(ctx context.Context, mux *runtime.S
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TestSessionService/SubmitAnswer", runtime.WithHTTPPathPattern("/v1/sessions/{session_token}/answers"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TestSessionService/SubmitAnswer", runtime.WithHTTPPathPattern("/v1/test-sessions/{session_token}/answers"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2865,7 +3373,7 @@ func RegisterTestSessionServiceHandlerServer(ctx context.Context, mux *runtime.S
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TestSessionService/ClearAnswer", runtime.WithHTTPPathPattern("/v1/sessions/{session_token}/clear-answer"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TestSessionService/ClearAnswer", runtime.WithHTTPPathPattern("/v1/test-sessions/{session_token}/clear-answer"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2890,7 +3398,7 @@ func RegisterTestSessionServiceHandlerServer(ctx context.Context, mux *runtime.S
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TestSessionService/CompleteSession", runtime.WithHTTPPathPattern("/v1/sessions/{session_token}/complete"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TestSessionService/CompleteSession", runtime.WithHTTPPathPattern("/v1/test-sessions/{session_token}/complete"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2915,7 +3423,7 @@ func RegisterTestSessionServiceHandlerServer(ctx context.Context, mux *runtime.S
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TestSessionService/GetTestResult", runtime.WithHTTPPathPattern("/v1/sessions/{session_token}/result"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.TestSessionService/GetTestResult", runtime.WithHTTPPathPattern("/v1/test-sessions/{session_token}/result"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2975,7 +3483,7 @@ func RegisterHistoryServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.HistoryService/GetStudentHistory", runtime.WithHTTPPathPattern("/v1/history/student"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.HistoryService/GetStudentHistory", runtime.WithHTTPPathPattern("/v1/history"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2989,6 +3497,31 @@ func RegisterHistoryServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		}
 
 		forward_HistoryService_GetStudentHistory_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("GET", pattern_HistoryService_GetStudentHistory_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/base.HistoryService/GetStudentHistory", runtime.WithHTTPPathPattern("/v1/history/student"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_HistoryService_GetStudentHistory_1(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_HistoryService_GetStudentHistory_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -3151,28 +3684,6 @@ func RegisterAuthServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 
 	})
 
-	mux.Handle("POST", pattern_AuthService_RefreshToken_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.AuthService/RefreshToken", runtime.WithHTTPPathPattern("/v1/auth/refresh"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_AuthService_RefreshToken_0(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_AuthService_RefreshToken_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_AuthService_GetProfile_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -3311,8 +3822,6 @@ func RegisterAuthServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 var (
 	pattern_AuthService_Login_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "auth", "login"}, ""))
 
-	pattern_AuthService_RefreshToken_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "auth", "refresh"}, ""))
-
 	pattern_AuthService_GetProfile_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "auth", "profile"}, ""))
 
 	pattern_AuthService_ListUsers_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "auth", "users"}, ""))
@@ -3328,8 +3837,6 @@ var (
 
 var (
 	forward_AuthService_Login_0 = runtime.ForwardResponseMessage
-
-	forward_AuthService_RefreshToken_0 = runtime.ForwardResponseMessage
 
 	forward_AuthService_GetProfile_0 = runtime.ForwardResponseMessage
 
@@ -3388,7 +3895,7 @@ func RegisterMataPelajaranServiceHandlerClient(ctx context.Context, mux *runtime
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MataPelajaranService/CreateMataPelajaran", runtime.WithHTTPPathPattern("/v1/subjects"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MataPelajaranService/CreateMataPelajaran", runtime.WithHTTPPathPattern("/v1/mata-pelajaran"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3410,7 +3917,7 @@ func RegisterMataPelajaranServiceHandlerClient(ctx context.Context, mux *runtime
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MataPelajaranService/GetMataPelajaran", runtime.WithHTTPPathPattern("/v1/subjects/{id}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MataPelajaranService/GetMataPelajaran", runtime.WithHTTPPathPattern("/v1/mata-pelajaran/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3432,7 +3939,7 @@ func RegisterMataPelajaranServiceHandlerClient(ctx context.Context, mux *runtime
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MataPelajaranService/UpdateMataPelajaran", runtime.WithHTTPPathPattern("/v1/subjects/{id}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MataPelajaranService/UpdateMataPelajaran", runtime.WithHTTPPathPattern("/v1/mata-pelajaran/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3454,7 +3961,7 @@ func RegisterMataPelajaranServiceHandlerClient(ctx context.Context, mux *runtime
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MataPelajaranService/DeleteMataPelajaran", runtime.WithHTTPPathPattern("/v1/subjects/{id}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MataPelajaranService/DeleteMataPelajaran", runtime.WithHTTPPathPattern("/v1/mata-pelajaran/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3476,7 +3983,7 @@ func RegisterMataPelajaranServiceHandlerClient(ctx context.Context, mux *runtime
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MataPelajaranService/ListMataPelajaran", runtime.WithHTTPPathPattern("/v1/subjects"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MataPelajaranService/ListMataPelajaran", runtime.WithHTTPPathPattern("/v1/mata-pelajaran"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3492,19 +3999,67 @@ func RegisterMataPelajaranServiceHandlerClient(ctx context.Context, mux *runtime
 
 	})
 
+	mux.Handle("GET", pattern_MataPelajaranService_ListMataPelajaran_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MataPelajaranService/ListMataPelajaran", runtime.WithHTTPPathPattern("/v1/topics"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_MataPelajaranService_ListMataPelajaran_1(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_MataPelajaranService_ListMataPelajaran_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("GET", pattern_MataPelajaranService_ListMataPelajaran_2, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MataPelajaranService/ListMataPelajaran", runtime.WithHTTPPathPattern("/v1/subjects"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_MataPelajaranService_ListMataPelajaran_2(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_MataPelajaranService_ListMataPelajaran_2(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	return nil
 }
 
 var (
-	pattern_MataPelajaranService_CreateMataPelajaran_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "subjects"}, ""))
+	pattern_MataPelajaranService_CreateMataPelajaran_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "mata-pelajaran"}, ""))
 
-	pattern_MataPelajaranService_GetMataPelajaran_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "subjects", "id"}, ""))
+	pattern_MataPelajaranService_GetMataPelajaran_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "mata-pelajaran", "id"}, ""))
 
-	pattern_MataPelajaranService_UpdateMataPelajaran_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "subjects", "id"}, ""))
+	pattern_MataPelajaranService_UpdateMataPelajaran_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "mata-pelajaran", "id"}, ""))
 
-	pattern_MataPelajaranService_DeleteMataPelajaran_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "subjects", "id"}, ""))
+	pattern_MataPelajaranService_DeleteMataPelajaran_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "mata-pelajaran", "id"}, ""))
 
-	pattern_MataPelajaranService_ListMataPelajaran_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "subjects"}, ""))
+	pattern_MataPelajaranService_ListMataPelajaran_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "mata-pelajaran"}, ""))
+
+	pattern_MataPelajaranService_ListMataPelajaran_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "topics"}, ""))
+
+	pattern_MataPelajaranService_ListMataPelajaran_2 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "subjects"}, ""))
 )
 
 var (
@@ -3517,6 +4072,10 @@ var (
 	forward_MataPelajaranService_DeleteMataPelajaran_0 = runtime.ForwardResponseMessage
 
 	forward_MataPelajaranService_ListMataPelajaran_0 = runtime.ForwardResponseMessage
+
+	forward_MataPelajaranService_ListMataPelajaran_1 = runtime.ForwardResponseMessage
+
+	forward_MataPelajaranService_ListMataPelajaran_2 = runtime.ForwardResponseMessage
 )
 
 // RegisterMateriServiceHandlerFromEndpoint is same as RegisterMateriServiceHandler but
@@ -3563,7 +4122,7 @@ func RegisterMateriServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MateriService/CreateMateri", runtime.WithHTTPPathPattern("/v1/topics"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MateriService/CreateMateri", runtime.WithHTTPPathPattern("/v1/materi"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3585,7 +4144,7 @@ func RegisterMateriServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MateriService/GetMateri", runtime.WithHTTPPathPattern("/v1/topics/{id}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MateriService/GetMateri", runtime.WithHTTPPathPattern("/v1/materi/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3607,7 +4166,7 @@ func RegisterMateriServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MateriService/UpdateMateri", runtime.WithHTTPPathPattern("/v1/topics/{id}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MateriService/UpdateMateri", runtime.WithHTTPPathPattern("/v1/materi/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3629,7 +4188,7 @@ func RegisterMateriServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MateriService/DeleteMateri", runtime.WithHTTPPathPattern("/v1/topics/{id}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MateriService/DeleteMateri", runtime.WithHTTPPathPattern("/v1/materi/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3651,7 +4210,7 @@ func RegisterMateriServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MateriService/ListMateri", runtime.WithHTTPPathPattern("/v1/topics"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.MateriService/ListMateri", runtime.WithHTTPPathPattern("/v1/materi"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3671,15 +4230,15 @@ func RegisterMateriServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 }
 
 var (
-	pattern_MateriService_CreateMateri_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "topics"}, ""))
+	pattern_MateriService_CreateMateri_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "materi"}, ""))
 
-	pattern_MateriService_GetMateri_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "topics", "id"}, ""))
+	pattern_MateriService_GetMateri_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "materi", "id"}, ""))
 
-	pattern_MateriService_UpdateMateri_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "topics", "id"}, ""))
+	pattern_MateriService_UpdateMateri_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "materi", "id"}, ""))
 
-	pattern_MateriService_DeleteMateri_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "topics", "id"}, ""))
+	pattern_MateriService_DeleteMateri_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "materi", "id"}, ""))
 
-	pattern_MateriService_ListMateri_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "topics"}, ""))
+	pattern_MateriService_ListMateri_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "materi"}, ""))
 )
 
 var (
@@ -3738,7 +4297,7 @@ func RegisterTingkatServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TingkatService/CreateTingkat", runtime.WithHTTPPathPattern("/v1/levels"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TingkatService/CreateTingkat", runtime.WithHTTPPathPattern("/v1/tingkat"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3760,7 +4319,7 @@ func RegisterTingkatServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TingkatService/GetTingkat", runtime.WithHTTPPathPattern("/v1/levels/{id}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TingkatService/GetTingkat", runtime.WithHTTPPathPattern("/v1/tingkat/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3782,7 +4341,7 @@ func RegisterTingkatServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TingkatService/UpdateTingkat", runtime.WithHTTPPathPattern("/v1/levels/{id}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TingkatService/UpdateTingkat", runtime.WithHTTPPathPattern("/v1/tingkat/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3804,7 +4363,7 @@ func RegisterTingkatServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TingkatService/DeleteTingkat", runtime.WithHTTPPathPattern("/v1/levels/{id}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TingkatService/DeleteTingkat", runtime.WithHTTPPathPattern("/v1/tingkat/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3826,7 +4385,7 @@ func RegisterTingkatServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TingkatService/ListTingkat", runtime.WithHTTPPathPattern("/v1/levels"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TingkatService/ListTingkat", runtime.WithHTTPPathPattern("/v1/tingkat"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3842,19 +4401,43 @@ func RegisterTingkatServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 
 	})
 
+	mux.Handle("GET", pattern_TingkatService_ListTingkat_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TingkatService/ListTingkat", runtime.WithHTTPPathPattern("/v1/levels"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_TingkatService_ListTingkat_1(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_TingkatService_ListTingkat_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	return nil
 }
 
 var (
-	pattern_TingkatService_CreateTingkat_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "levels"}, ""))
+	pattern_TingkatService_CreateTingkat_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "tingkat"}, ""))
 
-	pattern_TingkatService_GetTingkat_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "levels", "id"}, ""))
+	pattern_TingkatService_GetTingkat_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "tingkat", "id"}, ""))
 
-	pattern_TingkatService_UpdateTingkat_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "levels", "id"}, ""))
+	pattern_TingkatService_UpdateTingkat_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "tingkat", "id"}, ""))
 
-	pattern_TingkatService_DeleteTingkat_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "levels", "id"}, ""))
+	pattern_TingkatService_DeleteTingkat_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "tingkat", "id"}, ""))
 
-	pattern_TingkatService_ListTingkat_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "levels"}, ""))
+	pattern_TingkatService_ListTingkat_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "tingkat"}, ""))
+
+	pattern_TingkatService_ListTingkat_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "levels"}, ""))
 )
 
 var (
@@ -3867,6 +4450,8 @@ var (
 	forward_TingkatService_DeleteTingkat_0 = runtime.ForwardResponseMessage
 
 	forward_TingkatService_ListTingkat_0 = runtime.ForwardResponseMessage
+
+	forward_TingkatService_ListTingkat_1 = runtime.ForwardResponseMessage
 )
 
 // RegisterSoalServiceHandlerFromEndpoint is same as RegisterSoalServiceHandler but
@@ -3913,7 +4498,7 @@ func RegisterSoalServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/CreateSoal", runtime.WithHTTPPathPattern("/v1/questions"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/CreateSoal", runtime.WithHTTPPathPattern("/v1/soal"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3929,13 +4514,35 @@ func RegisterSoalServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 
 	})
 
+	mux.Handle("POST", pattern_SoalService_CreateSoal_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/CreateSoal", runtime.WithHTTPPathPattern("/v1/questions"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_SoalService_CreateSoal_1(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SoalService_CreateSoal_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	mux.Handle("GET", pattern_SoalService_GetSoal_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/GetSoal", runtime.WithHTTPPathPattern("/v1/questions/{id}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/GetSoal", runtime.WithHTTPPathPattern("/v1/soal/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3951,13 +4558,35 @@ func RegisterSoalServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 
 	})
 
+	mux.Handle("GET", pattern_SoalService_GetSoal_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/GetSoal", runtime.WithHTTPPathPattern("/v1/questions/{id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_SoalService_GetSoal_1(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SoalService_GetSoal_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	mux.Handle("PUT", pattern_SoalService_UpdateSoal_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/UpdateSoal", runtime.WithHTTPPathPattern("/v1/questions/{id}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/UpdateSoal", runtime.WithHTTPPathPattern("/v1/soal/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3973,13 +4602,35 @@ func RegisterSoalServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 
 	})
 
+	mux.Handle("PUT", pattern_SoalService_UpdateSoal_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/UpdateSoal", runtime.WithHTTPPathPattern("/v1/questions/{id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_SoalService_UpdateSoal_1(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SoalService_UpdateSoal_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	mux.Handle("DELETE", pattern_SoalService_DeleteSoal_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/DeleteSoal", runtime.WithHTTPPathPattern("/v1/questions/{id}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/DeleteSoal", runtime.WithHTTPPathPattern("/v1/soal/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3995,13 +4646,35 @@ func RegisterSoalServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 
 	})
 
+	mux.Handle("DELETE", pattern_SoalService_DeleteSoal_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/DeleteSoal", runtime.WithHTTPPathPattern("/v1/questions/{id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_SoalService_DeleteSoal_1(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SoalService_DeleteSoal_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	mux.Handle("GET", pattern_SoalService_ListSoal_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/ListSoal", runtime.WithHTTPPathPattern("/v1/questions"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/ListSoal", runtime.WithHTTPPathPattern("/v1/soal"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -4014,6 +4687,28 @@ func RegisterSoalServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		}
 
 		forward_SoalService_ListSoal_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("GET", pattern_SoalService_ListSoal_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/ListSoal", runtime.WithHTTPPathPattern("/v1/questions"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_SoalService_ListSoal_1(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SoalService_ListSoal_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -4083,43 +4778,89 @@ func RegisterSoalServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 
 	})
 
+	mux.Handle("GET", pattern_SoalService_GetQuestionCountsByTopic_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.SoalService/GetQuestionCountsByTopic", runtime.WithHTTPPathPattern("/v1/question-counts"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_SoalService_GetQuestionCountsByTopic_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SoalService_GetQuestionCountsByTopic_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	return nil
 }
 
 var (
-	pattern_SoalService_CreateSoal_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "questions"}, ""))
+	pattern_SoalService_CreateSoal_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "soal"}, ""))
 
-	pattern_SoalService_GetSoal_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "questions", "id"}, ""))
+	pattern_SoalService_CreateSoal_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "questions"}, ""))
 
-	pattern_SoalService_UpdateSoal_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "questions", "id"}, ""))
+	pattern_SoalService_GetSoal_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "soal", "id"}, ""))
 
-	pattern_SoalService_DeleteSoal_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "questions", "id"}, ""))
+	pattern_SoalService_GetSoal_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "questions", "id"}, ""))
 
-	pattern_SoalService_ListSoal_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "questions"}, ""))
+	pattern_SoalService_UpdateSoal_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "soal", "id"}, ""))
+
+	pattern_SoalService_UpdateSoal_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "questions", "id"}, ""))
+
+	pattern_SoalService_DeleteSoal_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "soal", "id"}, ""))
+
+	pattern_SoalService_DeleteSoal_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "questions", "id"}, ""))
+
+	pattern_SoalService_ListSoal_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "soal"}, ""))
+
+	pattern_SoalService_ListSoal_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "questions"}, ""))
 
 	pattern_SoalService_UploadImageToSoal_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "questions", "id_soal", "images"}, ""))
 
 	pattern_SoalService_DeleteImageFromSoal_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "questions", "images", "id_gambar"}, ""))
 
 	pattern_SoalService_UpdateImageInSoal_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "questions", "images", "id_gambar"}, ""))
+
+	pattern_SoalService_GetQuestionCountsByTopic_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "question-counts"}, ""))
 )
 
 var (
 	forward_SoalService_CreateSoal_0 = runtime.ForwardResponseMessage
 
+	forward_SoalService_CreateSoal_1 = runtime.ForwardResponseMessage
+
 	forward_SoalService_GetSoal_0 = runtime.ForwardResponseMessage
+
+	forward_SoalService_GetSoal_1 = runtime.ForwardResponseMessage
 
 	forward_SoalService_UpdateSoal_0 = runtime.ForwardResponseMessage
 
+	forward_SoalService_UpdateSoal_1 = runtime.ForwardResponseMessage
+
 	forward_SoalService_DeleteSoal_0 = runtime.ForwardResponseMessage
 
+	forward_SoalService_DeleteSoal_1 = runtime.ForwardResponseMessage
+
 	forward_SoalService_ListSoal_0 = runtime.ForwardResponseMessage
+
+	forward_SoalService_ListSoal_1 = runtime.ForwardResponseMessage
 
 	forward_SoalService_UploadImageToSoal_0 = runtime.ForwardResponseMessage
 
 	forward_SoalService_DeleteImageFromSoal_0 = runtime.ForwardResponseMessage
 
 	forward_SoalService_UpdateImageInSoal_0 = runtime.ForwardResponseMessage
+
+	forward_SoalService_GetQuestionCountsByTopic_0 = runtime.ForwardResponseMessage
 )
 
 // RegisterTestSessionServiceHandlerFromEndpoint is same as RegisterTestSessionServiceHandler but
@@ -4166,7 +4907,7 @@ func RegisterTestSessionServiceHandlerClient(ctx context.Context, mux *runtime.S
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TestSessionService/CreateTestSession", runtime.WithHTTPPathPattern("/v1/sessions"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TestSessionService/CreateTestSession", runtime.WithHTTPPathPattern("/v1/test-sessions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -4188,7 +4929,7 @@ func RegisterTestSessionServiceHandlerClient(ctx context.Context, mux *runtime.S
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TestSessionService/GetTestSession", runtime.WithHTTPPathPattern("/v1/sessions/{session_token}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TestSessionService/GetTestSession", runtime.WithHTTPPathPattern("/v1/test-sessions/{session_token}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -4210,7 +4951,7 @@ func RegisterTestSessionServiceHandlerClient(ctx context.Context, mux *runtime.S
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TestSessionService/GetTestQuestions", runtime.WithHTTPPathPattern("/v1/sessions/{session_token}/questions"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TestSessionService/GetTestQuestions", runtime.WithHTTPPathPattern("/v1/test-sessions/{session_token}/questions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -4232,7 +4973,7 @@ func RegisterTestSessionServiceHandlerClient(ctx context.Context, mux *runtime.S
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TestSessionService/SubmitAnswer", runtime.WithHTTPPathPattern("/v1/sessions/{session_token}/answers"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TestSessionService/SubmitAnswer", runtime.WithHTTPPathPattern("/v1/test-sessions/{session_token}/answers"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -4254,7 +4995,7 @@ func RegisterTestSessionServiceHandlerClient(ctx context.Context, mux *runtime.S
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TestSessionService/ClearAnswer", runtime.WithHTTPPathPattern("/v1/sessions/{session_token}/clear-answer"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TestSessionService/ClearAnswer", runtime.WithHTTPPathPattern("/v1/test-sessions/{session_token}/clear-answer"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -4276,7 +5017,7 @@ func RegisterTestSessionServiceHandlerClient(ctx context.Context, mux *runtime.S
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TestSessionService/CompleteSession", runtime.WithHTTPPathPattern("/v1/sessions/{session_token}/complete"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TestSessionService/CompleteSession", runtime.WithHTTPPathPattern("/v1/test-sessions/{session_token}/complete"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -4298,7 +5039,7 @@ func RegisterTestSessionServiceHandlerClient(ctx context.Context, mux *runtime.S
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TestSessionService/GetTestResult", runtime.WithHTTPPathPattern("/v1/sessions/{session_token}/result"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.TestSessionService/GetTestResult", runtime.WithHTTPPathPattern("/v1/test-sessions/{session_token}/result"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -4340,19 +5081,19 @@ func RegisterTestSessionServiceHandlerClient(ctx context.Context, mux *runtime.S
 }
 
 var (
-	pattern_TestSessionService_CreateTestSession_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "sessions"}, ""))
+	pattern_TestSessionService_CreateTestSession_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "test-sessions"}, ""))
 
-	pattern_TestSessionService_GetTestSession_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "sessions", "session_token"}, ""))
+	pattern_TestSessionService_GetTestSession_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "test-sessions", "session_token"}, ""))
 
-	pattern_TestSessionService_GetTestQuestions_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "sessions", "session_token", "questions"}, ""))
+	pattern_TestSessionService_GetTestQuestions_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "test-sessions", "session_token", "questions"}, ""))
 
-	pattern_TestSessionService_SubmitAnswer_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "sessions", "session_token", "answers"}, ""))
+	pattern_TestSessionService_SubmitAnswer_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "test-sessions", "session_token", "answers"}, ""))
 
-	pattern_TestSessionService_ClearAnswer_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "sessions", "session_token", "clear-answer"}, ""))
+	pattern_TestSessionService_ClearAnswer_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "test-sessions", "session_token", "clear-answer"}, ""))
 
-	pattern_TestSessionService_CompleteSession_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "sessions", "session_token", "complete"}, ""))
+	pattern_TestSessionService_CompleteSession_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "test-sessions", "session_token", "complete"}, ""))
 
-	pattern_TestSessionService_GetTestResult_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "sessions", "session_token", "result"}, ""))
+	pattern_TestSessionService_GetTestResult_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "test-sessions", "session_token", "result"}, ""))
 
 	pattern_TestSessionService_ListTestSessions_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "admin", "sessions"}, ""))
 )
@@ -4419,7 +5160,7 @@ func RegisterHistoryServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.HistoryService/GetStudentHistory", runtime.WithHTTPPathPattern("/v1/history/student"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.HistoryService/GetStudentHistory", runtime.WithHTTPPathPattern("/v1/history"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -4432,6 +5173,28 @@ func RegisterHistoryServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		}
 
 		forward_HistoryService_GetStudentHistory_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("GET", pattern_HistoryService_GetStudentHistory_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/base.HistoryService/GetStudentHistory", runtime.WithHTTPPathPattern("/v1/history/student"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_HistoryService_GetStudentHistory_1(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_HistoryService_GetStudentHistory_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -4461,13 +5224,17 @@ func RegisterHistoryServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 }
 
 var (
-	pattern_HistoryService_GetStudentHistory_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "history", "student"}, ""))
+	pattern_HistoryService_GetStudentHistory_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "history"}, ""))
+
+	pattern_HistoryService_GetStudentHistory_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "history", "student"}, ""))
 
 	pattern_HistoryService_GetHistoryDetail_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "history", "session_token", "detail"}, ""))
 )
 
 var (
 	forward_HistoryService_GetStudentHistory_0 = runtime.ForwardResponseMessage
+
+	forward_HistoryService_GetStudentHistory_1 = runtime.ForwardResponseMessage
 
 	forward_HistoryService_GetHistoryDetail_0 = runtime.ForwardResponseMessage
 )

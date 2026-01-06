@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useToast } from '@chakra-ui/react';
+import useSWR from 'swr';
 import apiClient from '../services/api';
 import { Question, Level, Subject, Topic } from '../types';
 
@@ -7,98 +8,98 @@ export interface UseQuestionsOptions {
   autoFetch?: boolean;
 }
 
+// Single fetcher for questions - levels/subjects/topics are derived from question.materi
+const questionsFetcher = async (url: string) => {
+  const response = await apiClient.get<any>(url, { timeout: 30000 });
+  return response.data?.soal || [];
+};
+
+// Separate fetcher for topics (needed for the form dropdown)
+const topicsFetcher = async (url: string) => {
+  const response = await apiClient.get<any>(url, { timeout: 20000 });
+  return response.data?.materi || [];
+};
+
 export function useQuestions(options: UseQuestionsOptions = { autoFetch: true }) {
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [levels, setLevels] = useState<Level[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [loading, setLoading] = useState(true);
   const toast = useToast();
 
-  const fetchLevels = useCallback(async () => {
-    try {
-      const response = await apiClient.get<any>('/levels');
-      const data = Array.isArray(response.data)
-        ? response.data
-        : Array.isArray(response.data?.data)
-        ? response.data.data
-        : response.data?.tingkat || [];
-      setLevels(data);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'Gagal memuat tingkat',
-        status: 'error',
-      });
+  // Only fetch questions and topics - levels/subjects can be derived from questions
+  const { data: questions, error: questionsError, isLoading: questionsLoading, mutate: mutateQuestions } = useSWR(
+    options.autoFetch !== false ? '/questions' : null,
+    questionsFetcher,
+    { 
+      revalidateOnFocus: false, 
+      revalidateOnReconnect: false,
+      dedupingInterval: 60000, // Cache for 1 minute
     }
-  }, [toast]);
+  );
 
-  const fetchSubjects = useCallback(async () => {
-    try {
-      const response = await apiClient.get<any>('/subjects');
-      const data = Array.isArray(response.data)
-        ? response.data
-        : Array.isArray(response.data?.data)
-        ? response.data.data
-        : response.data?.mataPelajaran || [];
-      setSubjects(data);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'Gagal memuat mata pelajaran',
-        status: 'error',
-      });
+  // Topics are needed for the create/edit form dropdown
+  const { data: topicsData, isLoading: topicsLoading } = useSWR(
+    options.autoFetch !== false ? '/materi' : null,
+    topicsFetcher,
+    { 
+      revalidateOnFocus: false, 
+      revalidateOnReconnect: false,
+      dedupingInterval: 60000, // Cache for 1 minute
     }
-  }, [toast]);
+  );
 
-  const fetchTopics = useCallback(async () => {
-    try {
-      const response = await apiClient.get<any>('/topics');
-      const data = Array.isArray(response.data)
-        ? response.data
-        : Array.isArray(response.data?.data)
-        ? response.data.data
-        : response.data?.materi || [];
-      setTopics(data);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'Gagal memuat materi',
-        status: 'error',
-      });
+  // Derive levels from questions data - no extra API call needed!
+  const levels = useMemo<Level[]>(() => {
+    if (!questions || !Array.isArray(questions)) return [];
+    const levelMap = new Map<number, Level>();
+    for (const q of questions) {
+      if (q.materi?.tingkat?.id && !levelMap.has(q.materi.tingkat.id)) {
+        levelMap.set(q.materi.tingkat.id, q.materi.tingkat);
+      }
     }
-  }, [toast]);
+    return Array.from(levelMap.values());
+  }, [questions]);
 
-  const fetchQuestions = useCallback(async () => {
-    try {
-      const response = await apiClient.get<any>('/questions');
-      const data = Array.isArray(response.data)
-        ? response.data
-        : Array.isArray(response.data?.data)
-        ? response.data.data
-        : response.data?.soal || [];
-      setQuestions(data);
-    } catch (error: any) {
+  // Derive subjects from questions data - no extra API call needed!
+  const subjects = useMemo<Subject[]>(() => {
+    if (!questions || !Array.isArray(questions)) return [];
+    const subjectMap = new Map<number, Subject>();
+    for (const q of questions) {
+      if (q.materi?.mataPelajaran?.id && !subjectMap.has(q.materi.mataPelajaran.id)) {
+        subjectMap.set(q.materi.mataPelajaran.id, q.materi.mataPelajaran);
+      }
+    }
+    return Array.from(subjectMap.values());
+  }, [questions]);
+
+  // Topics from API (needed for form with full list)
+  const topics = useMemo<Topic[]>(() => {
+    return topicsData || [];
+  }, [topicsData]);
+
+  useEffect(() => {
+    if (questionsError) {
       toast({
         title: 'Error',
         description: 'Gagal memuat soal',
         status: 'error',
       });
     }
-  }, [toast]);
+  }, [questionsError, toast]);
+
+  // For backward compatibility, return questions as state
+  const [questionsState, setQuestionsState] = useState<Question[]>([]);
+  
+  // Also expose setQuestions for direct manipulation
+  const setQuestions = useCallback((updater: Question[] | ((prev: Question[]) => Question[])) => {
+    setQuestionsState(prev => {
+      if (typeof updater === 'function') {
+        return updater(prev);
+      }
+      return updater;
+    });
+  }, []);
 
   useEffect(() => {
-    if (options.autoFetch !== false) {
-      setLoading(true);
-      Promise.all([
-        fetchLevels(),
-        fetchSubjects(),
-        fetchTopics(),
-        fetchQuestions(),
-      ]).finally(() => setLoading(false));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options.autoFetch]); // Only depend on autoFetch flag
+    if (questions) setQuestionsState(questions);
+  }, [questions]);
 
   const createQuestion = useCallback(
     async (data: Partial<Question>) => {
@@ -106,6 +107,8 @@ export function useQuestions(options: UseQuestionsOptions = { autoFetch: true })
         const response = await apiClient.post<any>('/questions', data);
         const newQuestion = response.data?.soal || response.data?.data || response.data;
         setQuestions((prev) => [...prev, newQuestion]);
+        // Revalidate cache
+        mutateQuestions();
         return newQuestion;
       } catch (error: any) {
         const message =
@@ -118,7 +121,7 @@ export function useQuestions(options: UseQuestionsOptions = { autoFetch: true })
         throw error;
       }
     },
-    [toast]
+    [toast, mutateQuestions, setQuestions]
   );
 
   const updateQuestion = useCallback(
@@ -143,7 +146,7 @@ export function useQuestions(options: UseQuestionsOptions = { autoFetch: true })
         throw error;
       }
     },
-    [toast]
+    [toast, setQuestions]
   );
 
   const deleteQuestion = useCallback(
@@ -167,7 +170,7 @@ export function useQuestions(options: UseQuestionsOptions = { autoFetch: true })
         throw error;
       }
     },
-    [toast]
+    [toast, setQuestions]
   );
 
   const uploadImage = useCallback(
@@ -247,19 +250,19 @@ export function useQuestions(options: UseQuestionsOptions = { autoFetch: true })
         throw error;
       }
     },
-    [toast]
+    [toast, setQuestions]
   );
 
   return {
-    questions,
+    questions: questionsState,
     levels,
     subjects,
     topics,
-    loading,
-    fetchQuestions,
-    fetchLevels,
-    fetchSubjects,
-    fetchTopics,
+    loading: questionsLoading || topicsLoading,
+    fetchQuestions: () => mutateQuestions(), // Trigger revalidation
+    fetchLevels: () => {}, // No-op, derived from questions
+    fetchSubjects: () => {}, // No-op, derived from questions
+    fetchTopics: () => {}, // No-op for now
     createQuestion,
     updateQuestion,
     deleteQuestion,

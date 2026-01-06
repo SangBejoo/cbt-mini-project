@@ -46,22 +46,43 @@ func (r *materiRepositoryImpl) List(idMataPelajaran, idTingkat *int, limit, offs
 	var materis []entity.Materi
 	var total int64
 
-	query := r.db.Model(&entity.Materi{}).Where("is_active = ?", true).Preload("MataPelajaran").Preload("Tingkat")
+	// Optimize query with indexes and eager loading
+	query := r.db.Model(&entity.Materi{}).
+		Select("materi.*, mata_pelajaran.nama as mata_pelajaran_nama, tingkat.nama as tingkat_nama").
+		Joins("LEFT JOIN mata_pelajaran ON materi.id_mata_pelajaran = mata_pelajaran.id").
+		Joins("LEFT JOIN tingkat ON materi.id_tingkat = tingkat.id").
+		Where("materi.is_active = ? AND mata_pelajaran.is_active = ? AND tingkat.is_active = ?", true, true, true)
 
 	if idMataPelajaran != nil {
-		query = query.Where("id_mata_pelajaran = ?", *idMataPelajaran)
+		query = query.Where("materi.id_mata_pelajaran = ?", *idMataPelajaran)
 	}
 	if idTingkat != nil {
-		query = query.Where("id_tingkat = ?", *idTingkat)
+		query = query.Where("materi.id_tingkat = ?", *idTingkat)
 	}
 
-	// Count total
-	if err := query.Count(&total).Error; err != nil {
+	// Count total with optimized query
+	countQuery := r.db.Model(&entity.Materi{}).
+		Joins("LEFT JOIN mata_pelajaran ON materi.id_mata_pelajaran = mata_pelajaran.id").
+		Joins("LEFT JOIN tingkat ON materi.id_tingkat = tingkat.id").
+		Where("materi.is_active = ? AND mata_pelajaran.is_active = ? AND tingkat.is_active = ?", true, true, true)
+	
+	if idMataPelajaran != nil {
+		countQuery = countQuery.Where("materi.id_mata_pelajaran = ?", *idMataPelajaran)
+	}
+	if idTingkat != nil {
+		countQuery = countQuery.Where("materi.id_tingkat = ?", *idTingkat)
+	}
+	
+	if err := countQuery.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// Get paginated results
-	if err := query.Limit(limit).Offset(offset).Find(&materis).Error; err != nil {
+	// Get paginated results with preloads
+	if err := query.Preload("MataPelajaran", "is_active = ?", true).
+		Preload("Tingkat", "is_active = ?", true).
+		Order("materi.id DESC").
+		Limit(limit).Offset(offset).
+		Find(&materis).Error; err != nil {
 		return nil, 0, err
 	}
 

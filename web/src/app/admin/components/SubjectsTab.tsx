@@ -24,12 +24,15 @@ import {
   Select,
   useDisclosure,
   Text,
+  Spinner,
+  VStack,
+  Center,
 } from '@chakra-ui/react';
 import { useCRUD, useForm, usePagination } from '../hooks';
 import { Subject } from '../types';
 
 export default React.memo(function SubjectsTab() {
-  const { data: subjects, create, update, remove } = useCRUD<Subject>('subjects');
+  const { data: subjects, loading, create, update, remove } = useCRUD<Subject>('subjects');
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -99,6 +102,16 @@ export default React.memo(function SubjectsTab() {
 
   return (
     <Box>
+      {loading && (
+        <Center py={8}>
+          <VStack spacing={4}>
+            <Spinner size="xl" color="green.500" thickness="4px" />
+            <Text color="gray.500">Memuat data mata pelajaran...</Text>
+          </VStack>
+        </Center>
+      )}
+      {!loading && (
+        <>
       <Button colorScheme="green" onClick={handleCreate} mb={4}>
         Tambah Mata Pelajaran
       </Button>
@@ -193,6 +206,8 @@ export default React.memo(function SubjectsTab() {
           </ModalFooter>
         </ModalContent>
       </Modal>
+      </>
+      )}
     </Box>
   );
 })

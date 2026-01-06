@@ -98,6 +98,7 @@ service SoalService {
     rpc UploadImageToSoal(UploadImageToSoalRequest) returns (UploadImageResponse) {};
     rpc DeleteImageFromSoal(DeleteImageFromSoalRequest) returns (MessageStatusResponse) {};
     rpc UpdateImageInSoal(UpdateImageInSoalRequest) returns (MessageStatusResponse) {};
+    rpc GetQuestionCountsByTopic(google.protobuf.Empty) returns (QuestionCountsResponse) {};
 }
 
 // ========================================
@@ -288,6 +289,7 @@ message Materi {
     bool is_active = 5;
     int32 default_durasi_menit = 6;
     int32 default_jumlah_soal = 7;
+    int32 jumlah_soal_real = 8;  // Actual question count from database
 }
 
 message CreateMateriRequest {
@@ -379,7 +381,9 @@ message SoalGambar {
     string mime_type = 5;
     int32 urutan = 6;
     string keterangan = 7;
-    google.protobuf.Timestamp created_at = 8;
+    string cloud_id = 8;
+    string public_id = 9;
+    google.protobuf.Timestamp created_at = 10;
 }
 
 // Full soal with answer (for admin/teacher only)
@@ -682,4 +686,13 @@ message MateriBreakdown {
     int32 jumlah_soal = 2;
     int32 jumlah_benar = 3;
     double persentase_benar = 4;
+}
+
+message QuestionCountsResponse {
+    repeated TopicCount counts = 1;
+}
+
+message TopicCount {
+    int32 topic_id = 1;
+    int32 count = 2;
 }

@@ -3,6 +3,7 @@ module cbt-test-mini-project
 go 1.25.1
 
 require (
+	github.com/cloudinary/cloudinary-go/v2 v2.14.0
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3
@@ -18,7 +19,10 @@ require (
 )
 
 require (
+	github.com/creasty/defaults v1.7.0 // indirect
 	github.com/elastic/go-licenser v0.3.1 // indirect
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/gorilla/schema v1.4.1 // indirect
 	github.com/jcchavezs/porto v0.1.0 // indirect
 	github.com/santhosh-tekuri/jsonschema v1.2.4 // indirect
 	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect

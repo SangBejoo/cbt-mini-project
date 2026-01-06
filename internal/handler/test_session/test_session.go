@@ -644,15 +644,28 @@ func convertSoalGambarToProto(gambar []entity.SoalGambar) []*base.SoalGambar {
 		if g.Keterangan != nil {
 			keterangan = *g.Keterangan
 		}
+		
+		cloudId := ""
+		if g.CloudId != nil {
+			cloudId = *g.CloudId
+		}
+		
+		publicId := ""
+		if g.PublicId != nil {
+			publicId = *g.PublicId
+		}
+		
 		protoGambar = append(protoGambar, &base.SoalGambar{
-			Id:        int32(g.ID),
-			NamaFile:  g.NamaFile,
-			FilePath:  g.FilePath,
-			FileSize:  int32(g.FileSize),
-			MimeType:  g.MimeType,
-			Urutan:    int32(g.Urutan),
+			Id:         int32(g.ID),
+			NamaFile:   g.NamaFile,
+			FilePath:   g.FilePath,
+			FileSize:   int32(g.FileSize),
+			MimeType:   g.MimeType,
+			Urutan:     int32(g.Urutan),
 			Keterangan: keterangan,
-			CreatedAt: timestamppb.New(g.CreatedAt),
+			CloudId:    cloudId,
+			PublicId:   publicId,
+			CreatedAt:  timestamppb.New(g.CreatedAt),
 		})
 	}
 	return protoGambar

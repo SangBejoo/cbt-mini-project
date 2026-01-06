@@ -64,10 +64,6 @@ func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repos
 	// Create a custom mux to handle both API and static files
 	mux := http.NewServeMux()
 
-	// Serve static files from uploads directory
-	uploadsDir := "./uploads"
-	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
-
 	// Custom endpoints
 	mux.HandleFunc("/v1/sessions/share-email", handleShareEmail)
 

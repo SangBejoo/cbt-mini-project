@@ -19,6 +19,7 @@ export interface Topic extends BaseEntity {
   isActive?: boolean;
   defaultDurasiMenit?: number;
   defaultJumlahSoal?: number;
+  jumlahSoalReal?: number;
 }
 
 export interface Question extends BaseEntity {

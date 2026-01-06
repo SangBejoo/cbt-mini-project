@@ -43,10 +43,11 @@ interface Topic {
   isActive?: boolean;
   defaultDurasiMenit?: number;
   defaultJumlahSoal?: number;
+  jumlahSoalReal?: number;
 }
 
-const TOPICS_API = process.env.NEXT_PUBLIC_API_BASE + '/v1/topics';
-const CREATE_SESSION_API = process.env.NEXT_PUBLIC_API_BASE + '/v1/sessions';
+const TOPICS_API = process.env.NEXT_PUBLIC_API_BASE + '/v1/materi';
+const CREATE_SESSION_API = process.env.NEXT_PUBLIC_API_BASE + '/v1/test-sessions';
 const ITEMS_PER_PAGE = 8; // Maximum 10 items per page
 
 export default function SessionsPage() {
@@ -173,7 +174,7 @@ export default function SessionsPage() {
       try {
         // Use defaults from materi, or fallback to hardcoded defaults
         const durasiMenit = selectedTopic.defaultDurasiMenit || 60;
-        const jumlahSoal = selectedTopic.defaultJumlahSoal || 20;
+        const jumlahSoal = selectedTopic.jumlahSoalReal || selectedTopic.defaultJumlahSoal || 20;
 
         const payload = {
           nama_peserta: user.nama,
@@ -244,6 +245,9 @@ export default function SessionsPage() {
             </Text>
             <Text fontSize="sm" color="gray.600" textAlign="center" noOfLines={2}>
               {topic.nama}
+            </Text>
+            <Text fontSize="xs" color="gray.500">
+              📚 {topic.jumlahSoalReal || 0} soal tersedia
             </Text>
           </VStack>
           <HStack spacing={2} width="full" justify="center">
@@ -336,7 +340,7 @@ export default function SessionsPage() {
                             📝 Jumlah Soal
                           </Text>
                           <Text fontSize="lg" fontWeight="bold" color="green.600">
-                            {selectedTopic.defaultJumlahSoal || 20} Soal
+                            {selectedTopic.jumlahSoalReal || 0} Soal
                           </Text>
                         </Box>
                       </VStack>

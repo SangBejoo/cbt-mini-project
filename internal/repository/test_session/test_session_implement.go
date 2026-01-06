@@ -65,6 +65,25 @@ func (r *testSessionRepositoryImpl) List(tingkatan, idMataPelajaran *int, status
 	var sessions []entity.TestSession
 	var total int64
 
+	// Build count query without preloads
+	countQuery := r.db.Model(&entity.TestSession{})
+
+	if tingkatan != nil {
+		countQuery = countQuery.Where("id_tingkat = ?", *tingkatan)
+	}
+	if idMataPelajaran != nil {
+		countQuery = countQuery.Where("id_mata_pelajaran = ?", *idMataPelajaran)
+	}
+	if status != nil {
+		countQuery = countQuery.Where("status = ?", *status)
+	}
+
+	// Count total
+	if err := countQuery.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Build data query with preloads
 	query := r.db.Model(&entity.TestSession{}).Preload("MataPelajaran").Preload("Tingkat").Preload("User")
 
 	if tingkatan != nil {
@@ -75,11 +94,6 @@ func (r *testSessionRepositoryImpl) List(tingkatan, idMataPelajaran *int, status
 	}
 	if status != nil {
 		query = query.Where("status = ?", *status)
-	}
-
-	// Count total
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
 	}
 
 	// Get paginated results

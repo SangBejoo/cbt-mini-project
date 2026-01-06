@@ -3,7 +3,10 @@ import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'ax
 const createApiClient = (): AxiosInstance => {
   const client = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_BASE + '/v1',
-    timeout: 10000,
+    timeout: 30000, // Increased to 30 seconds for slower endpoints
+    headers: {
+      'Content-Type': 'application/json',
+    },
   });
 
   // Request interceptor to add auth token

@@ -6,6 +6,7 @@ import (
 	"cbt-test-mini-project/internal/usecase/soal"
 	"context"
 
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -38,10 +39,30 @@ func (h *soalHandler) CreateSoal(ctx context.Context, req *base.CreateSoalReques
 	// Convert gambar entities to proto gambar
 	var protoGambar []*base.SoalGambar
 	for _, g := range s.Gambar {
+		keteranganStr := ""
+		if g.Keterangan != nil {
+			keteranganStr = *g.Keterangan
+		}
+		cloudIdStr := ""
+		if g.CloudId != nil {
+			cloudIdStr = *g.CloudId
+		}
+		publicIdStr := ""
+		if g.PublicId != nil {
+			publicIdStr = *g.PublicId
+		}
+		
 		protoGambar = append(protoGambar, &base.SoalGambar{
-			Id:       int32(g.ID),
-			FilePath: g.FilePath,
-			Urutan:   int32(g.Urutan),
+			Id:         int32(g.ID),
+			NamaFile:   g.NamaFile,
+			FilePath:   g.FilePath,
+			FileSize:   int32(g.FileSize),
+			MimeType:   g.MimeType,
+			Urutan:     int32(g.Urutan),
+			Keterangan: keteranganStr,
+			CloudId:    cloudIdStr,
+			PublicId:   publicIdStr,
+			CreatedAt:  timestamppb.New(g.CreatedAt),
 		})
 	}
 
@@ -121,6 +142,16 @@ func (h *soalHandler) UploadImageToSoal(ctx context.Context, req *base.UploadIma
 		keteranganStr = *gambar.Keterangan
 	}
 
+	cloudIdStr := ""
+	if gambar.CloudId != nil {
+		cloudIdStr = *gambar.CloudId
+	}
+
+	publicIdStr := ""
+	if gambar.PublicId != nil {
+		publicIdStr = *gambar.PublicId
+	}
+
 	return &base.UploadImageResponse{
 		Gambar: &base.SoalGambar{
 			Id:         int32(gambar.ID),
@@ -130,6 +161,8 @@ func (h *soalHandler) UploadImageToSoal(ctx context.Context, req *base.UploadIma
 			MimeType:   gambar.MimeType,
 			Urutan:     int32(gambar.Urutan),
 			Keterangan: keteranganStr,
+			CloudId:    cloudIdStr,
+			PublicId:   publicIdStr,
 			CreatedAt:  timestamppb.New(gambar.CreatedAt),
 		},
 	}, nil
@@ -300,16 +333,48 @@ func convertSoalGambarToProto(gambar []entity.SoalGambar) []*base.SoalGambar {
 			keteranganStr = *g.Keterangan
 		}
 		
+		cloudIdStr := ""
+		if g.CloudId != nil {
+			cloudIdStr = *g.CloudId
+		}
+		
+		publicIdStr := ""
+		if g.PublicId != nil {
+			publicIdStr = *g.PublicId
+		}
+		
 		protoGambar = append(protoGambar, &base.SoalGambar{
-			Id:        int32(g.ID),
-			NamaFile:  g.NamaFile,
-			FilePath:  g.FilePath,
-			FileSize:  int32(g.FileSize),
-			MimeType:  g.MimeType,
-			Urutan:    int32(g.Urutan),
+			Id:         int32(g.ID),
+			NamaFile:   g.NamaFile,
+			FilePath:   g.FilePath,
+			FileSize:   int32(g.FileSize),
+			MimeType:   g.MimeType,
+			Urutan:     int32(g.Urutan),
 			Keterangan: keteranganStr,
-			CreatedAt: timestamppb.New(g.CreatedAt),
+			CloudId:    cloudIdStr,
+			PublicId:   publicIdStr,
+			CreatedAt:  timestamppb.New(g.CreatedAt),
 		})
 	}
 	return protoGambar
+}
+
+// GetQuestionCountsByTopic gets the count of questions per topic
+func (h *soalHandler) GetQuestionCountsByTopic(ctx context.Context, req *emptypb.Empty) (*base.QuestionCountsResponse, error) {
+	counts, err := h.usecase.GetQuestionCountsByTopic()
+	if err != nil {
+		return nil, err
+	}
+
+	var protoCounts []*base.TopicCount
+	for topicId, count := range counts {
+		protoCounts = append(protoCounts, &base.TopicCount{
+			TopicId: int32(topicId),
+			Count:   int32(count),
+		})
+	}
+
+	return &base.QuestionCountsResponse{
+		Counts: protoCounts,
+	}, nil
 }

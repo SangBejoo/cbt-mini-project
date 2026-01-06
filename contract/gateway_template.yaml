@@ -16,13 +16,31 @@ http:
       post: /v1/auth/login
       body: "*"
 
-    - selector: base.AuthService.RefreshToken
-      post: /v1/auth/refresh
+    - selector: base.AuthService.ListUsers
+      get: /v1/auth/users
+
+    - selector: base.AuthService.CreateUser
+      post: /v1/auth/users
       body: "*"
 
+    - selector: base.AuthService.GetUser
+      get: /v1/auth/users/{id}
+
+    - selector: base.AuthService.UpdateUser
+      put: /v1/auth/users/{id}
+      body: "*"
+
+    - selector: base.AuthService.DeleteUser
+      delete: /v1/auth/users/{id}
+
+    - selector: base.AuthService.GetProfile
+      get: /v1/auth/profile
+
     # ==================================================
-    # TEST SESSION SERVICE (Student Flow - The Core)
+    # TEST SESSION SERVICE (Admin)
     # ==================================================
+    - selector: base.TestSessionService.ListTestSessions
+      get: /v1/admin/sessions
 
     # 1. Start Exam (Create Session)
     - selector: base.TestSessionService.CreateTestSession
@@ -65,7 +83,133 @@ http:
     - selector: base.HistoryService.GetStudentHistory
       get: /v1/history
 
+    # Alias for student history
+    - selector: base.HistoryService.GetStudentHistory
+      get: /v1/history/student
+
     - selector: base.HistoryService.GetHistoryDetail
       get: /v1/history/{session_token}/detail
+
+    # ==================================================
+    # MATA PELAJARAN SERVICE (Admin)
+    # ==================================================
+    - selector: base.MataPelajaranService.CreateMataPelajaran
+      post: /v1/mata-pelajaran
+      body: "*"
+
+    - selector: base.MataPelajaranService.GetMataPelajaran
+      get: /v1/mata-pelajaran/{id}
+
+    - selector: base.MataPelajaranService.UpdateMataPelajaran
+      put: /v1/mata-pelajaran/{id}
+      body: "*"
+
+    - selector: base.MataPelajaranService.DeleteMataPelajaran
+      delete: /v1/mata-pelajaran/{id}
+
+    - selector: base.MataPelajaranService.ListMataPelajaran
+      get: /v1/mata-pelajaran
+
+    # Alias for topics (mata pelajaran)
+    - selector: base.MataPelajaranService.ListMataPelajaran
+      get: /v1/topics
+
+    # Alias for subjects (mata pelajaran)
+    - selector: base.MataPelajaranService.ListMataPelajaran
+      get: /v1/subjects
+    # ==================================================
+    - selector: base.MateriService.CreateMateri
+      post: /v1/materi
+      body: "*"
+
+    - selector: base.MateriService.GetMateri
+      get: /v1/materi/{id}
+
+    - selector: base.MateriService.UpdateMateri
+      put: /v1/materi/{id}
+      body: "*"
+
+    - selector: base.MateriService.DeleteMateri
+      delete: /v1/materi/{id}
+
+    - selector: base.MateriService.ListMateri
+      get: /v1/materi
+
+    # ==================================================
+    # TINGKAT SERVICE (Admin)
+    # ==================================================
+    - selector: base.TingkatService.CreateTingkat
+      post: /v1/tingkat
+      body: "*"
+
+    - selector: base.TingkatService.GetTingkat
+      get: /v1/tingkat/{id}
+
+    - selector: base.TingkatService.UpdateTingkat
+      put: /v1/tingkat/{id}
+      body: "*"
+
+    - selector: base.TingkatService.DeleteTingkat
+      delete: /v1/tingkat/{id}
+
+    - selector: base.TingkatService.ListTingkat
+      get: /v1/tingkat
+
+    # Alias for levels (tingkat)
+    - selector: base.TingkatService.ListTingkat
+      get: /v1/levels
+
+    # ==================================================
+    # SOAL SERVICE (Admin)
+    # ==================================================
+    - selector: base.SoalService.CreateSoal
+      post: /v1/soal
+      body: "*"
+
+    - selector: base.SoalService.GetSoal
+      get: /v1/soal/{id}
+
+    - selector: base.SoalService.UpdateSoal
+      put: /v1/soal/{id}
+      body: "*"
+
+    - selector: base.SoalService.DeleteSoal
+      delete: /v1/soal/{id}
+
+    - selector: base.SoalService.ListSoal
+      get: /v1/soal
+
+    # Alias for questions (soal)
+    - selector: base.SoalService.ListSoal
+      get: /v1/questions
+
+    # Aliases for questions CRUD (frontend uses /questions)
+    - selector: base.SoalService.CreateSoal
+      post: /v1/questions
+      body: "*"
+
+    - selector: base.SoalService.GetSoal
+      get: /v1/questions/{id}
+
+    - selector: base.SoalService.UpdateSoal
+      put: /v1/questions/{id}
+      body: "*"
+
+    - selector: base.SoalService.DeleteSoal
+      delete: /v1/questions/{id}
+
+    - selector: base.SoalService.UploadImageToSoal
+      post: /v1/questions/{id_soal}/images
+      body: "*"
+
+    - selector: base.SoalService.DeleteImageFromSoal
+      delete: /v1/questions/images/{id_gambar}
+
+    - selector: base.SoalService.UpdateImageInSoal
+      put: /v1/questions/images/{id_gambar}
+      body: "*"
+
+    - selector: base.SoalService.GetQuestionCountsByTopic
+      get: /v1/question-counts
 
   

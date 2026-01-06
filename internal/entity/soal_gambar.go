@@ -13,6 +13,8 @@ type SoalGambar struct {
 	MimeType  string    `json:"mime_type" gorm:"type:varchar(50);not null"`
 	Urutan    int       `json:"urutan" gorm:"type:tinyint;default:1;not null"`
 	Keterangan *string  `json:"keterangan" gorm:"type:varchar(255)"`
+	CloudId   *string   `json:"cloud_id" gorm:"type:varchar(255)"`
+	PublicId  *string   `json:"public_id" gorm:"type:varchar(500)"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
 

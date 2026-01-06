@@ -90,7 +90,7 @@ interface TestResultResponse {
   }>;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1/sessions';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE + '/v1/test-sessions';
 
 export default function ResultsPage() {
   const params = useParams();
@@ -140,7 +140,7 @@ export default function ResultsPage() {
 
   const fetchMateri = async (mataPelajaranId: number, tingkatId: number) => {
     try {
-      const response = await axios.get(process.env.NEXT_PUBLIC_API_BASE + '/v1/topics');
+      const response = await axios.get(process.env.NEXT_PUBLIC_API_BASE + '/v1/materi');
       const materiList = response.data.materi || [];
       
       // Find materi that matches the session's mataPelajaran and tingkat
@@ -285,7 +285,7 @@ export default function ResultsPage() {
 
       // Send to backend
       const response = await axios.post(
-        process.env.NEXT_PUBLIC_API_BASE + '/v1/sessions/share-email',
+        process.env.NEXT_PUBLIC_API_BASE + '/v1/test-sessions/share-email',
         emailPayload,
         {
           headers: {
@@ -604,7 +604,7 @@ export default function ResultsPage() {
                                     .map((img) => (
                                       <Box key={img.id} borderWidth="1px" borderRadius="md" p={2} bg="gray.50">
                                         <Image
-                                          src={img.filePath ? `${process.env.NEXT_PUBLIC_API_BASE}/${img.filePath.replace(/\\/g, '/')}` : ''}
+                                          src={img.filePath || ''}
                                           alt={img.keterangan || 'Gambar soal'}
                                           maxH="300px"
                                           objectFit="contain"
@@ -678,7 +678,7 @@ export default function ResultsPage() {
                                             {optionText.map((img: any) => (
                                               <Image
                                                 key={img.id}
-                                                src={img.filePath ? `${process.env.NEXT_PUBLIC_API_BASE}/${img.filePath.replace(/\\/g, '/')}` : ''}
+                                                src={img.filePath || ''}
                                                 alt={img.keterangan || 'Gambar opsi'}
                                                 maxH="200px"
                                                 objectFit="contain"

@@ -24,12 +24,15 @@ import {
   Select,
   useDisclosure,
   Text,
+  Spinner,
+  VStack,
+  Center,
 } from '@chakra-ui/react';
 import { useCRUD, useForm, usePagination } from '../hooks';
 import { Level } from '../types';
 
 export default React.memo(function LevelsTab() {
-  const { data: levels, create, update, remove } = useCRUD<Level>('levels');
+  const { data: levels, loading, create, update, remove } = useCRUD<Level>('levels');
   const [editingLevel, setEditingLevel] = useState<Level | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -99,6 +102,16 @@ export default React.memo(function LevelsTab() {
 
   return (
     <Box>
+      {loading && (
+        <Center py={8}>
+          <VStack spacing={4}>
+            <Spinner size="xl" color="blue.500" thickness="4px" />
+            <Text color="gray.500">Memuat data tingkat...</Text>
+          </VStack>
+        </Center>
+      )}
+      {!loading && (
+        <>
       <Button colorScheme="blue" onClick={handleCreate} mb={4}>
         Tambah Tingkat
       </Button>
@@ -191,6 +204,8 @@ export default React.memo(function LevelsTab() {
           </ModalFooter>
         </ModalContent>
       </Modal>
+      </>
+      )}
     </Box>
   );
 })

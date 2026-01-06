@@ -59,13 +59,13 @@ const MateriSelect = memo(({ value, onChange, topics }: {
 }) => {
   return (
     <Select
-      placeholder="Pilih Materi"
       value={value || ''}
       onChange={(e) => {
         const topic = topics.find((t) => t.id === Number(e.target.value));
         onChange(topic || null);
       }}
     >
+      <option value="" disabled hidden>Pilih Materi</option>
       {topics.map((t) => (
         <option key={t.id} value={t.id}>
           {t.mataPelajaran.nama} • {t.tingkat.nama} • {t.nama}
@@ -230,17 +230,36 @@ const QuestionFormModal = memo(({
             {question?.gambar && question.gambar.length > 0 && (
               <>
                 <Heading size="sm">Gambar yang Ada</Heading>
-                <VStack spacing={2} align="stretch">
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                   {question.gambar.map((img: any) => (
-                    <HStack key={img.id} p={3} border="1px solid" borderColor="gray.200" borderRadius="md" justify="space-between">
-                      <VStack align="start" spacing={1}>
-                        <Text fontWeight="bold" fontSize="sm">{img.namaFile}</Text>
-                        <Text fontSize="xs" color="gray.600">{(img.fileSize / 1024).toFixed(2)} KB</Text>
-                      </VStack>
-                      <IconButton aria-label="Delete image" icon={<DeleteIcon />} size="sm" colorScheme="red" onClick={() => handleDeleteImage(img.id)} />
-                    </HStack>
+                    <Box 
+                      key={img.id} 
+                      p={3} 
+                      border="1px solid" 
+                      borderColor="gray.200" 
+                      borderRadius="md"
+                      bg="gray.50"
+                    >
+                      {/* Image Preview */}
+                      {img.filePath && (
+                        <Box mb={2} borderRadius="md" overflow="hidden" bg="white">
+                          <img 
+                            src={img.filePath} 
+                            alt={img.namaFile || 'Gambar soal'}
+                            style={{ width: '100%', maxHeight: '150px', objectFit: 'contain' }}
+                          />
+                        </Box>
+                      )}
+                      <HStack justify="space-between">
+                        <VStack align="start" spacing={0}>
+                          <Text fontWeight="bold" fontSize="sm" noOfLines={1}>{img.namaFile}</Text>
+                          <Text fontSize="xs" color="gray.600">{(img.fileSize / 1024).toFixed(2)} KB</Text>
+                        </VStack>
+                        <IconButton aria-label="Delete image" icon={<DeleteIcon />} size="sm" colorScheme="red" onClick={() => handleDeleteImage(img.id)} />
+                      </HStack>
+                    </Box>
                   ))}
-                </VStack>
+                </SimpleGrid>
               </>
             )}
           </VStack>
@@ -455,18 +474,19 @@ export default function QuestionsTab() {
         // Update existing question
         result = await updateQuestion(currentQuestion.id, questionData);
         toast({ title: 'Soal berhasil diupdate', status: 'success' });
+        setCurrentQuestion(result); // Keep the question in modal for further edits
       } else {
         // Create new question
         result = await createQuestion(questionData);
         toast({ title: 'Soal berhasil dibuat', status: 'success' });
+        // Don't set currentQuestion on create - modal will close
       }
-
-      setCurrentQuestion(result);
 
       // Auto open the level accordion to show the question
       setOpenLevelName(result.materi?.tingkat?.nama);
 
-      // onQuestionClose is handled by the modal component upon success
+      // Close modal after successful operation
+      onQuestionClose();
     } catch (error) {
       toast({ title: 'Error menyimpan soal', status: 'error' });
       throw error; // Re-throw so modal knows it failed

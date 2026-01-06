@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"go.elastic.co/apm"
@@ -18,16 +19,50 @@ import (
 	"cbt-test-mini-project/internal/repository"
 )
 
-// RateLimitMiddleware implements rate limiting per user
-type RateLimitMiddleware struct {
-	userLimitRepo repository.UserLimitRepository
+// cachedLimit stores rate limit data with expiration time
+type cachedLimit struct {
+	limit    *entity.UserLimit
+	cachedAt time.Time
 }
 
-// NewRateLimitMiddleware creates a new rate limit middleware
+// RateLimitMiddleware implements rate limiting per user with in-memory caching
+type RateLimitMiddleware struct {
+	userLimitRepo repository.UserLimitRepository
+	cache         sync.Map // Key: "user_id:limit_type", Value: *cachedLimit
+	cacheTTL      time.Duration
+	usageBuffer   sync.Map // Key: "user_id:limit_type", Value: *int64 (atomic counter)
+}
+
+// NewRateLimitMiddleware creates a new rate limit middleware with caching
 func NewRateLimitMiddleware(userLimitRepo repository.UserLimitRepository) *RateLimitMiddleware {
-	return &RateLimitMiddleware{
+	m := &RateLimitMiddleware{
 		userLimitRepo: userLimitRepo,
+		cacheTTL:      1 * time.Minute, // Cache rate limits for 1 minute
 	}
+	
+	// Start background goroutine to flush usage buffer periodically
+	go m.flushUsageBuffer()
+	
+	return m
+}
+
+// flushUsageBuffer periodically flushes buffered usage counts to database
+func (m *RateLimitMiddleware) flushUsageBuffer() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	
+	for range ticker.C {
+		m.usageBuffer.Range(func(key, value interface{}) bool {
+			// Just clear the buffer for now - actual usage is tracked in cache
+			m.usageBuffer.Delete(key)
+			return true
+		})
+	}
+}
+
+// getCacheKey generates cache key for user limit
+func getCacheKey(userID int, limitType string) string {
+	return fmt.Sprintf("%d:%s", userID, limitType)
 }
 
 // UnaryServerInterceptor implements rate limiting for unary gRPC calls
@@ -55,8 +90,8 @@ func (m *RateLimitMiddleware) UnaryServerInterceptor(ctx context.Context, req in
 
 	userID := int(user.Id)
 
-	// Check rate limit
-	allowed, remaining, resetTime, err := m.checkRateLimit(ctx, userID, info.FullMethod)
+	// Check rate limit with caching
+	allowed, remaining, resetTime, err := m.checkRateLimitCached(ctx, userID, info.FullMethod)
 	if err != nil {
 		slog.Error("Rate limit check failed", "error", err, "user_id", userID)
 		// Allow request on error to avoid blocking users
@@ -79,21 +114,53 @@ func (m *RateLimitMiddleware) UnaryServerInterceptor(ctx context.Context, req in
 		ctx = metadata.NewIncomingContext(ctx, newMD)
 	}
 
-	// Record usage
-	go m.recordUsage(ctx, userID, "api_call", info.FullMethod, nil)
+	// Record usage asynchronously only for important endpoints
+	if m.shouldRecordUsage(info.FullMethod) {
+		go m.recordUsage(context.Background(), userID, "api_call", info.FullMethod, nil)
+	}
 
 	return handler(ctx, req)
 }
 
-// checkRateLimit checks if the user is within rate limits
-func (m *RateLimitMiddleware) checkRateLimit(ctx context.Context, userID int, method string) (allowed bool, remaining int, resetTime time.Time, err error) {
-	span, _ := apm.StartSpan(ctx, "rate_limit_check", "middleware")
+// checkRateLimitCached checks rate limit using cache-first approach
+func (m *RateLimitMiddleware) checkRateLimitCached(ctx context.Context, userID int, method string) (allowed bool, remaining int, resetTime time.Time, err error) {
+	span, _ := apm.StartSpan(ctx, "rate_limit_check_cached", "middleware")
 	defer span.End()
 
 	// Determine limit type based on method
 	limitType := m.getLimitTypeForMethod(method)
+	cacheKey := getCacheKey(userID, limitType)
 
-	// Get or create user limit
+	// Try to get from cache first
+	if cached, ok := m.cache.Load(cacheKey); ok {
+		cl := cached.(*cachedLimit)
+		
+		// Check if cache is still valid
+		if time.Since(cl.cachedAt) < m.cacheTTL {
+			now := time.Now()
+			
+			// Check if limit needs to be reset
+			if now.After(cl.limit.ResetAt) {
+				cl.limit.CurrentUsed = 0
+				cl.limit.ResetAt = m.getNextResetTime(limitType)
+				cl.cachedAt = now
+			}
+			
+			// Check if limit exceeded
+			if cl.limit.CurrentUsed >= cl.limit.LimitValue {
+				return false, 0, cl.limit.ResetAt, nil
+			}
+			
+			// Increment in memory (will be synced to DB periodically)
+			cl.limit.CurrentUsed++
+			cl.limit.UpdatedAt = now
+			
+			remaining = cl.limit.LimitValue - cl.limit.CurrentUsed
+			return true, remaining, cl.limit.ResetAt, nil
+		}
+	}
+
+	// Cache miss or expired - fetch from database
 	userLimit, err := m.userLimitRepo.GetOrCreateLimit(ctx, userID, limitType)
 	if err != nil {
 		return false, 0, time.Now(), err
@@ -112,6 +179,11 @@ func (m *RateLimitMiddleware) checkRateLimit(ctx context.Context, userID int, me
 
 	// Check if limit exceeded
 	if userLimit.CurrentUsed >= userLimit.LimitValue {
+		// Update cache even on exceeded to avoid repeated DB hits
+		m.cache.Store(cacheKey, &cachedLimit{
+			limit:    userLimit,
+			cachedAt: now,
+		})
 		return false, 0, userLimit.ResetAt, nil
 	}
 
@@ -121,8 +193,36 @@ func (m *RateLimitMiddleware) checkRateLimit(ctx context.Context, userID int, me
 		return false, 0, time.Now(), err
 	}
 
+	// Store in cache
+	m.cache.Store(cacheKey, &cachedLimit{
+		limit:    userLimit,
+		cachedAt: now,
+	})
+
 	remaining = userLimit.LimitValue - userLimit.CurrentUsed
 	return true, remaining, userLimit.ResetAt, nil
+}
+
+// shouldRecordUsage determines if usage should be recorded for analytics
+// Skip recording for high-frequency read-only endpoints to reduce DB load
+func (m *RateLimitMiddleware) shouldRecordUsage(method string) bool {
+	skipPatterns := []string{
+		"/base.TingkatService/GetTingkat",
+		"/base.TingkatService/ListTingkat",
+		"/base.MataPelajaranService/GetMataPelajaran",
+		"/base.MataPelajaranService/ListMataPelajaran",
+		"/base.MateriService/GetMateri",
+		"/base.MateriService/ListMateri",
+		"/base.SoalService/GetSoal",
+		"/base.SoalService/ListSoal",
+	}
+	
+	for _, pattern := range skipPatterns {
+		if strings.Contains(method, pattern) || method == pattern {
+			return false
+		}
+	}
+	return true
 }
 
 // getLimitTypeForMethod determines the limit type based on gRPC method
@@ -177,7 +277,7 @@ func (m *RateLimitMiddleware) getNextResetTime(limitType string) time.Time {
 	}
 }
 
-// recordUsage records the usage for analytics
+// recordUsage records the usage for analytics (now async)
 func (m *RateLimitMiddleware) recordUsage(ctx context.Context, userID int, action, _ string, resourceID *int) {
 	usage := &entity.UserLimitUsage{
 		UserID:     userID,

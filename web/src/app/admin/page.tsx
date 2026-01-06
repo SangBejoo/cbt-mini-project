@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Button, VStack, Heading, Container, Tabs, TabList, Tab, TabPanels, TabPanel, HStack, Text } from '@chakra-ui/react';
 import { useAuth } from '../auth-context';
+import { DataProvider } from './context';
 import LevelsTab from './components/LevelsTab';
 const SubjectsTab = dynamic(() => import('./components/SubjectsTab'), { ssr: false });
 import TopicsTab from './components/TopicsTab';
@@ -61,13 +62,14 @@ export default function AdminHome() {
   }
 
   return (
-    <Box
-      minH="100vh"
-      bgGradient="linear(135deg, #FFF5EB 0%, #FFE8D6 100%)"
-      py={10}
-    >
-      <Container maxW="container.xl">
-        <HStack justify="space-between" mb={8}>
+    <DataProvider>
+      <Box
+        minH="100vh"
+        bgGradient="linear(135deg, #FFF5EB 0%, #FFE8D6 100%)"
+        py={10}
+      >
+        <Container maxW="container.xl">
+          <HStack justify="space-between" mb={8}>
           <Box>
             <Heading
               as="h1"
@@ -229,5 +231,6 @@ export default function AdminHome() {
         </Box>
       </Container>
     </Box>
+    </DataProvider>
   );
 }

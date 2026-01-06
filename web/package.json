@@ -24,7 +24,8 @@
     "next": "16.0.10",
     "react": "19.2.1",
     "react-dom": "19.2.1",
-    "react-window": "^2.2.3"
+    "react-window": "^2.2.3",
+    "swr": "^2.3.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

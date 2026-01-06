@@ -15,6 +15,7 @@ type Main struct {
 	APM        apm
 	RateLimit  rateLimit
 	CORS       cors
+	Cloudinary cloudinary
 }
 
 type Database struct {
@@ -65,6 +66,12 @@ type cors struct {
 	AllowOrigin string
 }
 
+type cloudinary struct {
+	Name   string
+	Key    string
+	Secret string
+}
+
 func Load() *Main {
 	godotenv.Load()
 	return &Main{
@@ -107,6 +114,11 @@ func Load() *Main {
 		},
 		CORS: cors{
 			AllowOrigin: util.GetEnv("CORS_ALLOW_ORIGIN", "*"),
+		},
+		Cloudinary: cloudinary{
+			Name:   util.GetEnv("cloudinary_name", ""),
+			Key:    util.GetEnv("cloudinary_key", ""),
+			Secret: util.GetEnv("cloudinary_secret", ""),
 		},
 	}
 }

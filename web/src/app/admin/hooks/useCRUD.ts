@@ -1,7 +1,8 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useToast } from '@chakra-ui/react';
+import useSWR from 'swr';
 import apiClient from '../services/api';
-import { BaseEntity, ApiResponse } from '../types';
+import { BaseEntity } from '../types';
 import { AxiosError } from 'axios';
 
 export interface UseCRUDOptions {
@@ -10,18 +11,89 @@ export interface UseCRUDOptions {
   autoFetch?: boolean;
 }
 
+// Maps internal endpoint names to actual API endpoints
+// GET requests can use alias endpoints (levels, subjects, topics)
+// POST/PUT/DELETE must use actual endpoints (tingkat, mata-pelajaran, materi)
+const getReadEndpoint = (endpoint: string): string => {
+  // Read operations - use actual endpoints for topics
+  switch (endpoint) {
+    case 'topics':
+      return 'materi';
+    default:
+      return endpoint;
+  }
+};
+
+const getWriteEndpoint = (endpoint: string): string => {
+  // Write operations must use actual API endpoints
+  switch (endpoint) {
+    case 'levels':
+      return 'tingkat';
+    case 'subjects':
+      return 'mata-pelajaran';
+    case 'topics':
+      return 'materi';
+    default:
+      return endpoint;
+  }
+};
+
+const createFetcher = (endpoint: string) => async () => {
+  const apiEndpoint = getReadEndpoint(endpoint);
+  const res = await apiClient.get<any>(apiEndpoint, { timeout: 20000 });
+  
+  // Handle different response formats based on endpoint
+  if (endpoint === 'levels' || endpoint === '/levels') {
+    return res.data?.tingkat || [];
+  } else if (endpoint === 'subjects' || endpoint === '/subjects') {
+    return res.data?.mataPelajaran || [];
+  } else if (endpoint === 'topics' || endpoint === '/topics' || endpoint === 'materi') {
+    return res.data?.materi || [];
+  } else if (endpoint === 'auth/users' || endpoint === '/auth/users') {
+    return res.data?.users || [];
+  } else {
+    // Default parsing for other endpoints
+    return Array.isArray(res.data)
+      ? res.data
+      : Array.isArray(res.data?.data)
+      ? res.data.data
+      : Array.isArray(res.data?.items)
+      ? res.data.items
+      : [];
+  }
+};
+
 export function useCRUD<T extends BaseEntity>(
   endpoint: string,
   options: UseCRUDOptions = { autoFetch: true }
 ) {
-  const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const toast = useToast();
+  const [localData, setLocalData] = useState<T[]>([]);
+
+  // Create fetcher for this endpoint
+  const fetcher = useMemo(() => createFetcher(endpoint), [endpoint]);
+
+  // Use SWR for data fetching with deduplication and caching
+  const { data: swrData, error, isLoading, mutate } = useSWR<T[]>(
+    options.autoFetch !== false ? `crud-${endpoint}` : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 60000, // 1 minute deduplication
+      errorRetryCount: 2,
+    }
+  );
+
+  // Sync SWR data to local state
+  useEffect(() => {
+    if (swrData) {
+      setLocalData(swrData);
+    }
+  }, [swrData]);
 
   const handleError = useCallback((err: any, defaultMessage: string) => {
     const message = err.response?.data?.message || err.message || defaultMessage;
-    setError(message);
     toast({
       title: 'Error',
       description: message,
@@ -40,51 +112,19 @@ export function useCRUD<T extends BaseEntity>(
       duration: 3000,
       isClosable: true,
     });
-    setError(null);
     options.onSuccess?.(newData);
   }, [toast, options]);
 
-  const fetch = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await apiClient.get<any>(endpoint);
-
-      // Handle different response formats based on endpoint
-      let items: T[] = [];
-      if (endpoint === 'levels') {
-        items = res.data?.tingkat || [];
-      } else if (endpoint === 'subjects') {
-        items = res.data?.mataPelajaran || [];
-      } else if (endpoint === 'topics') {
-        items = res.data?.materi || [];
-      } else if (endpoint === 'auth/users') {
-        items = res.data?.users || [];
-      } else {
-        // Default parsing for other endpoints
-        items = Array.isArray(res.data)
-          ? res.data
-          : Array.isArray(res.data?.data)
-          ? res.data.data
-          : Array.isArray(res.data?.items)
-          ? res.data.items
-          : [];
-      }
-
-      console.log('Parsed items:', items);
-      setData(items);
-      setError(null);
-    } catch (err: any) {
-      console.error('API Error:', err);
-      handleError(err, 'Gagal mengambil data');
-    } finally {
-      setLoading(false);
-    }
-  }, [endpoint, handleError]);
+  const fetch = useCallback(() => {
+    mutate();
+  }, [mutate]);
 
   const create = useCallback(
     async (payload: Omit<T, 'id'>) => {
       try {
-        const res = await apiClient.post<any>(endpoint, payload);
+        // Use write endpoint for POST
+        const apiEndpoint = getWriteEndpoint(endpoint);
+        const res = await apiClient.post<any>(apiEndpoint, payload);
 
         // Handle different response formats based on endpoint
         let newItem: T;
@@ -100,7 +140,10 @@ export function useCRUD<T extends BaseEntity>(
           newItem = (res.data?.data || res.data) as T;
         }
 
-        setData((prev) => [...prev, newItem]);
+        // Update local state immediately
+        setLocalData(prev => [...prev, newItem]);
+        // Then revalidate from server
+        mutate();
         handleSuccess('Data berhasil dibuat', newItem);
         return newItem;
       } catch (err: any) {
@@ -108,14 +151,16 @@ export function useCRUD<T extends BaseEntity>(
         throw err;
       }
     },
-    [endpoint, handleError, handleSuccess]
+    [endpoint, handleError, handleSuccess, mutate]
   );
 
   const update = useCallback(
     async (id: number, payload: Partial<Omit<T, 'id'>>) => {
       try {
+        // Use write endpoint for PUT
+        const apiEndpoint = getWriteEndpoint(endpoint);
         const res = await apiClient.put<any>(
-          `${endpoint}/${id}`,
+          `${apiEndpoint}/${id}`,
           payload
         );
 
@@ -133,9 +178,10 @@ export function useCRUD<T extends BaseEntity>(
           updatedItem = (res.data?.data || res.data) as T;
         }
 
-        setData((prev) =>
-          prev.map((item) => (item.id === id ? updatedItem : item))
-        );
+        // Update local state immediately
+        setLocalData(prev => prev.map(item => item.id === id ? updatedItem : item));
+        // Then revalidate from server
+        mutate();
         handleSuccess('Data berhasil diperbarui', updatedItem);
         return updatedItem;
       } catch (err: any) {
@@ -143,31 +189,35 @@ export function useCRUD<T extends BaseEntity>(
         throw err;
       }
     },
-    [endpoint, handleError, handleSuccess]
+    [endpoint, handleError, handleSuccess, mutate]
   );
 
   const remove = useCallback(
     async (id: number) => {
       try {
-        await apiClient.delete(`${endpoint}/${id}`);
-        setData((prev) => prev.filter((item) => item.id !== id));
+        // Use write endpoint for DELETE
+        const apiEndpoint = getWriteEndpoint(endpoint);
+        await apiClient.delete(`${apiEndpoint}/${id}`);
+        // Update local state immediately
+        setLocalData(prev => prev.filter(item => item.id !== id));
+        // Then revalidate from server
+        mutate();
         handleSuccess('Data berhasil dihapus');
       } catch (err: any) {
         handleError(err, 'Gagal menghapus data');
         throw err;
       }
     },
-    [endpoint, handleError, handleSuccess]
+    [endpoint, handleError, handleSuccess, mutate]
   );
 
-  useEffect(() => {
-    if (options.autoFetch !== false) {
-      fetch();
-    }
-  }, [endpoint, options.autoFetch]);
-
-  // Memoize the data array to prevent unnecessary re-renders
-  const memoizedData = useMemo(() => data, [data]);
-
-  return { data: memoizedData, loading, error, fetch, create, update, remove };
+  return { 
+    data: localData, 
+    loading: isLoading, 
+    error: error?.message || null, 
+    fetch, 
+    create, 
+    update, 
+    remove 
+  };
 }

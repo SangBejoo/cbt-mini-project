@@ -1,25 +1,29 @@
 package soal
 
 import (
+	"bytes"
+	"cbt-test-mini-project/init/config"
 	"cbt-test-mini-project/internal/entity"
 	"cbt-test-mini-project/internal/repository/test_soal"
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
+
+	"github.com/cloudinary/cloudinary-go/v2"
+	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 )
 
 // soalUsecaseImpl implements SoalUsecase
 type soalUsecaseImpl struct {
-	repo test_soal.SoalRepository
+	repo   test_soal.SoalRepository
+	config *config.Main
 }
 
 // NewSoalUsecase creates a new SoalUsecase instance
-func NewSoalUsecase(repo test_soal.SoalRepository) SoalUsecase {
-	return &soalUsecaseImpl{repo: repo}
+func NewSoalUsecase(repo test_soal.SoalRepository, config *config.Main) SoalUsecase {
+	return &soalUsecaseImpl{repo: repo, config: config}
 }
 
 // saveImages saves multiple image files and returns list of SoalGambar entities
@@ -30,9 +34,10 @@ func (u *soalUsecaseImpl) saveImages(imageFilesBytes [][]byte) ([]entity.SoalGam
 		return gambar, nil
 	}
 
-	dir := "uploads/images"
-	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-		return nil, err
+	// Initialize Cloudinary
+	cld, err := cloudinary.NewFromParams(u.config.Cloudinary.Name, u.config.Cloudinary.Key, u.config.Cloudinary.Secret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize Cloudinary: %v", err)
 	}
 
 	for i, imageBytes := range imageFilesBytes {
@@ -46,28 +51,24 @@ func (u *soalUsecaseImpl) saveImages(imageFilesBytes [][]byte) ([]entity.SoalGam
 			return nil, fmt.Errorf("invalid image type: %s, only JPG and PNG are allowed", mimeType)
 		}
 
-		// Determine extension
-		var ext string
-		if mimeType == "image/jpeg" {
-			ext = ".jpg"
-		} else {
-			ext = ".png"
-		}
-
-		filename := fmt.Sprintf("%d_%d_%d%s", time.Now().Unix(), time.Now().Nanosecond(), i, ext)
-		filePath := filepath.Join(dir, filename)
-
-		if err := os.WriteFile(filePath, imageBytes, 0644); err != nil {
-			return nil, err
+		// Upload to Cloudinary
+		resp, err := cld.Upload.Upload(context.Background(), bytes.NewReader(imageBytes), uploader.UploadParams{
+			Folder: "cbt/soal_images",
+			PublicID: fmt.Sprintf("%d_%d_%d", time.Now().Unix(), time.Now().Nanosecond(), i),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to upload image to Cloudinary: %v", err)
 		}
 
 		urutan := i + 1
 		gambar = append(gambar, entity.SoalGambar{
-			NamaFile: filename,
-			FilePath: filePath,
+			NamaFile: resp.PublicID,
+			FilePath: resp.SecureURL,
 			FileSize: len(imageBytes),
 			MimeType: mimeType,
 			Urutan:   urutan,
+			CloudId:  &u.config.Cloudinary.Name,
+			PublicId: &resp.PublicID,
 		})
 	}
 
@@ -208,49 +209,40 @@ func (u *soalUsecaseImpl) UploadImageToSoal(idSoal int, imageBytes []byte, namaF
 		return nil, fmt.Errorf("invalid image type: %s, only JPG and PNG are allowed", mimeType)
 	}
 
-	dir := "uploads/images"
-	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-		return nil, err
+	// Initialize Cloudinary
+	cld, err := cloudinary.NewFromParams(u.config.Cloudinary.Name, u.config.Cloudinary.Key, u.config.Cloudinary.Secret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize Cloudinary: %v", err)
 	}
 
-	// Determine extension
-	var ext string
-	if mimeType == "image/jpeg" {
-		ext = ".jpg"
-	} else {
-		ext = ".png"
-	}
-
-	// Generate filename if not provided or ensure it has correct extension
-	if namaFile == "" {
-		namaFile = fmt.Sprintf("%d_%d%s", time.Now().Unix(), time.Now().Nanosecond(), ext)
-	} else {
-		// Ensure extension matches
-		if !strings.HasSuffix(strings.ToLower(namaFile), ext) {
-			namaFile = strings.TrimSuffix(namaFile, filepath.Ext(namaFile)) + ext
-		}
-	}
-
-	filePath := filepath.Join(dir, namaFile)
-
-	if err := os.WriteFile(filePath, imageBytes, 0644); err != nil {
-		return nil, err
+	// Upload to Cloudinary
+	resp, err := cld.Upload.Upload(context.Background(), bytes.NewReader(imageBytes), uploader.UploadParams{
+		Folder:   "cbt/soal_images",
+		PublicID: namaFile,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload image to Cloudinary: %v", err)
 	}
 
 	gambar := &entity.SoalGambar{
 		IDSoal:     idSoal,
-		NamaFile:   namaFile,
-		FilePath:   filePath,
+		NamaFile:   resp.PublicID,
+		FilePath:   resp.SecureURL,
 		FileSize:   len(imageBytes),
 		MimeType:   mimeType,
 		Urutan:     urutan,
 		Keterangan: keterangan,
+		CloudId:    &u.config.Cloudinary.Name,
+		PublicId:   &resp.PublicID,
 	}
 
-	err := u.repo.CreateGambar(gambar)
+	err = u.repo.CreateGambar(gambar)
 	if err != nil {
-		// Clean up file if DB insert fails
-		os.Remove(filePath)
+		// Delete from Cloudinary if DB insert fails
+		_, delErr := cld.Upload.Destroy(context.Background(), uploader.DestroyParams{PublicID: resp.PublicID})
+		if delErr != nil {
+			fmt.Printf("Warning: failed to delete image from Cloudinary %s: %v\n", resp.PublicID, delErr)
+		}
 		return nil, err
 	}
 
@@ -264,10 +256,21 @@ func (u *soalUsecaseImpl) DeleteImageFromSoal(idGambar int) error {
 		return err
 	}
 
-	// Delete file
-	if err := os.Remove(gambar.FilePath); err != nil {
+	// Initialize Cloudinary
+	cld, err := cloudinary.NewFromParams(u.config.Cloudinary.Name, u.config.Cloudinary.Key, u.config.Cloudinary.Secret)
+	if err != nil {
+		return fmt.Errorf("failed to initialize Cloudinary: %v", err)
+	}
+
+	// Delete from Cloudinary
+	publicID := gambar.NamaFile // fallback to NamaFile for backward compatibility
+	if gambar.PublicId != nil {
+		publicID = *gambar.PublicId
+	}
+	_, err = cld.Upload.Destroy(context.Background(), uploader.DestroyParams{PublicID: publicID})
+	if err != nil {
 		// Log error but continue to delete DB record
-		fmt.Printf("Warning: failed to delete file %s: %v\n", gambar.FilePath, err)
+		fmt.Printf("Warning: failed to delete image from Cloudinary %s: %v\n", publicID, err)
 	}
 
 	return u.repo.DeleteGambar(idGambar)
@@ -276,4 +279,9 @@ func (u *soalUsecaseImpl) DeleteImageFromSoal(idGambar int) error {
 // UpdateImageInSoal updates an image in a soal
 func (u *soalUsecaseImpl) UpdateImageInSoal(idGambar int, urutan int, keterangan *string) error {
 	return u.repo.UpdateGambar(idGambar, urutan, keterangan)
+}
+
+// GetQuestionCountsByTopic returns the count of questions per topic
+func (u *soalUsecaseImpl) GetQuestionCountsByTopic() (map[int]int, error) {
+	return u.repo.GetQuestionCountsByTopic()
 }

@@ -29,4 +29,7 @@ type SoalRepository interface {
 	GetGambarByID(id int) (*entity.SoalGambar, error)
 	UpdateGambar(id int, urutan int, keterangan *string) error
 	DeleteGambar(id int) error
+
+	// Get question counts by topic
+	GetQuestionCountsByTopic() (map[int]int, error)
 }
