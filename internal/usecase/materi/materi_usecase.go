@@ -21,6 +21,9 @@ func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, idTin
 	if nama == "" {
 		return nil, errors.New("nama cannot be empty")
 	}
+	if idMataPelajaran < 1 {
+		return nil, errors.New("idMataPelajaran must be positive")
+	}
 	if idTingkat < 1 {
 		return nil, errors.New("idTingkat must be positive")
 	}
@@ -56,6 +59,9 @@ func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, i
 	if nama == "" {
 		return nil, errors.New("nama cannot be empty")
 	}
+	if idMataPelajaran < 1 {
+		return nil, errors.New("idMataPelajaran must be positive")
+	}
 	if idTingkat < 1 {
 		return nil, errors.New("idTingkat must be positive")
 	}
@@ -77,6 +83,11 @@ func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, i
 	m.IsActive = isActive
 	m.DefaultDurasiMenit = defaultDurasiMenit
 	m.DefaultJumlahSoal = defaultJumlahSoal
+
+	// Clear associations to prevent GORM from trying to update them with potentially conflicting IDs
+	m.MataPelajaran = entity.MataPelajaran{}
+	m.Tingkat = entity.Tingkat{}
+
 	err = u.repo.Update(m)
 	if err != nil {
 		return nil, err

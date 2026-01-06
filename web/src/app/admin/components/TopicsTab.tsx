@@ -68,12 +68,12 @@ export default React.memo(function TopicsTab() {
     },
     onSubmit: async (values) => {
       const data = {
-        id_mata_pelajaran: parseInt(values.idMataPelajaran),
-        id_tingkat: parseInt(values.idTingkat),
+        idMataPelajaran: parseInt(values.idMataPelajaran),
+        idTingkat: parseInt(values.idTingkat),
         nama: values.nama,
-        is_active: values.isActive,
-        default_durasi_menit: parseInt(values.defaultDurasiMenit),
-        default_jumlah_soal: parseInt(values.defaultJumlahSoal),
+        isActive: values.isActive,
+        defaultDurasiMenit: parseInt(values.defaultDurasiMenit),
+        defaultJumlahSoal: parseInt(values.defaultJumlahSoal),
       } as any;
       if (editingTopic) {
         await update(editingTopic.id, data);

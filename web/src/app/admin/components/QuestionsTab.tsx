@@ -457,17 +457,17 @@ export default function QuestionsTab() {
       }
 
       const questionData = {
-        id_materi: formValues.materi.id,
-        id_tingkat: formValues.materi.tingkat.id,
+        idMateri: formValues.materi.id,
+        idTingkat: formValues.materi.tingkat.id,
         pertanyaan: formValues.pertanyaan,
-        opsi_a: formValues.opsiA,
-        opsi_b: formValues.opsiB,
-        opsi_c: formValues.opsiC,
-        opsi_d: formValues.opsiD,
-        jawaban_benar: formValues.jawabanBenar === 'A' ? 1 : formValues.jawabanBenar === 'B' ? 2 : formValues.jawabanBenar === 'C' ? 3 : 4,
+        opsiA: formValues.opsiA,
+        opsiB: formValues.opsiB,
+        opsiC: formValues.opsiC,
+        opsiD: formValues.opsiD,
+        jawabanBenar: formValues.jawabanBenar === 'A' ? 1 : formValues.jawabanBenar === 'B' ? 2 : formValues.jawabanBenar === 'C' ? 3 : 4,
         pembahasan: formValues.pembahasan,
-        image_bytes: imageBytes,
-      };
+        imageBytes: imageBytes,
+      } as any;
 
       let result;
       if (currentQuestion?.id) {
