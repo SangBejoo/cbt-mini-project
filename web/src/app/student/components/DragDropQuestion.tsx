@@ -566,7 +566,7 @@ export default function DragDropQuestion({
         borderColor="orange.400"
       >
         <Badge colorScheme={isOrdering ? 'purple' : 'orange'} mb={2} fontSize={isMobile ? 'xs' : 'sm'}>
-          {isOrdering ? '🔢 URUTKAN' : '🔗 PASANGKAN'}
+          {isOrdering ? 'URUTKAN' : 'PASANGKAN'}
         </Badge>
         <Text fontSize={isMobile ? 'md' : 'lg'} fontWeight="medium">
           {question.pertanyaan}
@@ -583,7 +583,7 @@ export default function DragDropQuestion({
           textAlign="center"
         >
           <Text fontSize="xs" color="blue.600">
-            👆 Tekan dan tahan item, lalu geser ke tempat yang benar
+            Tekan dan tahan item, lalu geser ke tempat yang benar
           </Text>
         </Box>
       )}
@@ -722,7 +722,7 @@ export default function DragDropQuestion({
                   {unassignedItems.length === 0 && (
                     <Center p={isMobile ? 3 : 4} bg="green.50" borderRadius="md">
                       <Text color="green.600" fontWeight="medium" fontSize={isMobile ? 'xs' : 'sm'}>
-                        ✓ Semua sudah dipasangkan
+                        Semua sudah dipasangkan
                       </Text>
                     </Center>
                   )}

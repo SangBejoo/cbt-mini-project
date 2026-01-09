@@ -443,10 +443,23 @@ function DragDropFormModal({
       }
     }
     
-    // For ORDERING type, slots and answers can be empty
-    if (formData.dragType === 'ordering' && formData.items.length < 2) {
-      toast({ title: 'Minimal ada 2 item untuk tipe ORDERING', status: 'warning' });
-      return;
+    // For ORDERING type, require correct answers mapping (each item must have a position)
+    if (formData.dragType === 'ordering') {
+      if (formData.items.length < 2) {
+        toast({ title: 'Minimal ada 2 item untuk tipe ORDERING', status: 'warning' });
+        return;
+      }
+      if (formData.correctAnswers.length !== formData.items.length) {
+        toast({ title: 'Setiap item harus dipetakan ke posisi untuk ORDERING', status: 'warning' });
+        return;
+      }
+      // Check for duplicate slots (each position can only have one item)
+      const usedSlots = formData.correctAnswers.map(ca => ca.slotUrutan);
+      const uniqueSlots = new Set(usedSlots);
+      if (usedSlots.length !== uniqueSlots.size) {
+        toast({ title: 'Setiap posisi hanya bisa memiliki satu item', status: 'warning' });
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -507,15 +520,15 @@ function DragDropFormModal({
                     slots: newType === 'matching' && prev.slots.length === 0
                       ? [{ label: '', urutan: 1 }, { label: '', urutan: 2 }]
                       : newType === 'ordering'
-                      ? [] // When switching to ORDERING, clear slots
+                      ? [] // When switching to ORDERING, clear slots (will be auto-generated)
                       : prev.slots,
-                    // When switching to ORDERING, clear correct answers since they're not needed
-                    correctAnswers: newType === 'ordering' ? [] : prev.correctAnswers,
+                    // Keep correct answers when switching - admin needs to set them for ORDERING too
+                    correctAnswers: prev.correctAnswers,
                   }));
                 }}
               >
-                <option value="ordering">🔢 Ordering (Urutkan)</option>
-                <option value="matching">🔗 Matching (Cocokkan)</option>
+                <option value="ordering">Ordering (Urutkan)</option>
+                <option value="matching">Matching (Cocokkan)</option>
               </Select>
               <Text fontSize="xs" color="gray.500" mt={1}>
                 {formData.dragType === 'ordering' 
@@ -541,7 +554,7 @@ function DragDropFormModal({
             <Box>
               <HStack justify="space-between" mb={3}>
                 <VStack align="start" spacing={0}>
-                  <Heading size="sm">🎯 Item yang Dapat Didrag</Heading>
+                  <Heading size="sm">Item yang Dapat Didrag</Heading>
                   <Text fontSize="xs" color="gray.500">Setiap item bisa memiliki gambar (opsional)</Text>
                 </VStack>
                 <Button size="sm" leftIcon={<AddIcon />} onClick={addItem}>
@@ -641,7 +654,7 @@ function DragDropFormModal({
             {formData.dragType === 'matching' && (
             <Box>
               <HStack justify="space-between" mb={3}>
-                <Heading size="sm">📍 Slot/Kategori Drop Zone</Heading>
+                <Heading size="sm">Slot/Kategori Drop Zone</Heading>
                 <Button size="sm" leftIcon={<AddIcon />} onClick={addSlot}>
                   Tambah Slot
                 </Button>
@@ -722,7 +735,7 @@ function DragDropFormModal({
             {/* Correct Answers Mapping - Only for MATCHING type */}
             {formData.dragType === 'matching' && (
             <Box>
-              <Heading size="sm" mb={3}>✅ Jawaban Benar (Pemetaan Item → Slot)</Heading>
+              <Heading size="sm" mb={3}>Jawaban Benar (Pemetaan Item → Slot)</Heading>
               <Text fontSize="sm" color="gray.600" mb={3}>
                 Pilih slot yang benar untuk setiap item:
               </Text>
@@ -751,51 +764,95 @@ function DragDropFormModal({
 
             {formData.dragType === 'matching' && (
             <Box>
-              <Heading size="sm" color="blue.600" mb={2}>ℹ️ Info Tipe MATCHING</Heading>
+              <Heading size="sm" color="blue.600" mb={2}>Info Tipe MATCHING</Heading>
               <Text fontSize="sm" color="gray.600">
                 Siswa akan mencocokkan item dengan kategori/slot yang sesuai. Pastikan setiap item dipetakan ke slot yang benar untuk kunci jawaban.
               </Text>
             </Box>
             )}
 
+            {/* Correct Answers Mapping for ORDERING type */}
             {formData.dragType === 'ordering' && (
-            <Box bg="purple.50" p={4} borderRadius="md">
-              <Heading size="sm" color="purple.600" mb={3}>ℹ️ Info Tipe ORDERING (Urutkan seperti Brilliant)</Heading>
-              <VStack align="stretch" spacing={3}>
-                <Text fontSize="sm" color="gray.700">
-                  <strong>Cara Kerja:</strong> Siswa akan mengurutkan item ke posisi yang benar. Backend akan otomatis membuat slot posisi (1, 2, 3...) sesuai jumlah item.
+            <Box>
+              <Box bg="purple.50" p={4} borderRadius="md" mb={4}>
+                <Heading size="sm" color="purple.600" mb={3}>Info Tipe ORDERING (Seperti Brilliant)</Heading>
+                <VStack align="stretch" spacing={2}>
+                  <Text fontSize="sm" color="gray.700">
+                    <strong>Cara Kerja:</strong> Siswa akan mengurutkan item ke posisi yang benar. Item akan ditampilkan secara acak ke siswa.
+                  </Text>
+                  <Text fontSize="sm" color="gray.600">
+                    <strong>Set jawaban benar di bawah:</strong> Pilih posisi yang benar untuk setiap item.
+                  </Text>
+                </VStack>
+              </Box>
+
+              <Box bg="green.50" p={4} borderRadius="md" border="1px solid" borderColor="green.200">
+                <Heading size="sm" color="green.700" mb={3}>Jawaban Benar (Pemetaan Item → Posisi)</Heading>
+                <Text fontSize="sm" color="gray.600" mb={3}>
+                  Pilih posisi yang benar untuk setiap item. Contoh: Jika item "100" harus di posisi pertama, pilih "Posisi 1".
                 </Text>
-                
-                <Text fontSize="sm" color="gray.600">
-                  <strong>Urutan yang Anda set adalah jawaban benar:</strong> Item pertama di daftar = Posisi 1, Item kedua = Posisi 2, dst.
-                </Text>
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                  {formData.items.map((item, itemIdx) => (
+                    <HStack key={itemIdx} p={3} bg="white" borderRadius="md" border="1px solid" borderColor="green.200">
+                      <Badge colorScheme="blue" minW="100px" textAlign="center">
+                        {item.label || `Item ${itemIdx + 1}`}
+                      </Badge>
+                      <Text fontWeight="bold">→</Text>
+                      <Select
+                        size="sm"
+                        flex={1}
+                        value={formData.correctAnswers.find(ca => ca.itemUrutan === itemIdx + 1)?.slotUrutan || ''}
+                        onChange={(e) => setCorrectAnswer(itemIdx + 1, Number(e.target.value))}
+                        bg="white"
+                      >
+                        <option value="">Pilih posisi...</option>
+                        {formData.items.map((_, slotIdx) => {
+                          const isUsed = formData.correctAnswers.some(
+                            ca => ca.slotUrutan === slotIdx + 1 && ca.itemUrutan !== itemIdx + 1
+                          );
+                          return (
+                            <option key={slotIdx} value={slotIdx + 1} disabled={isUsed}>
+                              Posisi {slotIdx + 1} {isUsed ? '(sudah digunakan)' : ''}
+                            </option>
+                          );
+                        })}
+                      </Select>
+                    </HStack>
+                  ))}
+                </SimpleGrid>
                 
                 {/* Visual Preview */}
-                <Box bg="white" p={3} borderRadius="md" border="1px solid" borderColor="purple.200">
-                  <Text fontSize="xs" fontWeight="bold" color="purple.600" mb={2}>🎮 PREVIEW TAMPILAN SISWA:</Text>
+                <Box bg="purple.50" p={3} borderRadius="md" mt={4} border="1px solid" borderColor="purple.200">
+                  <Text fontSize="xs" fontWeight="bold" color="purple.600" mb={2}>🎮 PREVIEW JAWABAN BENAR:</Text>
                   <HStack spacing={2} justify="center" flexWrap="wrap">
-                    {formData.items.map((item, i) => (
-                      <VStack key={i} spacing={1}>
-                        <Badge colorScheme="gray" fontSize="sm" px={3} py={1}>{i + 1}</Badge>
-                        <Box 
-                          p={2} 
-                          borderRadius="md" 
-                          border="2px dashed" 
-                          borderColor="purple.300" 
-                          bg="purple.50"
-                          minW="80px"
-                          textAlign="center"
-                        >
-                          <Text fontSize="xs" color="purple.600">Drop Zone</Text>
-                        </Box>
-                      </VStack>
-                    ))}
+                    {formData.items.map((_, posIdx) => {
+                      const answer = formData.correctAnswers.find(ca => ca.slotUrutan === posIdx + 1);
+                      const item = answer ? formData.items.find((_, idx) => idx + 1 === answer.itemUrutan) : null;
+                      return (
+                        <VStack key={posIdx} spacing={1}>
+                          <Badge colorScheme="purple" fontSize="sm" px={3} py={1}>Posisi {posIdx + 1}</Badge>
+                          <Box 
+                            p={2} 
+                            borderRadius="md" 
+                            border={item ? "2px solid" : "2px dashed"}
+                            borderColor={item ? "green.400" : "gray.300"}
+                            bg={item ? "green.50" : "white"}
+                            minW="80px"
+                            textAlign="center"
+                          >
+                            <Text fontSize="xs" color={item ? "green.700" : "gray.400"} fontWeight={item ? "bold" : "normal"}>
+                              {item?.label || '?'}
+                            </Text>
+                          </Box>
+                        </VStack>
+                      );
+                    })}
                   </HStack>
                   <Text fontSize="xs" color="gray.500" mt={2} textAlign="center">
-                    Siswa akan meng-drag item ({formData.items.map(i => i.label || '?').join(', ')}) ke posisi yang benar
+                    Siswa akan melihat item dalam urutan acak dan harus menyusun ke posisi yang benar
                   </Text>
                 </Box>
-              </VStack>
+              </Box>
             </Box>
             )}
 

@@ -84,8 +84,12 @@ func (u *usecase) Create(req *CreateRequest) (*entity.SoalDragDrop, error) {
 		if len(req.CorrectAnswers) != len(req.Items) {
 			return nil, errors.New("each item must have exactly one correct slot for matching type")
 		}
+	} else if req.DragType == entity.DragTypeOrdering {
+		// ORDERING now also requires correct answers (admin manually maps items to positions)
+		if len(req.CorrectAnswers) != len(req.Items) {
+			return nil, errors.New("each item must be mapped to a position for ordering type")
+		}
 	}
-	// ORDERING: slots and correct answers will be auto-generated
 
 	// Create main question entity
 	soal := &entity.SoalDragDrop{
@@ -130,13 +134,13 @@ func (u *usecase) Create(req *CreateRequest) (*entity.SoalDragDrop, error) {
 			}
 		}
 
-		// Auto-generate correct answers: item with urutan N belongs to slot with urutan N
-		// This means the correct order is the order defined by the admin
-		correctAnswers = make([]entity.DragCorrectAnswer, len(req.Items))
-		for i, item := range req.Items {
+		// Use correct answers provided by admin (manual mapping)
+		// Admin specifies which item goes to which position
+		correctAnswers = make([]entity.DragCorrectAnswer, len(req.CorrectAnswers))
+		for i, ca := range req.CorrectAnswers {
 			correctAnswers[i] = entity.DragCorrectAnswer{
-				IDDragItem: item.Urutan, // Pass urutan, repository will map to ID
-				IDDragSlot: item.Urutan, // Same urutan = correct position
+				IDDragItem: ca.ItemUrutan, // Pass urutan, repository will map to ID
+				IDDragSlot: ca.SlotUrutan, // Pass urutan (position), repository will map to ID
 			}
 		}
 	} else {
@@ -203,6 +207,14 @@ func (u *usecase) Update(id int, req *UpdateRequest) (*entity.SoalDragDrop, erro
 		if len(req.Slots) < 2 {
 			return nil, errors.New("at least 2 slots are required for matching type")
 		}
+		if len(req.CorrectAnswers) != len(req.Items) {
+			return nil, errors.New("each item must have exactly one correct slot for matching type")
+		}
+	} else if req.DragType == entity.DragTypeOrdering {
+		// ORDERING now also requires correct answers (admin manually maps items to positions)
+		if len(req.CorrectAnswers) != len(req.Items) {
+			return nil, errors.New("each item must be mapped to a position for ordering type")
+		}
 	}
 
 	// Get existing question
@@ -254,12 +266,13 @@ func (u *usecase) Update(id int, req *UpdateRequest) (*entity.SoalDragDrop, erro
 			}
 		}
 
-		// Auto-generate correct answers: item with urutan N belongs to slot with urutan N
-		correctAnswers = make([]entity.DragCorrectAnswer, len(req.Items))
-		for i, item := range req.Items {
+		// Use correct answers provided by admin (manual mapping)
+		// Admin specifies which item goes to which position
+		correctAnswers = make([]entity.DragCorrectAnswer, len(req.CorrectAnswers))
+		for i, ca := range req.CorrectAnswers {
 			correctAnswers[i] = entity.DragCorrectAnswer{
-				IDDragItem: item.Urutan,
-				IDDragSlot: item.Urutan,
+				IDDragItem: ca.ItemUrutan, // Pass urutan, repository will map to ID
+				IDDragSlot: ca.SlotUrutan, // Pass urutan (position), repository will map to ID
 			}
 		}
 	} else {
