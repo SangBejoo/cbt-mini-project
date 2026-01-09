@@ -41,7 +41,7 @@ func (ts TestSession) BatasWaktu() time.Time {
 	return ts.WaktuMulai.Add(time.Duration(ts.DurasiMenit) * time.Minute)
 }
 
-// TestSessionSoal represents the test_session_soal table
+// TestSessionSoal represents the test_session_soal table (supports both MC and Drag-Drop)
 type TestSessionSoal struct {
 	ID int `json:"id" gorm:"primaryKey;autoIncrement"`
 
@@ -49,10 +49,24 @@ type TestSessionSoal struct {
 	IDTestSession int         `json:"id_test_session" gorm:"not null;index:idx_session_urut,unique"`
 	TestSession   TestSession `json:"-" gorm:"foreignKey:IDTestSession;constraint:OnDelete:CASCADE"`
 
-	IDSoal int  `json:"id_soal" gorm:"not null"`
+	// Question type for routing
+	QuestionType QuestionType `json:"question_type" gorm:"type:enum('multiple_choice','drag_drop');default:'multiple_choice'"`
+
+	// Multiple-choice question FK (nullable when QuestionType is drag_drop)
+	IDSoal *int `json:"id_soal" gorm:""`
 	Soal   Soal `json:"soal" gorm:"foreignKey:IDSoal"`
+
+	// Drag-drop question FK (nullable when QuestionType is multiple_choice)
+	IDSoalDragDrop *int          `json:"id_soal_drag_drop" gorm:""`
+	SoalDragDrop   *SoalDragDrop `json:"soal_drag_drop,omitempty" gorm:"foreignKey:IDSoalDragDrop"`
 
 	NomorUrut int `json:"nomor_urut" gorm:"not null;index:idx_session_urut,unique"`
 }
 
 func (TestSessionSoal) TableName() string { return "test_session_soal" }
+
+// IsDragDrop returns true if this is a drag-drop question
+func (tss TestSessionSoal) IsDragDrop() bool {
+	return tss.QuestionType == QuestionTypeDragDrop
+}
+

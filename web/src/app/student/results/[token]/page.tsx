@@ -39,6 +39,20 @@ import {
 import axios from 'axios';
 import { useAuth } from '../../../auth-context';
 
+interface DragItem {
+  id: number;
+  label: string;
+  imageUrl?: string;
+  urutan: number;
+}
+
+interface DragSlot {
+  id: number;
+  label: string;
+  imageUrl?: string;
+  urutan: number;
+}
+
 interface TestResultResponse {
   sessionInfo: {
     id: number;
@@ -83,6 +97,13 @@ interface TestResultResponse {
       keterangan?: string;
       createdAt: string;
     }>;
+    // New Fields for Drag Drop
+    questionType?: 'MULTIPLE_CHOICE' | 'DRAG_DROP';
+    dragType?: 'ORDERING' | 'MATCHING';
+    items?: DragItem[];
+    slots?: DragSlot[];
+    userDragAnswer?: Record<number, number>;
+    correctDragAnswer?: Record<number, number>;
   }>;
   tingkat: Array<{
     id: number;
@@ -621,104 +642,352 @@ export default function ResultsPage() {
                               </Box>
                             )}
 
-                            {/* Options */}
+                            {/* Options / Answers Display */}
                             <VStack spacing={3} align="stretch">
                               <Text fontSize="sm" color="gray.600" mb={-2}>
                                 {currentJawaban.pertanyaan}
                               </Text>
-                              {['A', 'B', 'C', 'D'].map((option) => {
-                                const isCorrectAnswer = currentJawaban.jawabanBenar === option;
-                                const isUserAnswer = currentJawaban.jawabanDipilih === option;
-                                const isAnswered = currentJawaban.isAnswered;
-                                const optionText = currentJawaban[`opsi${option}` as keyof typeof currentJawaban];
 
-                                let bgColor = 'white';
-                                let borderColor = 'gray.200';
-                                let borderWidth = '1px';
+                              {currentJawaban.questionType === 'DRAG_DROP' ? (
+                                <Box mt={4}>
+                                  {currentJawaban.dragType === 'MATCHING' ? (
+                                    <VStack spacing={4} align="stretch">
+                                      <Text fontWeight="bold" color="gray.700">Hasil Pencocokan:</Text>
+                                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                                        {currentJawaban.slots?.map((slot) => {
+                                          const userItems = currentJawaban.items?.filter(item => currentJawaban.userDragAnswer?.[item.id] === slot.id) || [];
+                                          const correctItems = currentJawaban.items?.filter(item => currentJawaban.correctDragAnswer?.[item.id] === slot.id) || [];
+                                          
+                                          // Sort correct items by label for consistency
+                                          correctItems.sort((a, b) => a.label.localeCompare(b.label));
+                                          
+                                          return (
+                                            <Card key={slot.id} variant="outline" bg="gray.50">
+                                              <CardBody p={3}>
+                                                <VStack align="stretch" spacing={3}>
+                                                  <Box borderBottom="1px" borderColor="gray.200" pb={2}>
+                                                    <HStack spacing={2}>
+                                                      {slot.imageUrl && (
+                                                        <Image 
+                                                          src={slot.imageUrl} 
+                                                          alt={slot.label} 
+                                                          boxSize="40px" 
+                                                          objectFit="cover" 
+                                                          borderRadius="md"
+                                                        />
+                                                      )}
+                                                      <Text fontWeight="bold" color="purple.600">{slot.label}</Text>
+                                                    </HStack>
+                                                  </Box>
+                                                  
+                                                  <VStack align="stretch" spacing={2}>
+                                                    <Text fontSize="xs" fontWeight="bold" color="gray.500">Jawaban Anda:</Text>
+                                                    {userItems.length > 0 ? (
+                                                      userItems.map(item => {
+                                                        const isCorrect = currentJawaban.correctDragAnswer?.[item.id] === slot.id;
+                                                        return (
+                                                          <HStack key={item.id} p={2} bg={isCorrect ? "green.100" : "red.100"} borderRadius="md" justify="space-between">
+                                                            <HStack spacing={2}>
+                                                              {item.imageUrl && (
+                                                                <Image 
+                                                                  src={item.imageUrl} 
+                                                                  alt={item.label} 
+                                                                  boxSize="32px" 
+                                                                  objectFit="cover" 
+                                                                  borderRadius="sm"
+                                                                />
+                                                              )}
+                                                              <Text fontSize="sm">{item.label}</Text>
+                                                            </HStack>
+                                                            {isCorrect ? (
+                                                              <Badge colorScheme="green">✓</Badge>
+                                                            ) : (
+                                                              <Badge colorScheme="red">✗</Badge>
+                                                            )}
+                                                          </HStack>
+                                                        );
+                                                      })
+                                                    ) : (
+                                                      <Text fontSize="xs" color="gray.400" fontStyle="italic">Kosong</Text>
+                                                    )}
+                                                  </VStack>
 
-                                // If question was not answered at all
-                                if (!isAnswered) {
-                                  if (isCorrectAnswer) {
-                                    bgColor = 'green.50';
-                                    borderColor = 'green.400';
-                                    borderWidth = '2px';
-                                  } else {
-                                    bgColor = 'gray.50';
-                                    borderColor = 'gray.300';
-                                  }
-                                } else {
-                                  // Question was answered
-                                  if (isCorrectAnswer) {
-                                    bgColor = 'green.50';
-                                    borderColor = 'green.400';
-                                    borderWidth = '2px';
-                                  } else if (isUserAnswer && !isCorrectAnswer) {
-                                    bgColor = 'red.50';
-                                    borderColor = 'red.400';
-                                    borderWidth = '2px';
-                                  }
-                                }
-
-                                return (
-                                  <Box
-                                    key={option}
-                                    p={3}
-                                    borderWidth={borderWidth}
-                                    borderColor={borderColor}
-                                    borderRadius="md"
-                                    bg={bgColor}
-                                  >
-                                    <HStack justify="space-between" align="start">
-                                      <Box flex="1">
-                                        <Text fontWeight={isCorrectAnswer || isUserAnswer ? 'semibold' : 'normal'}>
-                                          {option}.
-                                        </Text>
-                                        {Array.isArray(optionText) ? (
-                                          <VStack spacing={2} mt={2}>
-                                            {optionText.map((img: any) => (
-                                              <Image
-                                                key={img.id}
-                                                src={img.filePath || ''}
-                                                alt={img.keterangan || 'Gambar opsi'}
-                                                maxH="200px"
-                                                objectFit="contain"
-                                                mx="auto"
-                                              />
+                                                  <VStack align="stretch" spacing={2} pt={2} borderTop="1px dashed" borderColor="gray.300">
+                                                    <Text fontSize="xs" fontWeight="bold" color="green.600">Kunci Jawaban:</Text>
+                                                    {correctItems.map(item => (
+                                                      <HStack key={item.id} p={1} pl={2}>
+                                                        <Box w="6px" h="6px" borderRadius="full" bg="green.400" />
+                                                        {item.imageUrl && (
+                                                          <Image 
+                                                            src={item.imageUrl} 
+                                                            alt={item.label} 
+                                                            boxSize="28px" 
+                                                            objectFit="cover" 
+                                                            borderRadius="sm"
+                                                          />
+                                                        )}
+                                                        <Text fontSize="sm" color="gray.700">{item.label}</Text>
+                                                      </HStack>
+                                                    ))}
+                                                  </VStack>
+                                                </VStack>
+                                              </CardBody>
+                                            </Card>
+                                          );
+                                        })}
+                                      </SimpleGrid>
+                                    </VStack>
+                                  ) : (
+                                    <VStack spacing={4} align="stretch">
+                                      <Text fontWeight="bold" color="gray.700">Urutan Benar vs Jawaban Anda:</Text>
+                                      
+                                      {/* Correct Order */}
+                                      <Box p={4} bg="green.50" borderRadius="lg" border="1px" borderColor="green.200">
+                                        <Text fontWeight="bold" color="green.700" mb={3}>Kunci Urutan Benar:</Text>
+                                        <VStack align="stretch" spacing={2}>
+                                          {[...(currentJawaban.items || [])]
+                                            .sort((a, b) => a.urutan - b.urutan)
+                                            .map((item, index) => (
+                                              <HStack key={item.id} spacing={3} p={2} bg="white" borderRadius="md" shadow="sm">
+                                                <Box 
+                                                  w="24px" h="24px" bg="green.500" color="white" 
+                                                  borderRadius="full" fontSize="xs" display="flex" 
+                                                  alignItems="center" justifyContent="center" fontWeight="bold"
+                                                >
+                                                  {index + 1}
+                                                </Box>
+                                                {item.imageUrl && (
+                                                  <Image 
+                                                    src={item.imageUrl} 
+                                                    alt={item.label} 
+                                                    boxSize="36px" 
+                                                    objectFit="cover" 
+                                                    borderRadius="sm"
+                                                  />
+                                                )}
+                                                <Text fontSize="sm">{item.label}</Text>
+                                              </HStack>
                                             ))}
-                                          </VStack>
-                                        ) : (
-                                          <Text fontWeight={isCorrectAnswer || isUserAnswer ? 'semibold' : 'normal'} mt={1}>
-                                            {String(optionText)}
-                                          </Text>
-                                        )}
+                                        </VStack>
                                       </Box>
-                                      {isCorrectAnswer && (
-                                        <Badge colorScheme="green" ml={2}>Jawaban Benar</Badge>
-                                      )}
-                                      {isUserAnswer && !isCorrectAnswer && (
-                                        <Badge colorScheme="red" ml={2}>Jawaban Anda</Badge>
-                                      )}
-                                    </HStack>
-                                  </Box>
-                                );
-                              })}
+
+                                      {/* User Order */}
+                                      <Box p={4} bg={currentJawaban.isCorrect ? "blue.50" : "red.50"} borderRadius="lg" border="1px" borderColor={currentJawaban.isCorrect ? "blue.200" : "red.200"}>
+                                        <Text fontWeight="bold" color={currentJawaban.isCorrect ? "blue.700" : "red.700"} mb={3}>
+                                          Jawaban Anda ({currentJawaban.isCorrect ? "Benar" : "Salah"}):
+                                        </Text>
+                                        <VStack align="stretch" spacing={2}>
+                                          {(() => {
+                                            if (!currentJawaban.userDragAnswer || Object.keys(currentJawaban.userDragAnswer).length === 0) {
+                                                return <Text fontSize="sm" fontStyle="italic" color="gray.500">Tidak ada jawaban</Text>;
+                                            }
+ 
+                                            // Detect format: Check if first Key is an ItemID
+                                            const firstKey = Number(Object.keys(currentJawaban.userDragAnswer)[0]);
+                                            const isNewFormat = currentJawaban.items?.some(i => i.id === firstKey);
+                                            
+                                            let displayItems: { pos: number, label: string, imageUrl?: string, isCorrect: boolean, key: string }[] = [];
+                                            
+                                            if (isNewFormat) {
+                                                // New Format: Key=ItemID, Value=SlotID
+                                                const sortedSlots = [...(currentJawaban.slots || [])].sort((a, b) => a.urutan - b.urutan);
+                                                
+                                                displayItems = sortedSlots.map((slot, idx) => {
+                                                    const itemIdStr = Object.keys(currentJawaban.userDragAnswer!).find(
+                                                        key => currentJawaban.userDragAnswer![Number(key)] === slot.id
+                                                    );
+                                                    const item = itemIdStr ? currentJawaban.items?.find(i => i.id === Number(itemIdStr)) : null;
+                                                    
+                                                    let isCorrect = false;
+                                                    if (item) {
+                                                        if (currentJawaban.correctDragAnswer) {
+                                                            isCorrect = currentJawaban.correctDragAnswer[item.id] === slot.id;
+                                                        } else {
+                                                            isCorrect = item.urutan === slot.urutan;
+                                                        }
+                                                    }
+                                                    
+                                                    return {
+                                                        pos: idx + 1,
+                                                        label: item ? item.label : "Kosong",
+                                                        imageUrl: item?.imageUrl,
+                                                        isCorrect: isCorrect,
+                                                        key: `slot-${slot.id}`
+                                                    };
+                                                });
+                                            } else {
+                                                // Old Format: Key=Pos, Value=ItemID
+                                                displayItems = Object.entries(currentJawaban.userDragAnswer)
+                                                    .sort((a, b) => Number(a[0]) - Number(b[0]))
+                                                    .map(([posStr, itemId]) => {
+                                                        const item = currentJawaban.items?.find(i => i.id === itemId);
+                                                        const pos = Number(posStr) + 1;
+                                                        const isCorrect = item ? item.urutan === pos : false;
+                                                        return {
+                                                            pos,
+                                                            label: item ? item.label : "Unknown Item",
+                                                            imageUrl: item?.imageUrl,
+                                                            isCorrect,
+                                                            key: `pos-${posStr}`
+                                                        };
+                                                    });
+                                            }
+
+                                            return displayItems.map(d => (
+                                                <HStack key={d.key} spacing={3} p={2} bg="white" borderRadius="md" shadow="sm">
+                                                   <Box 
+                                                    w="24px" h="24px" 
+                                                    bg={d.isCorrect ? "blue.500" : "red.500"} 
+                                                    color="white" 
+                                                    borderRadius="full" fontSize="xs" display="flex" 
+                                                    alignItems="center" justifyContent="center" fontWeight="bold"
+                                                  >
+                                                    {d.pos}
+                                                  </Box>
+                                                  {d.imageUrl && (
+                                                    <Image 
+                                                      src={d.imageUrl} 
+                                                      alt={d.label} 
+                                                      boxSize="36px" 
+                                                      objectFit="cover" 
+                                                      borderRadius="sm"
+                                                    />
+                                                  )}
+                                                  <Text fontSize="sm">{d.label}</Text>
+                                                  {d.isCorrect ? <Badge colorScheme="green" ml="auto">✓</Badge> : <Badge colorScheme="red" ml="auto">✗</Badge>}
+                                                </HStack>
+                                            ));
+                                          })()}
+                                        </VStack>
+                                      </Box>
+                                    </VStack>
+                                  )}
+                                </Box>
+                              ) : (
+                                  // MULTIPLE CHOICE RENDERER
+                                  ['A', 'B', 'C', 'D'].map((option) => {
+                                  const isCorrectAnswer = currentJawaban.jawabanBenar === option;
+                                  const isUserAnswer = currentJawaban.jawabanDipilih === option;
+                                  const isAnswered = currentJawaban.isAnswered;
+                                  const optionText = currentJawaban[`opsi${option}` as keyof typeof currentJawaban];
+
+                                  let bgColor = 'white';
+                                  let borderColor = 'gray.200';
+                                  let borderWidth = '1px';
+
+                                  // If question was not answered at all
+                                  if (!isAnswered) {
+                                    if (isCorrectAnswer) {
+                                      bgColor = 'green.50';
+                                      borderColor = 'green.400';
+                                      borderWidth = '2px';
+                                    } else {
+                                      bgColor = 'gray.50';
+                                      borderColor = 'gray.300';
+                                    }
+                                  } else {
+                                    // Question was answered
+                                    if (isCorrectAnswer) {
+                                      bgColor = 'green.50';
+                                      borderColor = 'green.400';
+                                      borderWidth = '2px';
+                                    } else if (isUserAnswer && !isCorrectAnswer) {
+                                      bgColor = 'red.50';
+                                      borderColor = 'red.400';
+                                      borderWidth = '2px';
+                                    }
+                                  }
+
+                                  return (
+                                    <Box
+                                      key={option}
+                                      p={3}
+                                      borderWidth={borderWidth}
+                                      borderColor={borderColor}
+                                      borderRadius="md"
+                                      bg={bgColor}
+                                    >
+                                      <HStack justify="space-between" align="start">
+                                        <Box flex="1">
+                                          <Text fontWeight={isCorrectAnswer || isUserAnswer ? 'semibold' : 'normal'}>
+                                            {option}.
+                                          </Text>
+                                          {Array.isArray(optionText) ? (
+                                            <VStack spacing={2} mt={2}>
+                                              {optionText.map((img: any) => (
+                                                <Image
+                                                  key={img.id}
+                                                  src={img.filePath || ''}
+                                                  alt={img.keterangan || 'Gambar opsi'}
+                                                  maxH="200px"
+                                                  objectFit="contain"
+                                                  mx="auto"
+                                                />
+                                              ))}
+                                            </VStack>
+                                          ) : (
+                                            <Text fontWeight={isCorrectAnswer || isUserAnswer ? 'semibold' : 'normal'} mt={1}>
+                                              {String(optionText)}
+                                            </Text>
+                                          )}
+                                        </Box>
+                                        {isCorrectAnswer && (
+                                          <Badge colorScheme="green" ml={2}>Jawaban Benar</Badge>
+                                        )}
+                                        {isUserAnswer && !isCorrectAnswer && (
+                                          <Badge colorScheme="red" ml={2}>Jawaban Anda</Badge>
+                                        )}
+                                      </HStack>
+                                    </Box>
+                                  );
+                                })
+                              )}
                             </VStack>
 
                             {/* Kunci Jawaban Label */}
-                            <Box p={3} bg="green.50" borderRadius="md" borderLeft="4px solid" borderLeftColor="green.500">
-                              <Text fontSize="sm" fontWeight="bold" color="green.700">
-                                Kunci Jawaban: {currentJawaban.jawabanBenar}
-                              </Text>
-                            </Box>
+                            {currentJawaban.questionType !== 'DRAG_DROP' && (
+                              <Box p={3} bg="green.50" borderRadius="md" borderLeft="4px solid" borderLeftColor="green.500">
+                                <Text fontSize="sm" fontWeight="bold" color="green.700">
+                                  Kunci Jawaban: {currentJawaban.jawabanBenar}
+                                </Text>
+                              </Box>
+                            )}
 
                             {/* Pembahasan */}
                             {currentJawaban.isAnswered ? (
-                              currentJawaban.pembahasan && currentJawaban.pembahasan.trim() ? (
+                              ((currentJawaban.pembahasan && currentJawaban.pembahasan.trim()) || (currentJawaban.questionType === 'DRAG_DROP' && currentJawaban.gambar && currentJawaban.gambar.length > 0)) ? (
                                 <Box p={4} bg="blue.50" borderRadius="md" borderLeft="4px solid" borderLeftColor="blue.400">
                                   <Text fontWeight="bold" mb={2} color="blue.700">Pembahasan :</Text>
-                                  <Text color="blue.800" whiteSpace="pre-wrap" lineHeight="1.6">
-                                    {currentJawaban.pembahasan}
-                                  </Text>
+                                  {currentJawaban.pembahasan && (
+                                    <Text color="blue.800" whiteSpace="pre-wrap" lineHeight="1.6" mb={(currentJawaban.questionType === 'DRAG_DROP' && currentJawaban.gambar && currentJawaban.gambar.length > 0) ? 3 : 0}>
+                                      {currentJawaban.pembahasan}
+                                    </Text>
+                                  )}
+                                  
+                                  {/* Drag & Drop Explanation Images */}
+                                  {currentJawaban.questionType === 'DRAG_DROP' && currentJawaban.gambar && currentJawaban.gambar.length > 0 && (
+                                    <Box mt={2}>
+                                      <Text fontSize="xs" color="blue.600" mb={2} fontWeight="medium">Ilustrasi / Gambar:</Text>
+                                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                                        {currentJawaban.gambar.map((img: any) => (
+                                          <Box key={img.id} borderWidth="1px" borderRadius="md" p={2} bg="white">
+                                            <Image
+                                              src={img.filePath || ''}
+                                              alt={img.keterangan || 'Gambar pembahasan'}
+                                              maxH="200px"
+                                              objectFit="contain"
+                                              mx="auto"
+                                            />
+                                            {img.keterangan && (
+                                              <Text fontSize="xs" color="gray.500" mt={1} textAlign="center">
+                                                {img.keterangan}
+                                              </Text>
+                                            )}
+                                          </Box>
+                                        ))}
+                                      </SimpleGrid>
+                                    </Box>
+                                  )}
                                 </Box>
                               ) : (
                                 <Box p={4} bg="gray.50" borderRadius="md" borderLeft="4px solid" borderLeftColor="gray.400">
@@ -732,7 +1001,10 @@ export default function ResultsPage() {
                               <Box p={4} bg="orange.50" borderRadius="md" borderLeft="4px solid" borderLeftColor="orange.400">
                                 <Text fontWeight="bold" mb={2} color="orange.700">Soal Tidak Dijawab</Text>
                                 <Text color="orange.800" fontSize="sm">
-                                  Anda tidak menjawab soal ini. Kunci jawaban yang benar adalah {currentJawaban.jawabanBenar}.
+                                  Anda tidak menjawab soal ini.{" "}
+                                  {currentJawaban.questionType !== 'DRAG_DROP' && (
+                                    <>Kunci jawaban yang benar adalah {currentJawaban.jawabanBenar}.</>
+                                  )}
                                 </Text>
                               </Box>
                             )}

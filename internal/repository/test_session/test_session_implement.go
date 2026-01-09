@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // testSessionRepositoryImpl implements TestSessionRepository
@@ -116,6 +117,7 @@ func (r *testSessionRepositoryImpl) GetSessionQuestions(token string) ([]entity.
 func (r *testSessionRepositoryImpl) GetAllQuestionsForSession(token string) ([]entity.TestSessionSoal, error) {
 	var sessionSoals []entity.TestSessionSoal
 	err := r.db.Preload("Soal", func(db *gorm.DB) *gorm.DB { return db.Preload("Gambar", func(db2 *gorm.DB) *gorm.DB { return db2.Order("urutan ASC") }).Preload("Materi").Preload("Materi.MataPelajaran").Preload("Materi.Tingkat") }).
+		Preload("SoalDragDrop", func(db *gorm.DB) *gorm.DB { return db.Preload("Materi").Preload("Items", func(db2 *gorm.DB) *gorm.DB { return db2.Order("urutan ASC") }).Preload("Slots", func(db2 *gorm.DB) *gorm.DB { return db2.Order("urutan ASC") }).Preload("Gambar", func(db2 *gorm.DB) *gorm.DB { return db2.Order("urutan ASC") }) }).
 		Joins("JOIN test_session ON test_session_soal.id_test_session = test_session.id").
 		Where("test_session.session_token = ?", token).Order("nomor_urut").Find(&sessionSoals).Error
 	return sessionSoals, err
@@ -145,25 +147,21 @@ func (r *testSessionRepositoryImpl) SubmitAnswer(token string, nomorUrut int, ja
 		return err
 	}
 
-	// Check if already answered
-	var existing entity.JawabanSiswa
-	err = r.db.Where("id_test_session_soal = ?", tss.ID).First(&existing).Error
-	if err == nil {
-		// Update existing
-		existing.JawabanDipilih = &jawaban
-		existing.IsCorrect = (*existing.JawabanDipilih == tss.Soal.JawabanBenar)
-		return r.db.Save(&existing).Error
-	} else if errors.Is(err, gorm.ErrRecordNotFound) {
-		// Create new
-		isCorrect := (jawaban == tss.Soal.JawabanBenar)
-		newAnswer := entity.JawabanSiswa{
-			IDTestSessionSoal: tss.ID,
-			JawabanDipilih:    &jawaban,
-			IsCorrect:         isCorrect,
-		}
-		return r.db.Create(&newAnswer).Error
+	// Use GORM Clauses for Upsert (On Conflict)
+	// Prepare the answer object
+	isCorrect := (jawaban == tss.Soal.JawabanBenar)
+	newAnswer := entity.JawabanSiswa{
+		IDTestSessionSoal: tss.ID,
+		JawabanDipilih:    &jawaban,
+		IsCorrect:         isCorrect,
+		QuestionType:      entity.QuestionTypeMultipleChoice,
 	}
-	return err
+
+	// Upsert: If exists, update answer and correctness; if not, create new.
+	return r.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id_test_session_soal"}},
+		DoUpdates: clause.AssignmentColumns([]string{"jawaban_dipilih", "is_correct", "dijawab_pada"}),
+	}).Create(&newAnswer).Error
 }
 
 // Clear answer
@@ -202,29 +200,77 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 		return err
 	}
 
-	if len(soalIDs) == 0 {
+	// Get drag-drop question IDs for the same criteria
+	var dragDropIDs []int
+	err = r.db.Model(&entity.SoalDragDrop{}).
+		Joins("JOIN materi ON soal_drag_drop.id_materi = materi.id").
+		Where("materi.id_mata_pelajaran = ? AND materi.id_tingkat = ? AND soal_drag_drop.is_active = ?", idMataPelajaran, tingkatan, true).
+		Pluck("soal_drag_drop.id", &dragDropIDs).Error
+	if err != nil {
+		return err
+	}
+
+	// Combine all question IDs
+	var allQuestionIDs []struct {
+		ID           int
+		QuestionType entity.QuestionType
+	}
+
+	// Add multiple choice questions
+	for _, id := range soalIDs {
+		allQuestionIDs = append(allQuestionIDs, struct {
+			ID           int
+			QuestionType entity.QuestionType
+		}{ID: id, QuestionType: entity.QuestionTypeMultipleChoice})
+	}
+
+	// Add drag-drop questions
+	for _, id := range dragDropIDs {
+		allQuestionIDs = append(allQuestionIDs, struct {
+			ID           int
+			QuestionType entity.QuestionType
+		}{ID: id, QuestionType: entity.QuestionTypeDragDrop})
+	}
+
+	if len(allQuestionIDs) == 0 {
 		return errors.New("tidak ada soal yang tersedia untuk mata pelajaran dan tingkatan ini")
 	}
 
 	// Ambil jumlah soal yang tersedia atau yang diminta (mana yang lebih kecil)
 	actualJumlahSoal := jumlahSoal
-	if len(soalIDs) < jumlahSoal {
-		actualJumlahSoal = len(soalIDs)
+	if len(allQuestionIDs) < jumlahSoal {
+		actualJumlahSoal = len(allQuestionIDs)
 	}
 
 	// Shuffle and select
-	rand.Shuffle(len(soalIDs), func(i, j int) { soalIDs[i], soalIDs[j] = soalIDs[j], soalIDs[i] })
-	selectedIDs := soalIDs[:actualJumlahSoal]
+	rand.Shuffle(len(allQuestionIDs), func(i, j int) { allQuestionIDs[i], allQuestionIDs[j] = allQuestionIDs[j], allQuestionIDs[i] })
+	selectedQuestions := allQuestionIDs[:actualJumlahSoal]
 
 	// Create TestSessionSoal entries
-	for i, soalID := range selectedIDs {
-		tss := entity.TestSessionSoal{
-			IDTestSession: sessionID,
-			IDSoal:        soalID,
-			NomorUrut:     i + 1,
-		}
-		if err := r.db.Create(&tss).Error; err != nil {
-			return err
+	for i, question := range selectedQuestions {
+		switch question.QuestionType {
+		case entity.QuestionTypeMultipleChoice:
+			soalIDPtr := question.ID // Create a copy for pointer
+			tss := entity.TestSessionSoal{
+				IDTestSession: sessionID,
+				QuestionType:  entity.QuestionTypeMultipleChoice,
+				IDSoal:        &soalIDPtr,
+				NomorUrut:     i + 1,
+			}
+			if err := r.db.Create(&tss).Error; err != nil {
+				return err
+			}
+		case entity.QuestionTypeDragDrop:
+			soalDragDropIDPtr := question.ID // Create a copy for pointer
+			tss := entity.TestSessionSoal{
+				IDTestSession:   sessionID,
+				QuestionType:    entity.QuestionTypeDragDrop,
+				IDSoalDragDrop:  &soalDragDropIDPtr,
+				NomorUrut:       i + 1,
+			}
+			if err := r.db.Create(&tss).Error; err != nil {
+				return err
+			}
 		}
 	}
 
@@ -239,4 +285,77 @@ func (r *testSessionRepositoryImpl) CreateUnansweredRecord(sessionSoalID, testSe
 		IsCorrect:         false,
 	}
 	return r.db.Create(&newAnswer).Error
+}
+
+// GetTestSessionSoalByOrder gets TestSessionSoal by token and nomor_urut
+func (r *testSessionRepositoryImpl) GetTestSessionSoalByOrder(token string, nomorUrut int) (*entity.TestSessionSoal, error) {
+	var tss entity.TestSessionSoal
+	err := r.db.Joins("JOIN test_session ON test_session_soal.id_test_session = test_session.id").
+		Preload("Soal").
+		Preload("SoalDragDrop").
+		Preload("SoalDragDrop.Items").
+		Preload("SoalDragDrop.Slots").
+		Preload("SoalDragDrop.Gambar", func(db *gorm.DB) *gorm.DB { return db.Order("urutan ASC") }).
+		Where("test_session.session_token = ? AND test_session_soal.nomor_urut = ?", token, nomorUrut).
+		First(&tss).Error
+	if err != nil {
+		return nil, err
+	}
+	return &tss, nil
+}
+
+// SubmitDragDropAnswer submits a drag-drop answer
+func (r *testSessionRepositoryImpl) SubmitDragDropAnswer(token string, nomorUrut int, answer map[int]int, isCorrect bool) error {
+	// Find the TestSessionSoal
+	tss, err := r.GetTestSessionSoalByOrder(token, nomorUrut)
+	if err != nil {
+		return err
+	}
+
+	// Prepare the new answer object
+	newAnswer := entity.JawabanSiswa{
+		IDTestSessionSoal: tss.ID,
+		QuestionType:      entity.QuestionTypeDragDrop,
+		IsCorrect:         isCorrect,
+		JawabanDipilih:    nil, // Explicitly nil for DragDrop
+	}
+	newAnswer.SetDragDropAnswer(answer)
+
+	// Use GORM Clauses for Upsert (On Conflict)
+	// Assuming unique constraint on (id_test_session_soal)
+	return r.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id_test_session_soal"}},
+		DoUpdates: clause.AssignmentColumns([]string{"jawaban_drag_drop", "question_type", "is_correct", "dijawab_pada"}),
+	}).Create(&newAnswer).Error
+}
+
+// GetDragDropCorrectAnswers gets correct answers for a drag-drop question
+func (r *testSessionRepositoryImpl) GetDragDropCorrectAnswers(soalDragDropID int) ([]entity.DragCorrectAnswer, error) {
+	var correctAnswers []entity.DragCorrectAnswer
+	err := r.db.
+		Joins("JOIN drag_item ON drag_correct_answer.id_drag_item = drag_item.id").
+		Where("drag_item.id_soal_drag_drop = ?", soalDragDropID).
+		Find(&correctAnswers).Error
+	return correctAnswers, err
+}
+
+// GetSoalDragDropByID gets a drag-drop question by ID
+func (r *testSessionRepositoryImpl) GetSoalDragDropByID(id int) (*entity.SoalDragDrop, error) {
+	var soal entity.SoalDragDrop
+	err := r.db.
+		Preload("Materi").
+		Preload("Items", func(db *gorm.DB) *gorm.DB {
+			return db.Order("urutan ASC")
+		}).
+		Preload("Slots", func(db *gorm.DB) *gorm.DB {
+			return db.Order("urutan ASC")
+		}).
+		Preload("Gambar", func(db *gorm.DB) *gorm.DB {
+			return db.Order("urutan ASC")
+		}).
+		First(&soal, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &soal, nil
 }

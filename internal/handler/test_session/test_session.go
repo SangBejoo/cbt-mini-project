@@ -200,65 +200,89 @@ func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.Get
 		}
 	}
 
-	var protoSoals []*base.SoalForStudent
-	for i, s := range soals {
+	var protoQuestions []*base.QuestionForStudent
+	for i, q := range soals {
 		// Add more detailed logging
-		fmt.Printf("Processing soal %d: ID=%d, NomorUrut=%d, MateriID=%d\n", i, s.ID, s.NomorUrut, s.Materi.ID)
-		
-		var jawabanDipilih base.JawabanOption = base.JawabanOption_JAWABAN_INVALID
-		if s.JawabanDipilih != nil {
-			if val, ok := base.JawabanOption_value[string(*s.JawabanDipilih)]; ok {
-				jawabanDipilih = base.JawabanOption(val)
+		fmt.Printf("Processing question %d: NomorUrut=%d, QuestionType=%s\n", i, q.NomorUrut, q.QuestionType)
+
+		protoQuestion := &base.QuestionForStudent{
+			NomorUrut:    int32(q.NomorUrut),
+			QuestionType: base.QuestionType(base.QuestionType_value[strings.ToUpper(string(q.QuestionType))]),
+			IsAnswered:   q.IsAnswered,
+		}
+
+		// Add Materi
+		if q.Materi.ID > 0 {
+			protoQuestion.Materi = &base.Materi{
+				Id:                 int32(q.Materi.ID),
+				MataPelajaran:      &base.MataPelajaran{Id: int32(q.Materi.MataPelajaran.ID), Nama: q.Materi.MataPelajaran.Nama},
+				Tingkat:            &base.Tingkat{Id: int32(q.Materi.Tingkat.ID), Nama: q.Materi.Tingkat.Nama},
+				Nama:               q.Materi.Nama,
+				IsActive:           q.Materi.IsActive,
+				DefaultDurasiMenit: int32(q.Materi.DefaultDurasiMenit),
+				DefaultJumlahSoal:  int32(q.Materi.DefaultJumlahSoal),
 			}
 		}
 
-		// Ensure Materi fields are not nil or zero
-		if s.Materi.ID == 0 || s.Materi.MataPelajaran.ID == 0 || s.Materi.Tingkat.ID == 0 {
-			fmt.Printf("WARNING: Incomplete Materi data for soal ID %d, skipping\n", s.ID)
-			continue
+		// Handle multiple choice fields
+		if q.QuestionType == entity.QuestionTypeMultipleChoice && q.MCID != nil {
+			protoQuestion.McId = int32(*q.MCID)
+			if q.MCPertanyaan != nil {
+				protoQuestion.McPertanyaan = *q.MCPertanyaan
+			}
+			if q.MCOpsiA != nil {
+				protoQuestion.McOpsiA = *q.MCOpsiA
+			}
+			if q.MCOpsiB != nil {
+				protoQuestion.McOpsiB = *q.MCOpsiB
+			}
+			if q.MCOpsiC != nil {
+				protoQuestion.McOpsiC = *q.MCOpsiC
+			}
+			if q.MCOpsiD != nil {
+				protoQuestion.McOpsiD = *q.MCOpsiD
+			}
+			if q.MCJawabanDipilih != nil {
+				if val, ok := base.JawabanOption_value[string(*q.MCJawabanDipilih)]; ok {
+					protoQuestion.McJawabanDipilih = base.JawabanOption(val)
+				}
+			}
+			protoQuestion.McGambar = convertSoalGambarToProto(q.MCGambar)
 		}
 
-		// Create proto soal with error handling
-		protoSoal := &base.SoalForStudent{
-			Id:             int32(s.ID),
-			NomorUrut:      int32(s.NomorUrut),
-			Pertanyaan:     s.Pertanyaan,
-			OpsiA:          s.OpsiA,
-			OpsiB:          s.OpsiB,
-			OpsiC:          s.OpsiC,
-			OpsiD:          s.OpsiD,
-			JawabanDipilih: jawabanDipilih,
-			IsAnswered:     s.IsAnswered,
+		// Handle drag-drop fields
+		if q.QuestionType == entity.QuestionTypeDragDrop && q.DDID != nil {
+			protoQuestion.DdId = int32(*q.DDID)
+			if q.DDPertanyaan != nil {
+				protoQuestion.DdPertanyaan = *q.DDPertanyaan
+			}
+			if q.DDDDragType != nil {
+				protoQuestion.DdDragType = base.DragDropType(base.DragDropType_value[strings.ToUpper(string(*q.DDDDragType))])
+			}
+			protoQuestion.DdItems = convertDragItemsToProto(q.DDItems)
+			protoQuestion.DdSlots = convertDragSlotsToProto(q.DDSlots)
+			if q.DDUserAnswer != nil {
+				protoQuestion.DdUserAnswer = make(map[int32]int32)
+				for k, v := range q.DDUserAnswer {
+					protoQuestion.DdUserAnswer[int32(k)] = int32(v)
+				}
+			}
 		}
-		
-		// Add Materi separately to catch any panic
-		protoSoal.Materi = &base.Materi{
-			Id:                 int32(s.Materi.ID),
-			MataPelajaran:      &base.MataPelajaran{Id: int32(s.Materi.MataPelajaran.ID), Nama: s.Materi.MataPelajaran.Nama},
-			Tingkat:            &base.Tingkat{Id: int32(s.Materi.Tingkat.ID), Nama: s.Materi.Tingkat.Nama},
-			Nama:               s.Materi.Nama,
-			IsActive:           s.Materi.IsActive,
-			DefaultDurasiMenit: int32(s.Materi.DefaultDurasiMenit),
-			DefaultJumlahSoal:  int32(s.Materi.DefaultJumlahSoal),
-		}
-		
-		// Add Gambar separately
-		protoSoal.Gambar = convertSoalGambarToProto(s.Gambar)
-		
-		protoSoals = append(protoSoals, protoSoal)
+
+		protoQuestions = append(protoQuestions, protoQuestion)
 	}
 
-	// Don't return error if no soals, just log warning
-	if len(protoSoals) == 0 {
-		fmt.Printf("WARNING: No valid soals found for session %s\n", req.SessionToken)
+	// Don't return error if no questions, just log warning
+	if len(protoQuestions) == 0 {
+		fmt.Printf("WARNING: No valid questions found for session %s\n", req.SessionToken)
 	}
 
-	fmt.Printf("DEBUG: Creating response with %d soals\n", len(protoSoals))
-	
+	fmt.Printf("DEBUG: Creating response with %d questions\n", len(protoQuestions))
+
 	response := &base.TestQuestionsResponse{
 		SessionToken:      req.SessionToken,
-		Soal:              protoSoals,
-		TotalSoal:         int32(len(protoSoals)),
+		Questions:         protoQuestions,
+		TotalSoal:         int32(len(protoQuestions)),
 		CurrentNomorUrut:  1, // Not used
 		DijawabCount:      int32(len(answers)),
 		IsAnsweredStatus:  isAnsweredStatus,
@@ -323,6 +347,60 @@ func (h *testSessionHandler) SubmitAnswer(ctx context.Context, req *base.SubmitA
 		JawabanDipilih:  req.JawabanDipilih,
 		IsCorrect:       true, // TODO: get from usecase
 		DijawabPada:     timestamppb.Now(),
+	}, nil
+}
+
+// SubmitDragDropAnswer submits a drag-drop answer
+func (h *testSessionHandler) SubmitDragDropAnswer(ctx context.Context, req *base.SubmitDragDropAnswerRequest) (*base.SubmitDragDropAnswerResponse, error) {
+	// Get user from JWT context
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		// For REST gateway, extract token from metadata
+		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
+		if extractErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+		}
+		claims, validateErr := interceptor.ValidateToken(token)
+		if validateErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
+		user = &base.User{
+			Id:    claims.UserID,
+			Email: claims.Email,
+			Role:  base.UserRole(claims.Role),
+		}
+		// Add to context for consistency
+		ctx = interceptor.AddUserToContext(ctx, claims)
+	}
+
+	// Get session to check ownership
+	session, err := h.usecase.GetTestSession(req.SessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if the session belongs to the authenticated user
+	if session.UserID == nil || *session.UserID != int(user.Id) {
+		return nil, status.Error(codes.PermissionDenied, "you do not have permission to access this session")
+	}
+
+	// Convert map[int32]int32 to map[int]int
+	answer := make(map[int]int)
+	for k, v := range req.Answer {
+		answer[int(k)] = int(v)
+	}
+
+	err = h.usecase.SubmitDragDropAnswer(req.SessionToken, int(req.NomorUrut), answer)
+	if err != nil {
+		return nil, err
+	}
+
+	return &base.SubmitDragDropAnswerResponse{
+		SessionToken: req.SessionToken,
+		NomorUrut:    req.NomorUrut,
+		Answer:       req.Answer,
+		IsCorrect:    true, // Determined by usecase
+		DijawabPada:  timestamppb.Now(),
 	}, nil
 }
 
@@ -467,7 +545,7 @@ func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTes
 			pembahasan = *d.Pembahasan
 		}
 
-		jawabanDetails = append(jawabanDetails, &base.JawabanDetail{
+		jawabanDetail := &base.JawabanDetail{
 			NomorUrut:      int32(d.NomorUrut),
 			Pertanyaan:     d.Pertanyaan,
 			OpsiA:          d.OpsiA,
@@ -480,7 +558,31 @@ func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTes
 			IsAnswered:     d.IsAnswered,
 			Pembahasan:     pembahasan,
 			Gambar:         convertSoalGambarToProto(d.Gambar),
-		})
+			QuestionType:   base.QuestionType(base.QuestionType_value[strings.ToUpper(string(d.QuestionType))]),
+		}
+
+		if d.QuestionType == entity.QuestionTypeDragDrop {
+			if d.DragType != nil {
+				jawabanDetail.DragType = base.DragDropType(base.DragDropType_value[strings.ToUpper(string(*d.DragType))])
+			}
+			jawabanDetail.Items = convertDragItemsToProto(d.DragItems)
+			jawabanDetail.Slots = convertDragSlotsToProto(d.DragSlots)
+
+			if d.UserDragAnswer != nil {
+				jawabanDetail.UserDragAnswer = make(map[int32]int32)
+				for k, v := range d.UserDragAnswer {
+					jawabanDetail.UserDragAnswer[int32(k)] = int32(v)
+				}
+			}
+			if d.CorrectDragAnswer != nil {
+				jawabanDetail.CorrectDragAnswer = make(map[int32]int32)
+				for k, v := range d.CorrectDragAnswer {
+					jawabanDetail.CorrectDragAnswer[int32(k)] = int32(v)
+				}
+			}
+		}
+
+		jawabanDetails = append(jawabanDetails, jawabanDetail)
 	}
 
 	var protoTingkat []*base.Tingkat
@@ -669,4 +771,41 @@ func convertSoalGambarToProto(gambar []entity.SoalGambar) []*base.SoalGambar {
 		})
 	}
 	return protoGambar
+}
+
+func convertDragItemsToProto(items []entity.DragItem) []*base.DragItem {
+	if len(items) == 0 {
+		return nil
+	}
+
+	var protoItems []*base.DragItem
+	for _, item := range items {
+		protoItem := &base.DragItem{
+			Id:       int32(item.ID),
+			Label:    item.Label,
+			Urutan:   int32(item.Urutan),
+		}
+		if item.ImageURL != nil {
+			protoItem.ImageUrl = *item.ImageURL
+		}
+		protoItems = append(protoItems, protoItem)
+	}
+	return protoItems
+}
+
+func convertDragSlotsToProto(slots []entity.DragSlot) []*base.DragSlot {
+	if len(slots) == 0 {
+		return nil
+	}
+
+	var protoSlots []*base.DragSlot
+	for _, slot := range slots {
+		protoSlot := &base.DragSlot{
+			Id:       int32(slot.ID),
+			Label:    slot.Label,
+			Urutan:   int32(slot.Urutan),
+		}
+		protoSlots = append(protoSlots, protoSlot)
+	}
+	return protoSlots
 }

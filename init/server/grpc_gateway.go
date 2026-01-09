@@ -67,6 +67,10 @@ func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repos
 	// Custom endpoints
 	mux.HandleFunc("/v1/sessions/share-email", handleShareEmail)
 
+	// Serve static files (uploads)
+	fs := http.FileServer(http.Dir("uploads"))
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", fs))
+
 	// Serve API through gRPC-Gateway
 	mux.Handle("/", gwMux)
 

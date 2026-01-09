@@ -1660,14 +1660,269 @@ var SoalService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	TestSessionService_CreateTestSession_FullMethodName = "/base.TestSessionService/CreateTestSession"
-	TestSessionService_GetTestSession_FullMethodName    = "/base.TestSessionService/GetTestSession"
-	TestSessionService_GetTestQuestions_FullMethodName  = "/base.TestSessionService/GetTestQuestions"
-	TestSessionService_SubmitAnswer_FullMethodName      = "/base.TestSessionService/SubmitAnswer"
-	TestSessionService_ClearAnswer_FullMethodName       = "/base.TestSessionService/ClearAnswer"
-	TestSessionService_CompleteSession_FullMethodName   = "/base.TestSessionService/CompleteSession"
-	TestSessionService_GetTestResult_FullMethodName     = "/base.TestSessionService/GetTestResult"
-	TestSessionService_ListTestSessions_FullMethodName  = "/base.TestSessionService/ListTestSessions"
+	SoalDragDropService_CreateSoalDragDrop_FullMethodName = "/base.SoalDragDropService/CreateSoalDragDrop"
+	SoalDragDropService_GetSoalDragDrop_FullMethodName    = "/base.SoalDragDropService/GetSoalDragDrop"
+	SoalDragDropService_UpdateSoalDragDrop_FullMethodName = "/base.SoalDragDropService/UpdateSoalDragDrop"
+	SoalDragDropService_DeleteSoalDragDrop_FullMethodName = "/base.SoalDragDropService/DeleteSoalDragDrop"
+	SoalDragDropService_ListSoalDragDrop_FullMethodName   = "/base.SoalDragDropService/ListSoalDragDrop"
+)
+
+// SoalDragDropServiceClient is the client API for SoalDragDropService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type SoalDragDropServiceClient interface {
+	CreateSoalDragDrop(ctx context.Context, in *CreateSoalDragDropRequest, opts ...grpc.CallOption) (*SoalDragDropResponse, error)
+	GetSoalDragDrop(ctx context.Context, in *GetSoalDragDropRequest, opts ...grpc.CallOption) (*SoalDragDropResponse, error)
+	UpdateSoalDragDrop(ctx context.Context, in *UpdateSoalDragDropRequest, opts ...grpc.CallOption) (*SoalDragDropResponse, error)
+	DeleteSoalDragDrop(ctx context.Context, in *DeleteSoalDragDropRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error)
+	ListSoalDragDrop(ctx context.Context, in *ListSoalDragDropRequest, opts ...grpc.CallOption) (*ListSoalDragDropResponse, error)
+}
+
+type soalDragDropServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewSoalDragDropServiceClient(cc grpc.ClientConnInterface) SoalDragDropServiceClient {
+	return &soalDragDropServiceClient{cc}
+}
+
+func (c *soalDragDropServiceClient) CreateSoalDragDrop(ctx context.Context, in *CreateSoalDragDropRequest, opts ...grpc.CallOption) (*SoalDragDropResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SoalDragDropResponse)
+	err := c.cc.Invoke(ctx, SoalDragDropService_CreateSoalDragDrop_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *soalDragDropServiceClient) GetSoalDragDrop(ctx context.Context, in *GetSoalDragDropRequest, opts ...grpc.CallOption) (*SoalDragDropResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SoalDragDropResponse)
+	err := c.cc.Invoke(ctx, SoalDragDropService_GetSoalDragDrop_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *soalDragDropServiceClient) UpdateSoalDragDrop(ctx context.Context, in *UpdateSoalDragDropRequest, opts ...grpc.CallOption) (*SoalDragDropResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SoalDragDropResponse)
+	err := c.cc.Invoke(ctx, SoalDragDropService_UpdateSoalDragDrop_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *soalDragDropServiceClient) DeleteSoalDragDrop(ctx context.Context, in *DeleteSoalDragDropRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MessageStatusResponse)
+	err := c.cc.Invoke(ctx, SoalDragDropService_DeleteSoalDragDrop_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *soalDragDropServiceClient) ListSoalDragDrop(ctx context.Context, in *ListSoalDragDropRequest, opts ...grpc.CallOption) (*ListSoalDragDropResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSoalDragDropResponse)
+	err := c.cc.Invoke(ctx, SoalDragDropService_ListSoalDragDrop_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// SoalDragDropServiceServer is the server API for SoalDragDropService service.
+// All implementations must embed UnimplementedSoalDragDropServiceServer
+// for forward compatibility.
+type SoalDragDropServiceServer interface {
+	CreateSoalDragDrop(context.Context, *CreateSoalDragDropRequest) (*SoalDragDropResponse, error)
+	GetSoalDragDrop(context.Context, *GetSoalDragDropRequest) (*SoalDragDropResponse, error)
+	UpdateSoalDragDrop(context.Context, *UpdateSoalDragDropRequest) (*SoalDragDropResponse, error)
+	DeleteSoalDragDrop(context.Context, *DeleteSoalDragDropRequest) (*MessageStatusResponse, error)
+	ListSoalDragDrop(context.Context, *ListSoalDragDropRequest) (*ListSoalDragDropResponse, error)
+	mustEmbedUnimplementedSoalDragDropServiceServer()
+}
+
+// UnimplementedSoalDragDropServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedSoalDragDropServiceServer struct{}
+
+func (UnimplementedSoalDragDropServiceServer) CreateSoalDragDrop(context.Context, *CreateSoalDragDropRequest) (*SoalDragDropResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateSoalDragDrop not implemented")
+}
+func (UnimplementedSoalDragDropServiceServer) GetSoalDragDrop(context.Context, *GetSoalDragDropRequest) (*SoalDragDropResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSoalDragDrop not implemented")
+}
+func (UnimplementedSoalDragDropServiceServer) UpdateSoalDragDrop(context.Context, *UpdateSoalDragDropRequest) (*SoalDragDropResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSoalDragDrop not implemented")
+}
+func (UnimplementedSoalDragDropServiceServer) DeleteSoalDragDrop(context.Context, *DeleteSoalDragDropRequest) (*MessageStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteSoalDragDrop not implemented")
+}
+func (UnimplementedSoalDragDropServiceServer) ListSoalDragDrop(context.Context, *ListSoalDragDropRequest) (*ListSoalDragDropResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListSoalDragDrop not implemented")
+}
+func (UnimplementedSoalDragDropServiceServer) mustEmbedUnimplementedSoalDragDropServiceServer() {}
+func (UnimplementedSoalDragDropServiceServer) testEmbeddedByValue()                             {}
+
+// UnsafeSoalDragDropServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to SoalDragDropServiceServer will
+// result in compilation errors.
+type UnsafeSoalDragDropServiceServer interface {
+	mustEmbedUnimplementedSoalDragDropServiceServer()
+}
+
+func RegisterSoalDragDropServiceServer(s grpc.ServiceRegistrar, srv SoalDragDropServiceServer) {
+	// If the following call pancis, it indicates UnimplementedSoalDragDropServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&SoalDragDropService_ServiceDesc, srv)
+}
+
+func _SoalDragDropService_CreateSoalDragDrop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSoalDragDropRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SoalDragDropServiceServer).CreateSoalDragDrop(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SoalDragDropService_CreateSoalDragDrop_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SoalDragDropServiceServer).CreateSoalDragDrop(ctx, req.(*CreateSoalDragDropRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SoalDragDropService_GetSoalDragDrop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSoalDragDropRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SoalDragDropServiceServer).GetSoalDragDrop(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SoalDragDropService_GetSoalDragDrop_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SoalDragDropServiceServer).GetSoalDragDrop(ctx, req.(*GetSoalDragDropRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SoalDragDropService_UpdateSoalDragDrop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSoalDragDropRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SoalDragDropServiceServer).UpdateSoalDragDrop(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SoalDragDropService_UpdateSoalDragDrop_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SoalDragDropServiceServer).UpdateSoalDragDrop(ctx, req.(*UpdateSoalDragDropRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SoalDragDropService_DeleteSoalDragDrop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteSoalDragDropRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SoalDragDropServiceServer).DeleteSoalDragDrop(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SoalDragDropService_DeleteSoalDragDrop_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SoalDragDropServiceServer).DeleteSoalDragDrop(ctx, req.(*DeleteSoalDragDropRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SoalDragDropService_ListSoalDragDrop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSoalDragDropRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SoalDragDropServiceServer).ListSoalDragDrop(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SoalDragDropService_ListSoalDragDrop_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SoalDragDropServiceServer).ListSoalDragDrop(ctx, req.(*ListSoalDragDropRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// SoalDragDropService_ServiceDesc is the grpc.ServiceDesc for SoalDragDropService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var SoalDragDropService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "base.SoalDragDropService",
+	HandlerType: (*SoalDragDropServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateSoalDragDrop",
+			Handler:    _SoalDragDropService_CreateSoalDragDrop_Handler,
+		},
+		{
+			MethodName: "GetSoalDragDrop",
+			Handler:    _SoalDragDropService_GetSoalDragDrop_Handler,
+		},
+		{
+			MethodName: "UpdateSoalDragDrop",
+			Handler:    _SoalDragDropService_UpdateSoalDragDrop_Handler,
+		},
+		{
+			MethodName: "DeleteSoalDragDrop",
+			Handler:    _SoalDragDropService_DeleteSoalDragDrop_Handler,
+		},
+		{
+			MethodName: "ListSoalDragDrop",
+			Handler:    _SoalDragDropService_ListSoalDragDrop_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "template.proto",
+}
+
+const (
+	TestSessionService_CreateTestSession_FullMethodName    = "/base.TestSessionService/CreateTestSession"
+	TestSessionService_GetTestSession_FullMethodName       = "/base.TestSessionService/GetTestSession"
+	TestSessionService_GetTestQuestions_FullMethodName     = "/base.TestSessionService/GetTestQuestions"
+	TestSessionService_SubmitAnswer_FullMethodName         = "/base.TestSessionService/SubmitAnswer"
+	TestSessionService_SubmitDragDropAnswer_FullMethodName = "/base.TestSessionService/SubmitDragDropAnswer"
+	TestSessionService_ClearAnswer_FullMethodName          = "/base.TestSessionService/ClearAnswer"
+	TestSessionService_CompleteSession_FullMethodName      = "/base.TestSessionService/CompleteSession"
+	TestSessionService_GetTestResult_FullMethodName        = "/base.TestSessionService/GetTestResult"
+	TestSessionService_ListTestSessions_FullMethodName     = "/base.TestSessionService/ListTestSessions"
 )
 
 // TestSessionServiceClient is the client API for TestSessionService service.
@@ -1680,6 +1935,7 @@ type TestSessionServiceClient interface {
 	// Test execution (NEW - critical!)
 	GetTestQuestions(ctx context.Context, in *GetTestQuestionsRequest, opts ...grpc.CallOption) (*TestQuestionsResponse, error)
 	SubmitAnswer(ctx context.Context, in *SubmitAnswerRequest, opts ...grpc.CallOption) (*SubmitAnswerResponse, error)
+	SubmitDragDropAnswer(ctx context.Context, in *SubmitDragDropAnswerRequest, opts ...grpc.CallOption) (*SubmitDragDropAnswerResponse, error)
 	ClearAnswer(ctx context.Context, in *ClearAnswerRequest, opts ...grpc.CallOption) (*ClearAnswerResponse, error)
 	CompleteSession(ctx context.Context, in *CompleteSessionRequest, opts ...grpc.CallOption) (*TestSessionResponse, error)
 	// Results & review
@@ -1736,6 +1992,16 @@ func (c *testSessionServiceClient) SubmitAnswer(ctx context.Context, in *SubmitA
 	return out, nil
 }
 
+func (c *testSessionServiceClient) SubmitDragDropAnswer(ctx context.Context, in *SubmitDragDropAnswerRequest, opts ...grpc.CallOption) (*SubmitDragDropAnswerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubmitDragDropAnswerResponse)
+	err := c.cc.Invoke(ctx, TestSessionService_SubmitDragDropAnswer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *testSessionServiceClient) ClearAnswer(ctx context.Context, in *ClearAnswerRequest, opts ...grpc.CallOption) (*ClearAnswerResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ClearAnswerResponse)
@@ -1786,6 +2052,7 @@ type TestSessionServiceServer interface {
 	// Test execution (NEW - critical!)
 	GetTestQuestions(context.Context, *GetTestQuestionsRequest) (*TestQuestionsResponse, error)
 	SubmitAnswer(context.Context, *SubmitAnswerRequest) (*SubmitAnswerResponse, error)
+	SubmitDragDropAnswer(context.Context, *SubmitDragDropAnswerRequest) (*SubmitDragDropAnswerResponse, error)
 	ClearAnswer(context.Context, *ClearAnswerRequest) (*ClearAnswerResponse, error)
 	CompleteSession(context.Context, *CompleteSessionRequest) (*TestSessionResponse, error)
 	// Results & review
@@ -1813,6 +2080,9 @@ func (UnimplementedTestSessionServiceServer) GetTestQuestions(context.Context, *
 }
 func (UnimplementedTestSessionServiceServer) SubmitAnswer(context.Context, *SubmitAnswerRequest) (*SubmitAnswerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitAnswer not implemented")
+}
+func (UnimplementedTestSessionServiceServer) SubmitDragDropAnswer(context.Context, *SubmitDragDropAnswerRequest) (*SubmitDragDropAnswerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SubmitDragDropAnswer not implemented")
 }
 func (UnimplementedTestSessionServiceServer) ClearAnswer(context.Context, *ClearAnswerRequest) (*ClearAnswerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClearAnswer not implemented")
@@ -1919,6 +2189,24 @@ func _TestSessionService_SubmitAnswer_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestSessionService_SubmitDragDropAnswer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubmitDragDropAnswerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestSessionServiceServer).SubmitDragDropAnswer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TestSessionService_SubmitDragDropAnswer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestSessionServiceServer).SubmitDragDropAnswer(ctx, req.(*SubmitDragDropAnswerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TestSessionService_ClearAnswer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ClearAnswerRequest)
 	if err := dec(in); err != nil {
@@ -2013,6 +2301,10 @@ var TestSessionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SubmitAnswer",
 			Handler:    _TestSessionService_SubmitAnswer_Handler,
+		},
+		{
+			MethodName: "SubmitDragDropAnswer",
+			Handler:    _TestSessionService_SubmitDragDropAnswer_Handler,
 		},
 		{
 			MethodName: "ClearAnswer",

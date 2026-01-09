@@ -43,3 +43,29 @@ type SoalForStudent struct {
 	Materi         Materi       `json:"materi"`
 	Gambar         []SoalGambar `json:"gambar"`
 }
+
+// QuestionForStudent represents a unified question for students (multiple choice or drag-drop)
+type QuestionForStudent struct {
+	NomorUrut    int         `json:"nomor_urut"`
+	QuestionType QuestionType `json:"question_type"`
+	Materi       Materi      `json:"materi"`
+	IsAnswered   bool        `json:"is_answered"`
+
+	// Multiple choice fields
+	MCID             *int          `json:"mc_id,omitempty"`
+	MCPertanyaan     *string       `json:"mc_pertanyaan,omitempty"`
+	MCOpsiA          *string       `json:"mc_opsi_a,omitempty"`
+	MCOpsiB          *string       `json:"mc_opsi_b,omitempty"`
+	MCOpsiC          *string       `json:"mc_opsi_c,omitempty"`
+	MCOpsiD          *string       `json:"mc_opsi_d,omitempty"`
+	MCJawabanDipilih *JawabanOption `json:"mc_jawaban_dipilih,omitempty"`
+	MCGambar         []SoalGambar  `json:"mc_gambar,omitempty"`
+
+	// Drag-drop fields
+	DDID          *int                  `json:"dd_id,omitempty"`
+	DDPertanyaan  *string               `json:"dd_pertanyaan,omitempty"`
+	DDDDragType   *DragDropType         `json:"dd_drag_type,omitempty"`
+	DDItems       []DragItem            `json:"dd_items,omitempty"`
+	DDSlots       []DragSlot            `json:"dd_slots,omitempty"`
+	DDUserAnswer  map[int]int           `json:"dd_user_answer,omitempty"`
+}

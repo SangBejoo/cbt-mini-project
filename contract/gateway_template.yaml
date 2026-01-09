@@ -63,6 +63,11 @@ http:
       post: /v1/test-sessions/{session_token}/answers
       body: "*"
 
+    # 4.4. Submit Drag-Drop Answer
+    - selector: base.TestSessionService.SubmitDragDropAnswer
+      post: /v1/test-sessions/{session_token}/drag-drop-answers
+      body: "*"
+
     # 4.5. Clear Answer (Batalkan Jawaban)
     - selector: base.TestSessionService.ClearAnswer
       post: /v1/test-sessions/{session_token}/clear-answer
@@ -212,4 +217,23 @@ http:
     - selector: base.SoalService.GetQuestionCountsByTopic
       get: /v1/question-counts
 
+    # ==================================================
+    # SOAL DRAG DROP SERVICE (Admin)
+    # ==================================================
+    - selector: base.SoalDragDropService.CreateSoalDragDrop
+      post: /v1/soal-drag-drop
+      body: "*"
+
+    - selector: base.SoalDragDropService.GetSoalDragDrop
+      get: /v1/soal-drag-drop/{id}
+
+    - selector: base.SoalDragDropService.UpdateSoalDragDrop
+      put: /v1/soal-drag-drop/{id}
+      body: "*"
+
+    - selector: base.SoalDragDropService.DeleteSoalDragDrop
+      delete: /v1/soal-drag-drop/{id}
+
+    - selector: base.SoalDragDropService.ListSoalDragDrop
+      get: /v1/soal-drag-drop
   

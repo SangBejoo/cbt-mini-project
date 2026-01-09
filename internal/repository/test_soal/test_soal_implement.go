@@ -124,19 +124,43 @@ func (r *soalRepositoryImpl) DeleteGambar(id int) error {
 	return r.db.Delete(&entity.SoalGambar{}, id).Error
 }
 
-// GetQuestionCountsByTopic returns the count of questions per topic
+// GetQuestionCountsByTopic returns the count of questions per topic (both MC and drag-drop)
 func (r *soalRepositoryImpl) GetQuestionCountsByTopic() (map[int]int, error) {
-	var results []struct {
+	counts := make(map[int]int)
+	
+	// Count multiple-choice questions
+	var mcResults []struct {
 		IdMateri int
 		Count    int
 	}
-	err := r.db.Model(&entity.Soal{}).Select("id_materi, count(*) as count").Group("id_materi").Scan(&results).Error
+	err := r.db.Model(&entity.Soal{}).
+		Select("id_materi, count(*) as count").
+		Where("is_active = ?", true).
+		Group("id_materi").
+		Scan(&mcResults).Error
 	if err != nil {
 		return nil, err
 	}
-	counts := make(map[int]int)
-	for _, result := range results {
+	for _, result := range mcResults {
 		counts[result.IdMateri] = result.Count
 	}
+	
+	// Count drag-drop questions
+	var ddResults []struct {
+		IdMateri int
+		Count    int
+	}
+	err = r.db.Table("soal_drag_drop").
+		Select("id_materi, count(*) as count").
+		Where("is_active = ?", true).
+		Group("id_materi").
+		Scan(&ddResults).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, result := range ddResults {
+		counts[result.IdMateri] += result.Count // Add to existing count
+	}
+	
 	return counts, nil
 }

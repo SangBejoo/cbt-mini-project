@@ -40,7 +40,7 @@ type TestSessionRepository interface {
 	// Get single question by order
 	GetQuestionByOrder(token string, nomorUrut int) (*entity.Soal, error)
 
-	// Submit answer
+	// Submit answer (multiple choice)
 	SubmitAnswer(token string, nomorUrut int, jawaban entity.JawabanOption) error
 
 	// Clear answer
@@ -51,4 +51,16 @@ type TestSessionRepository interface {
 
 	// Create unanswered record with NULL jawaban_dipilih
 	CreateUnansweredRecord(sessionSoalID, testSessionID int) error
+
+	// NEW: Get TestSessionSoal by token and nomor_urut
+	GetTestSessionSoalByOrder(token string, nomorUrut int) (*entity.TestSessionSoal, error)
+
+	// NEW: Submit drag-drop answer
+	SubmitDragDropAnswer(token string, nomorUrut int, answer map[int]int, isCorrect bool) error
+
+	// NEW: Get correct answers for a drag-drop question
+	GetDragDropCorrectAnswers(soalDragDropID int) ([]entity.DragCorrectAnswer, error)
+
+	// NEW: Get drag-drop question by ID
+	GetSoalDragDropByID(id int) (*entity.SoalDragDrop, error)
 }

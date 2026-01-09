@@ -25,6 +25,20 @@ enum TestStatus {
     TIMEOUT = 3;
 }
 
+// Question type for mixed sessions
+enum QuestionType {
+    QUESTION_TYPE_INVALID = 0;
+    MULTIPLE_CHOICE = 1;
+    DRAG_DROP = 2;
+}
+
+// Drag-drop question subtype
+enum DragDropType {
+    DRAG_TYPE_INVALID = 0;
+    ORDERING = 1;   // Sequence/order items
+    MATCHING = 2;   // Match items to categories
+}
+
 // ========================================
 // BASE SERVICE
 // ========================================
@@ -102,6 +116,18 @@ service SoalService {
 }
 
 // ========================================
+// SOAL DRAG DROP SERVICE (ADMIN)
+// ========================================
+
+service SoalDragDropService {
+    rpc CreateSoalDragDrop(CreateSoalDragDropRequest) returns (SoalDragDropResponse) {};
+    rpc GetSoalDragDrop(GetSoalDragDropRequest) returns (SoalDragDropResponse) {};
+    rpc UpdateSoalDragDrop(UpdateSoalDragDropRequest) returns (SoalDragDropResponse) {};
+    rpc DeleteSoalDragDrop(DeleteSoalDragDropRequest) returns (MessageStatusResponse) {};
+    rpc ListSoalDragDrop(ListSoalDragDropRequest) returns (ListSoalDragDropResponse) {};
+}
+
+// ========================================
 // TEST SESSION SERVICE (STUDENT)
 // ========================================
 
@@ -113,6 +139,7 @@ service TestSessionService {
     // Test execution (NEW - critical!)
     rpc GetTestQuestions(GetTestQuestionsRequest) returns (TestQuestionsResponse) {};
     rpc SubmitAnswer(SubmitAnswerRequest) returns (SubmitAnswerResponse) {};
+    rpc SubmitDragDropAnswer(SubmitDragDropAnswerRequest) returns (SubmitDragDropAnswerResponse) {};
     rpc ClearAnswer(ClearAnswerRequest) returns (ClearAnswerResponse) {};
     rpc CompleteSession(CompleteSessionRequest) returns (TestSessionResponse) {};
 
@@ -489,6 +516,139 @@ message UpdateImageInSoalRequest {
 }
 
 // ========================================
+// SOAL DRAG DROP MESSAGES
+// ========================================
+
+// Draggable item
+message DragItem {
+    int32 id = 1;
+    string label = 2;
+    string image_url = 3;
+    int32 urutan = 4;
+}
+
+// Drop zone/slot
+message DragSlot {
+    int32 id = 1;
+    string label = 2;
+    string image_url = 3;
+    int32 urutan = 4;
+}
+
+// Correct answer mapping (item -> slot)
+message DragCorrectAnswer {
+    int32 item_id = 1;
+    int32 slot_id = 2;
+}
+
+// Correct answer by urutan (for create/update requests)
+message DragCorrectAnswerByUrutan {
+    int32 item_urutan = 1;
+    int32 slot_urutan = 2;
+}
+
+// Full drag-drop question (admin view with answers)
+message SoalDragDropFull {
+    int32 id = 1;
+    Materi materi = 2;
+    string pertanyaan = 3;
+    DragDropType drag_type = 4;
+    repeated DragItem items = 5;
+    repeated DragSlot slots = 6;
+    repeated DragCorrectAnswer correct_answers = 7;
+    string pembahasan = 8;
+    bool is_active = 9;
+    google.protobuf.Timestamp created_at = 10;
+    google.protobuf.Timestamp updated_at = 11;
+}
+
+// Drag-drop for student (no correct answers exposed)
+message SoalDragDropForStudent {
+    int32 id = 1;
+    int32 nomor_urut = 2;
+    string pertanyaan = 3;
+    DragDropType drag_type = 4;
+    repeated DragItem items = 5;
+    repeated DragSlot slots = 6;
+    Materi materi = 7;
+    map<int32, int32> user_answer = 8;  // item_id -> slot_id
+    bool is_answered = 9;
+}
+
+// Unified question for mixed test sessions
+message QuestionForStudent {
+    int32 nomor_urut = 1;
+    QuestionType question_type = 2;
+    Materi materi = 3;
+    bool is_answered = 4;
+
+    // Multiple choice fields (only populated when question_type = MULTIPLE_CHOICE)
+    int32 mc_id = 5;
+    string mc_pertanyaan = 6;
+    string mc_opsi_a = 7;
+    string mc_opsi_b = 8;
+    string mc_opsi_c = 9;
+    string mc_opsi_d = 10;
+    JawabanOption mc_jawaban_dipilih = 11;
+    repeated SoalGambar mc_gambar = 12;
+
+    // Drag-drop fields (only populated when question_type = DRAG_DROP)
+    int32 dd_id = 13;
+    string dd_pertanyaan = 14;
+    DragDropType dd_drag_type = 15;
+    repeated DragItem dd_items = 16;
+    repeated DragSlot dd_slots = 17;
+    map<int32, int32> dd_user_answer = 18;  // item_id -> slot_id
+}
+
+message CreateSoalDragDropRequest {
+    int32 id_materi = 1;
+    int32 id_tingkat = 2;
+    string pertanyaan = 3;
+    DragDropType drag_type = 4;
+    repeated DragItem items = 5;
+    repeated DragSlot slots = 6;
+    repeated DragCorrectAnswerByUrutan correct_answers = 7;
+    string pembahasan = 8;
+}
+
+message GetSoalDragDropRequest {
+    int32 id = 1;
+}
+
+message UpdateSoalDragDropRequest {
+    int32 id = 1;
+    int32 id_materi = 2;
+    int32 id_tingkat = 3;
+    string pertanyaan = 4;
+    DragDropType drag_type = 5;
+    repeated DragItem items = 6;
+    repeated DragSlot slots = 7;
+    repeated DragCorrectAnswerByUrutan correct_answers = 8;
+    string pembahasan = 9;
+    bool is_active = 10;
+}
+
+message DeleteSoalDragDropRequest {
+    int32 id = 1;
+}
+
+message SoalDragDropResponse {
+    SoalDragDropFull soal = 1;
+}
+
+message ListSoalDragDropRequest {
+    int32 id_materi = 1;
+    int32 id_tingkat = 2;
+    PaginationRequest pagination = 3;
+}
+
+message ListSoalDragDropResponse {
+    repeated SoalDragDropFull soal = 1;
+    PaginationResponse pagination = 2;
+}
+
+// ========================================
 // TEST SESSION MESSAGES
 // ========================================
 
@@ -547,7 +707,7 @@ message GetTestQuestionsRequest {
 
 message TestQuestionsResponse {
     string session_token = 1;
-    repeated SoalForStudent soal = 2;  // ALL questions for the session
+    repeated QuestionForStudent questions = 2;  // ALL questions for the session (mixed types)
     int32 total_soal = 3;
     int32 current_nomor_urut = 4;
     int32 dijawab_count = 5;
@@ -566,6 +726,20 @@ message SubmitAnswerResponse {
     int32 nomor_urut = 2;
     JawabanOption jawaban_dipilih = 3;
     bool is_correct = 4;  // Immediate feedback
+    google.protobuf.Timestamp dijawab_pada = 5;
+}
+
+message SubmitDragDropAnswerRequest {
+    string session_token = 1;
+    int32 nomor_urut = 2;
+    map<int32, int32> answer = 3;  // For ORDERING: position->itemId, For MATCHING: slotId->itemId
+}
+
+message SubmitDragDropAnswerResponse {
+    string session_token = 1;
+    int32 nomor_urut = 2;
+    map<int32, int32> answer = 3;
+    bool is_correct = 4;
     google.protobuf.Timestamp dijawab_pada = 5;
 }
 
@@ -605,6 +779,12 @@ message JawabanDetail {
     bool is_answered = 10;
     string pembahasan = 11;
     repeated SoalGambar gambar = 12;
+    QuestionType question_type = 13;
+    DragDropType drag_type = 14;
+    repeated DragItem items = 15;
+    repeated DragSlot slots = 16;
+    map<int32, int32> user_drag_answer = 17;
+    map<int32, int32> correct_drag_answer = 18;
 }
 
 message TestResultResponse {

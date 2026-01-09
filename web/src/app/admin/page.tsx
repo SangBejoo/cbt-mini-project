@@ -11,8 +11,10 @@ import TopicsTab from './components/TopicsTab';
 import dynamic from 'next/dynamic';
 
 const QuestionsTab = dynamic(() => import('./components/QuestionsTab'), { ssr: false });
+const DragDropQuestionsTab = dynamic(() => import('./components/DragDropQuestionsTab'), { ssr: false });
 import UsersTab from './components/UsersTab';
 import HistoryTab from './components/HistoryTab';
+import { useSharedData } from './context';
 
 export default function AdminHome() {
   const { user, logout, isLoading } = useAuth();
@@ -60,6 +62,12 @@ export default function AdminHome() {
   if (!user || user.role !== 'ADMIN') {
     return null; // Will redirect
   }
+
+  // Wrapper to pass topics from context to DragDropQuestionsTab
+  const DragDropQuestionsWrapper = () => {
+    const { topics } = useSharedData();
+    return <DragDropQuestionsTab topics={topics} />;
+  };
 
   return (
     <DataProvider>
@@ -181,6 +189,20 @@ export default function AdminHome() {
               <Tab
                 _selected={{
                   color: 'white',
+                  bg: '#9F7AEA',
+                  borderColor: '#9F7AEA',
+                }}
+                color="gray.600"
+                fontWeight="600"
+                _hover={{
+                  color: '#9F7AEA',
+                }}
+              >
+                🎯 Soal D&D
+              </Tab>
+              <Tab
+                _selected={{
+                  color: 'white',
                   bg: '#FF6B35',
                   borderColor: '#FF6B35',
                 }}
@@ -219,6 +241,9 @@ export default function AdminHome() {
               </TabPanel>
               <TabPanel>
                 <QuestionsTab />
+              </TabPanel>
+              <TabPanel>
+                <DragDropQuestionsWrapper />
               </TabPanel>
               <TabPanel>
                 <UsersTab />

@@ -84,54 +84,94 @@ func (u *testSessionUsecaseImpl) GetTestSession(sessionToken string) (*entity.Te
 }
 
 // GetTestQuestions gets a single question for the student
-func (u *testSessionUsecaseImpl) GetTestQuestions(sessionToken string, nomorUrut int) (*entity.SoalForStudent, error) {
+func (u *testSessionUsecaseImpl) GetTestQuestions(sessionToken string, nomorUrut int) (*entity.QuestionForStudent, error) {
 	_, err := u.GetTestSession(sessionToken)
 	if err != nil {
 		return nil, err
 	}
 
-	soal, err := u.repo.GetQuestionByOrder(sessionToken, nomorUrut)
+	// Get the TestSessionSoal to determine question type
+	tss, err := u.repo.GetTestSessionSoalByOrder(sessionToken, nomorUrut)
 	if err != nil {
 		return nil, err
+	}
+
+	question := &entity.QuestionForStudent{
+		NomorUrut:    nomorUrut,
+		QuestionType: tss.QuestionType,
+		Materi:       tss.Soal.Materi, // Will be nil for drag-drop, need to handle this
+		IsAnswered:   false, // Will be set below
 	}
 
 	// Get existing answer if any
 	answers, _ := u.repo.GetSessionAnswers(sessionToken)
-	var jawabanDipilih *entity.JawabanOption
-	isAnswered := false
 	for _, ans := range answers {
 		if ans.TestSessionSoal.NomorUrut == nomorUrut {
-			jawabanDipilih = ans.JawabanDipilih
-			isAnswered = true
+			question.IsAnswered = true
 			break
 		}
 	}
 
-	soalForStudent := &entity.SoalForStudent{
-		ID:             soal.ID,
-		NomorUrut:      nomorUrut,
-		Pertanyaan:     soal.Pertanyaan,
-		OpsiA:          soal.OpsiA,
-		OpsiB:          soal.OpsiB,
-		OpsiC:          soal.OpsiC,
-		OpsiD:          soal.OpsiD,
-		JawabanDipilih: jawabanDipilih,
-		IsAnswered:     isAnswered,
-		Materi:         soal.Materi,
-		Gambar:         soal.Gambar,
+	if tss.QuestionType == entity.QuestionTypeMultipleChoice && tss.IDSoal != nil {
+		// Handle multiple choice question
+		soal, err := u.repo.GetQuestionByOrder(sessionToken, nomorUrut)
+		if err != nil {
+			return nil, err
+		}
+
+		var jawabanDipilih *entity.JawabanOption
+		for _, ans := range answers {
+			if ans.TestSessionSoal.NomorUrut == nomorUrut && ans.JawabanDipilih != nil {
+				jawabanDipilih = ans.JawabanDipilih
+				break
+			}
+		}
+
+		question.Materi = soal.Materi
+		question.MCID = &soal.ID
+		question.MCPertanyaan = &soal.Pertanyaan
+		question.MCOpsiA = &soal.OpsiA
+		question.MCOpsiB = &soal.OpsiB
+		question.MCOpsiC = &soal.OpsiC
+		question.MCOpsiD = &soal.OpsiD
+		question.MCJawabanDipilih = jawabanDipilih
+		question.MCGambar = soal.Gambar
+
+	} else if tss.QuestionType == entity.QuestionTypeDragDrop && tss.IDSoalDragDrop != nil {
+		// Handle drag-drop question
+		soalDD, err := u.repo.GetSoalDragDropByID(*tss.IDSoalDragDrop)
+		if err != nil {
+			return nil, err
+		}
+
+		var userAnswer map[int]int
+		for _, ans := range answers {
+			if ans.TestSessionSoal.NomorUrut == nomorUrut && ans.QuestionType == entity.QuestionTypeDragDrop {
+				userAnswer = ans.GetDragDropAnswer()
+				break
+			}
+		}
+
+		question.Materi = soalDD.Materi
+		question.DDID = &soalDD.ID
+		question.DDPertanyaan = &soalDD.Pertanyaan
+		question.DDDDragType = &soalDD.DragType
+		question.DDItems = soalDD.Items
+		question.DDSlots = soalDD.Slots
+		question.DDUserAnswer = userAnswer
 	}
 
-	return soalForStudent, nil
+	return question, nil
 }
 
 // GetAllTestQuestions gets all questions for the session
-func (u *testSessionUsecaseImpl) GetAllTestQuestions(sessionToken string) ([]entity.SoalForStudent, error) {
+func (u *testSessionUsecaseImpl) GetAllTestQuestions(sessionToken string) ([]entity.QuestionForStudent, error) {
 	_, err := u.GetTestSession(sessionToken)
 	if err != nil {
 		return nil, err
 	}
 
-	soals, err := u.repo.GetAllQuestionsForSession(sessionToken)
+	sessionSoals, err := u.repo.GetAllQuestionsForSession(sessionToken)
 	if err != nil {
 		return nil, err
 	}
@@ -139,34 +179,66 @@ func (u *testSessionUsecaseImpl) GetAllTestQuestions(sessionToken string) ([]ent
 	// Get existing answers
 	answers, _ := u.repo.GetSessionAnswers(sessionToken)
 
-	var soalForStudents []entity.SoalForStudent
-	for _, soal := range soals {
-		var jawabanDipilih *entity.JawabanOption
-		isAnswered := false
+	var questions []entity.QuestionForStudent
+	for _, tss := range sessionSoals {
+		question := &entity.QuestionForStudent{
+			NomorUrut:    tss.NomorUrut,
+			QuestionType: tss.QuestionType,
+			IsAnswered:   false, // Will be set below
+		}
+
+		// Check if answered
 		for _, ans := range answers {
-			if ans.TestSessionSoal.NomorUrut == soal.NomorUrut {
-				jawabanDipilih = ans.JawabanDipilih
-				isAnswered = true
+			if ans.TestSessionSoal.NomorUrut == tss.NomorUrut {
+				question.IsAnswered = true
 				break
 			}
 		}
 
-		soalForStudents = append(soalForStudents, entity.SoalForStudent{
-			ID:             soal.Soal.ID,
-			NomorUrut:      soal.NomorUrut,
-			Pertanyaan:     soal.Soal.Pertanyaan,
-			OpsiA:          soal.Soal.OpsiA,
-			OpsiB:          soal.Soal.OpsiB,
-			OpsiC:          soal.Soal.OpsiC,
-			OpsiD:          soal.Soal.OpsiD,
-			JawabanDipilih: jawabanDipilih,
-			IsAnswered:     isAnswered,
-			Materi:         soal.Soal.Materi,
-			Gambar:         soal.Soal.Gambar,
-		})
+		if tss.QuestionType == entity.QuestionTypeMultipleChoice && tss.Soal.ID > 0 {
+			// Handle multiple choice question
+			var jawabanDipilih *entity.JawabanOption
+			for _, ans := range answers {
+				if ans.TestSessionSoal.NomorUrut == tss.NomorUrut && ans.JawabanDipilih != nil {
+					jawabanDipilih = ans.JawabanDipilih
+					break
+				}
+			}
+
+			question.Materi = tss.Soal.Materi
+			question.MCID = &tss.Soal.ID
+			question.MCPertanyaan = &tss.Soal.Pertanyaan
+			question.MCOpsiA = &tss.Soal.OpsiA
+			question.MCOpsiB = &tss.Soal.OpsiB
+			question.MCOpsiC = &tss.Soal.OpsiC
+			question.MCOpsiD = &tss.Soal.OpsiD
+			question.MCJawabanDipilih = jawabanDipilih
+			question.MCGambar = tss.Soal.Gambar
+
+
+		} else if tss.QuestionType == entity.QuestionTypeDragDrop && tss.SoalDragDrop != nil && tss.SoalDragDrop.ID > 0 {
+			// Handle drag-drop question
+			var userAnswer map[int]int
+			for _, ans := range answers {
+				if ans.TestSessionSoal.NomorUrut == tss.NomorUrut && ans.QuestionType == entity.QuestionTypeDragDrop {
+					userAnswer = ans.GetDragDropAnswer()
+					break
+				}
+			}
+
+			question.Materi = tss.SoalDragDrop.Materi
+			question.DDID = &tss.SoalDragDrop.ID
+			question.DDPertanyaan = &tss.SoalDragDrop.Pertanyaan
+			question.DDDDragType = &tss.SoalDragDrop.DragType
+			question.DDItems = tss.SoalDragDrop.Items
+			question.DDSlots = tss.SoalDragDrop.Slots
+			question.DDUserAnswer = userAnswer
+		}
+
+		questions = append(questions, *question)
 	}
 
-	return soalForStudents, nil
+	return questions, nil
 }
 
 // GetSessionAnswers gets all answers for the session
@@ -187,6 +259,50 @@ func (u *testSessionUsecaseImpl) SubmitAnswer(sessionToken string, nomorUrut int
 	}
 
 	return u.repo.SubmitAnswer(sessionToken, nomorUrut, jawaban)
+}
+
+// SubmitDragDropAnswer submits a drag-drop answer with all-or-nothing scoring
+func (u *testSessionUsecaseImpl) SubmitDragDropAnswer(sessionToken string, nomorUrut int, answer map[int]int) error {
+	_, err := u.GetTestSession(sessionToken)
+	if err != nil {
+		return err
+	}
+
+	// Get the TestSessionSoal to find the drag-drop question
+	tss, err := u.repo.GetTestSessionSoalByOrder(sessionToken, nomorUrut)
+	if err != nil {
+		return err
+	}
+
+	// Verify this is a drag-drop question
+	if tss.QuestionType != entity.QuestionTypeDragDrop || tss.IDSoalDragDrop == nil {
+		return errors.New("this is not a drag-drop question")
+	}
+
+	// Get correct answers
+	correctAnswers, err := u.repo.GetDragDropCorrectAnswers(*tss.IDSoalDragDrop)
+	if err != nil {
+		return err
+	}
+
+	// All-or-nothing scoring: check if all answers are correct
+	isCorrect := u.checkDragDropAnswer(correctAnswers, answer)
+
+	return u.repo.SubmitDragDropAnswer(sessionToken, nomorUrut, answer, isCorrect)
+}
+
+// checkDragDropAnswer implements all-or-nothing scoring
+func (u *testSessionUsecaseImpl) checkDragDropAnswer(correctAnswers []entity.DragCorrectAnswer, userAnswer map[int]int) bool {
+	if len(userAnswer) != len(correctAnswers) {
+		return false // Not all items answered
+	}
+	for _, correct := range correctAnswers {
+		userSlot, exists := userAnswer[correct.IDDragItem]
+		if !exists || userSlot != correct.IDDragSlot {
+			return false // Wrong or missing answer
+		}
+	}
+	return true // All correct!
 }
 
 // ClearAnswer clears an answer
@@ -299,27 +415,82 @@ func (u *testSessionUsecaseImpl) GetTestResult(sessionToken string) (*entity.Tes
 	}
 
 	// Process all questions in order
+	// Process all questions in order
 	for _, question := range allQuestions {
 		var detail entity.JawabanDetail
 		detail.NomorUrut = question.NomorUrut
-		detail.Pertanyaan = question.Soal.Pertanyaan
-		detail.OpsiA = question.Soal.OpsiA
-		detail.OpsiB = question.Soal.OpsiB
-		detail.OpsiC = question.Soal.OpsiC
-		detail.OpsiD = question.Soal.OpsiD
-		detail.JawabanBenar = question.Soal.JawabanBenar
-		detail.Pembahasan = question.Soal.Pembahasan
-		detail.Gambar = question.Soal.Gambar
+		detail.QuestionType = question.QuestionType
 
-		// Add answer details if exists
-		if ans, exists := answersMap[question.NomorUrut]; exists {
-			detail.JawabanDipilih = ans.JawabanDipilih
-			detail.IsCorrect = ans.IsCorrect
-			detail.IsAnswered = ans.JawabanDipilih != nil
+		// Check type
+		if question.QuestionType == entity.QuestionTypeDragDrop && question.SoalDragDrop != nil {
+			// DRAG DROP Handling
+			dd := question.SoalDragDrop
+			detail.Pertanyaan = dd.Pertanyaan
+			detail.Pembahasan = dd.Pembahasan
+			detail.DragType = &dd.DragType
+			detail.DragItems = dd.Items
+			detail.DragSlots = dd.Slots
+
+			// Map DragDrop Images to generic SoalGambar for ID
+			if len(dd.Gambar) > 0 {
+				convertedImages := make([]entity.SoalGambar, len(dd.Gambar))
+				for i, img := range dd.Gambar {
+					convertedImages[i] = entity.SoalGambar{
+						ID:         img.ID,
+						NamaFile:   img.NamaFile,
+						FilePath:   img.FilePath,
+						FileSize:   img.FileSize,
+						MimeType:   img.MimeType,
+						Urutan:     img.Urutan,
+						Keterangan: img.Keterangan,
+						CreatedAt:  img.CreatedAt,
+					}
+				}
+				detail.Gambar = convertedImages
+			}
+
+			// Fetch correct answers (needed for result view)
+			correctAnswersList, err := u.repo.GetDragDropCorrectAnswers(dd.ID)
+			if err == nil {
+				detail.CorrectDragAnswer = make(map[int]int)
+				for _, ca := range correctAnswersList {
+					detail.CorrectDragAnswer[ca.IDDragItem] = ca.IDDragSlot
+				}
+			}
+
+			// Get User Answer
+			if ans, exists := answersMap[question.NomorUrut]; exists {
+				detail.UserDragAnswer = ans.GetDragDropAnswer()
+				detail.IsCorrect = ans.IsCorrect
+				detail.IsAnswered = (len(detail.UserDragAnswer) > 0)
+			} else {
+				detail.IsCorrect = false
+				detail.IsAnswered = false
+			}
+
 		} else {
-			// No answer provided
-			detail.IsCorrect = false
-			detail.IsAnswered = false
+			// MULTIPLE CHOICE Handling (Default)
+			// Use loaded Soal info directly
+			
+			detail.Pertanyaan = question.Soal.Pertanyaan
+			detail.OpsiA = question.Soal.OpsiA
+			detail.OpsiB = question.Soal.OpsiB
+			detail.OpsiC = question.Soal.OpsiC
+			detail.OpsiD = question.Soal.OpsiD
+			detail.JawabanBenar = question.Soal.JawabanBenar
+			detail.Pembahasan = question.Soal.Pembahasan
+			detail.Gambar = question.Soal.Gambar
+
+			// Add answer details if exists
+			if ans, exists := answersMap[question.NomorUrut]; exists {
+				detail.JawabanDipilih = ans.JawabanDipilih
+				detail.IsCorrect = ans.IsCorrect
+				detail.IsAnswered = ans.JawabanDipilih != nil
+			} else {
+				// No answer provided
+				detail.IsCorrect = false
+				detail.IsAnswered = false
+			}
 		}
 
 		details = append(details, detail)

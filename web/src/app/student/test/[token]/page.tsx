@@ -35,16 +35,16 @@ import {
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { useAuth } from '../../../auth-context';
+import { DndContext, DragEndEvent, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, arrayMove, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import DragDropQuestion from '../../components/DragDropQuestion';
 
 interface Question {
   id: number;
-  pertanyaan: string;
-  opsiA: string;
-  opsiB: string;
-  opsiC: string;
-  opsiD: string;
   nomorUrut: number;
-  jawabanDipilih?: string;
+  questionType: string;
+  isAnswered: boolean;
   materi: {
     nama: string;
     mataPelajaran: {
@@ -54,6 +54,48 @@ interface Question {
       nama: string;
     };
   };
+  // Multiple Choice fields
+  mcId?: number;
+  mcPertanyaan?: string;
+  mcOpsiA?: string;
+  mcOpsiB?: string;
+  mcOpsiC?: string;
+  mcOpsiD?: string;
+  mcJawabanDipilih?: string;
+  mcGambar?: Array<{
+    id: number;
+    namaFile: string;
+    filePath: string;
+    fileSize: number;
+    mimeType: string;
+    urutan: number;
+    keterangan?: string;
+    createdAt: string;
+  }>;
+  // Drag-Drop fields
+  ddId?: number;
+  ddPertanyaan?: string;
+  ddDragType?: string;
+  ddItems?: Array<{
+    id: number;
+    label: string;
+    imageUrl?: string;
+    urutan: number;
+  }>;
+  ddSlots?: Array<{
+    id: number;
+    label: string;
+    imageUrl?: string;
+    urutan: number;
+  }>;
+  ddUserAnswer?: Record<number, number>;
+  // Legacy fields for backward compatibility
+  pertanyaan?: string;
+  opsiA?: string;
+  opsiB?: string;
+  opsiC?: string;
+  opsiD?: string;
+  jawabanDipilih?: string;
   gambar?: Array<{
     id: number;
     namaFile: string;
@@ -92,6 +134,8 @@ export default function TestPage() {
 
   const [sessionData, setSessionData] = useState<TestSessionData | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [dragDropAnswers, setDragDropAnswers] = useState<Record<number, number[]>>({});  // questionId -> ordered item IDs (for ORDERING)
+  const [matchingAnswers, setMatchingAnswers] = useState<Record<number, Record<number, number[]>>>({});  // questionId -> { slotId: itemId[] } (for MATCHING - multiple items per slot)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -101,6 +145,14 @@ export default function TestPage() {
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [isAutoSubmitting, setIsAutoSubmitting] = useState(false);
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -197,6 +249,154 @@ export default function TestPage() {
     return 'green';
   };
 
+  // Drag-drop handlers
+  const handleDragEnd = (event: DragEndEvent, questionId: number, items: any[], dragType: string) => {
+    const { active, over } = event;
+    
+    if (!over) return;
+    
+    if (dragType === 'MATCHING' || dragType === 'matching') {
+      // For MATCHING: active.id is itemId, over.id is slotId
+      const itemId = Number(active.id);
+      const slotId = Number(over.id);
+      
+      // Get current state directly to ensure we're not missing items
+      setMatchingAnswers(prev => {
+        // Start with existing slots for this question
+        const currentSlots = { ...(prev[questionId] || {}) };
+        
+        // Remove this item from ALL slots first
+        Object.keys(currentSlots).forEach(sId => {
+          const sid = Number(sId);
+          currentSlots[sid] = (currentSlots[sid] || []).filter(id => id !== itemId);
+          // Clean up empty slot arrays
+          if (currentSlots[sid].length === 0) {
+            delete currentSlots[sid];
+          }
+        });
+        
+        // Add item to the new slot
+        if (!currentSlots[slotId]) {
+          currentSlots[slotId] = [];
+        }
+        currentSlots[slotId].push(itemId);
+        
+        const updated = {
+          ...prev,
+          [questionId]: currentSlots
+        };
+        
+        // Build answer map and submit immediately (like multiple choice)
+        const answerMap: Record<number, number> = {};
+        Object.entries(currentSlots).forEach(([sId, itemIds]) => {
+          if (Array.isArray(itemIds)) {
+            itemIds.forEach(iId => {
+              answerMap[iId] = Number(sId);
+            });
+          }
+        });
+        
+        // Submit immediately after state update
+        handleDragDropSubmit(questionId, dragType, answerMap);
+        
+        return updated;
+      });
+    } else {
+      // For ORDERING: reorder items
+      if (active.id === over.id) return;
+      
+      const currentOrder = dragDropAnswers[questionId] || (currentQuestion.ddItems || []).map(item => item.id);
+      const oldIndex = currentOrder.indexOf(Number(active.id));
+      const newIndex = currentOrder.indexOf(Number(over.id));
+      
+      const newOrder = arrayMove(currentOrder, oldIndex, newIndex);
+      setDragDropAnswers(prev => {
+        const updated = {
+          ...prev,
+          [questionId]: newOrder
+        };
+        
+        // Build answer map and submit immediately (like multiple choice)
+        const answerMap: Record<number, number> = {};
+        newOrder.forEach((itemId, position) => {
+          answerMap[position] = itemId;
+        });
+        
+        // Submit immediately after state update
+        handleDragDropSubmit(questionId, dragType, answerMap);
+        
+        return updated;
+      });
+    }
+  };
+
+  // Sortable Item Component (for ORDERING)
+  const SortableItem = ({ id, children }: { id: number; children: React.ReactNode }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <Box ref={setNodeRef} style={style} {...attributes} {...listeners}>
+        {children}
+      </Box>
+    );
+  };
+  
+  // Draggable Item Component (for MATCHING)
+  const DraggableItem = ({ id, children }: { id: number; children: React.ReactNode }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <Box ref={setNodeRef} style={style} {...attributes} {...listeners}>
+        {children}
+      </Box>
+    );
+  };
+  
+  // Droppable Slot Component (for MATCHING)
+  const DroppableSlot = ({ id, children }: { id: number; children: React.ReactNode }) => {
+    const {
+      setNodeRef,
+      isOver,
+    } = useSortable({ id });
+
+    return (
+      <Box 
+        ref={setNodeRef}
+        borderColor={isOver ? 'blue.500' : 'gray.300'}
+        bg={isOver ? 'blue.50' : 'gray.50'}
+        transition="all 0.2s"
+      >
+        {children}
+      </Box>
+    );
+  };
+
   const fetchAllQuestions = async () => {
     try {
       // Ensure auth token is set before making request
@@ -207,7 +407,29 @@ export default function TestPage() {
       
       const response = await axios.get(`${API_BASE}/${token}/questions`);
       const data = response.data;
-      setSessionData(data);
+      
+      // Transform response to match expected structure
+      const transformedData = {
+        session_token: data.sessionToken || data.session_token,
+        soal: data.questions || data.soal || [],
+        total_soal: data.totalSoal || data.total_soal,
+        current_nomor_urut: data.currentNomorUrut || data.current_nomor_urut,
+        dijawab_count: data.dijawabCount || data.dijawab_count,
+        is_answered_status: data.isAnsweredStatus || data.is_answered_status,
+        batas_waktu: data.batasWaktu || data.batas_waktu,
+        durasi_menit: data.durasiMenit || data.durasi_menit,
+        waktu_mulai: data.waktuMulai || data.waktu_mulai,
+      };
+      
+      setSessionData(transformedData);
+      
+      // Handle empty or undefined soal array
+      if (!transformedData.soal || !Array.isArray(transformedData.soal)) {
+        console.error('Invalid response structure:', data);
+        toast({ title: 'No questions available', status: 'error' });
+        setLoading(false);
+        return;
+      }
       
       // Load saved state from localStorage first
       const savedState = localStorage.getItem(`test_session_${token}`);
@@ -226,7 +448,7 @@ export default function TestPage() {
       
       // Merge server answers with saved answers (prefer saved answers)
       const mergedAnswers: Record<number, string> = { ...savedAnswers };
-      data.soal.forEach((q: Question) => {
+      transformedData.soal.forEach((q: Question) => {
         if (q.jawabanDipilih && q.jawabanDipilih !== 'JAWABAN_INVALID' && !mergedAnswers[q.nomorUrut]) {
           mergedAnswers[q.nomorUrut] = q.jawabanDipilih;
         }
@@ -272,6 +494,65 @@ export default function TestPage() {
     } catch (error) {
       console.error('Error submitting answer:', error);
       toast({ title: 'Error menyimpan jawaban', status: 'error' });
+    }
+  };
+
+  const handleDragDropSubmit = async (questionId: number, dragType: string, answerMapParam?: Record<number, number>) => {
+    try {
+      const authToken = localStorage.getItem('auth_token');
+      if (authToken && !axios.defaults.headers.common['Authorization']) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      }
+
+      let answerMap: Record<number, number> = answerMapParam || {};
+
+      // If answerMap not provided as parameter, build it from state
+      if (!answerMapParam) {
+        if (dragType === 'ORDERING' || dragType === 'ordering') {
+          // For ORDERING: map position (0, 1, 2...) to item ID
+          const order = dragDropAnswers[questionId];
+          if (order && order.length > 0) {
+            order.forEach((itemId, position) => {
+              answerMap[position] = itemId;
+            });
+          }
+        } else {
+          // For MATCHING: flatten the array structure to map Item ID to Slot ID
+          // Backend expects map<ItemId, SlotId>
+          const matchingData = matchingAnswers[questionId] || {};
+          
+          Object.entries(matchingData).forEach(([slotId, itemIds]) => {
+            if (Array.isArray(itemIds)) {
+              itemIds.forEach(itemId => {
+                answerMap[itemId] = Number(slotId);
+              });
+            }
+          });
+        }
+      }
+
+      // Only submit if there's an answer
+      if (Object.keys(answerMap).length > 0) {
+        
+        await axios.post(`${API_BASE}/${token}/drag-drop-answers`, {
+          nomor_urut: questionId,
+          answer: answerMap,
+        });
+
+        // Mark as answered
+        if (sessionData) {
+          const updatedQuestions = sessionData.soal.map(q => 
+            q.nomorUrut === questionId ? { ...q, isAnswered: true } : q
+          );
+          setSessionData({
+            ...sessionData,
+            soal: updatedQuestions,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting drag-drop answer:', error);
+      toast({ title: 'Error menyimpan jawaban drag-drop', status: 'error' });
     }
   };
 
@@ -374,7 +655,26 @@ export default function TestPage() {
   const currentQuestion = sessionData.soal[currentQuestionIndex];
   const getQuestionStatus = (index: number) => {
     const nomorUrut = sessionData.soal[index].nomorUrut;
+    const question = sessionData.soal[index];
+    
+    // Check multiple choice answer
     if (answers[nomorUrut]) return 'answered';
+    
+    // Check drag-drop answers
+    if (question.questionType === 'QUESTION_TYPE_DRAG_DROP' || question.ddPertanyaan) {
+      if (question.ddDragType === 'MATCHING' || question.ddDragType === 'matching') {
+        // Check if any items are placed in slots
+        if (matchingAnswers[nomorUrut] && Object.keys(matchingAnswers[nomorUrut]).length > 0) {
+          return 'answered';
+        }
+      } else {
+        // Check if ordering items are in order
+        if (dragDropAnswers[nomorUrut] && dragDropAnswers[nomorUrut].length > 0) {
+          return 'answered';
+        }
+      }
+    }
+    
     return 'unanswered';
   };
 
@@ -383,20 +683,161 @@ export default function TestPage() {
       await axios.post(`${API_BASE}/${token}/clear-answer`, {
         nomor_urut: currentQuestion.nomorUrut,
       });
-      const newAnswers = { ...answers };
-      delete newAnswers[currentQuestion.nomorUrut];
-      setAnswers(newAnswers);
+      
+      // Clear based on question type
+      if (currentQuestion.questionType === 'QUESTION_TYPE_DRAG_DROP' || currentQuestion.ddPertanyaan) {
+        // For drag-drop questions
+        if (currentQuestion.ddDragType === 'MATCHING' || currentQuestion.ddDragType === 'matching') {
+          // Clear matching answers
+          const newMatchingAnswers = { ...matchingAnswers };
+          delete newMatchingAnswers[currentQuestion.nomorUrut];
+          setMatchingAnswers(newMatchingAnswers);
+        } else {
+          // Clear ordering answers
+          const newDragDropAnswers = { ...dragDropAnswers };
+          delete newDragDropAnswers[currentQuestion.nomorUrut];
+          setDragDropAnswers(newDragDropAnswers);
+        }
+      } else {
+        // Clear multiple choice answer
+        const newAnswers = { ...answers };
+        delete newAnswers[currentQuestion.nomorUrut];
+        setAnswers(newAnswers);
+      }
+      
       // Update dijawab_count locally
       if (sessionData) {
+        let newCount = 0;
+        Object.keys(answers).forEach(key => {
+          if (Number(key) !== currentQuestion.nomorUrut) {
+            newCount++;
+          }
+        });
         setSessionData({
           ...sessionData,
-          dijawab_count: Object.keys(newAnswers).length,
+          dijawab_count: newCount,
         });
       }
+      
+      toast({
+        title: 'Jawaban dibatalkan',
+        status: 'success',
+        duration: 2,
+      });
     } catch (error) {
       console.error('Error clearing answer:', error);
       toast({ title: 'Error membatalkan jawaban', status: 'error' });
     }
+  };
+
+  const getDragDropQuestionProps = () => {
+    const q = currentQuestion;
+    const dragType = (q.ddDragType || 'ORDERING').toLowerCase() as 'ordering' | 'matching';
+    
+    // 1. Prepare Question Data
+    const questionProps = {
+      id: q.id,
+      pertanyaan: q.ddPertanyaan || q.pertanyaan || '',
+      dragType: dragType,
+      items: (q.ddItems || []).map(item => ({
+        id: item.id,
+        label: item.label,
+        imageUrl: item.imageUrl,
+        urutan: item.urutan
+      })),
+      slots: (q.ddSlots || []).map(slot => ({
+        id: slot.id,
+        label: slot.label,
+        urutan: slot.urutan
+      }))
+    };
+
+    // 2. Prepare User Answer Data
+    let userAnswerMap: Record<number, number> = {};
+
+    if (dragType === 'matching') {
+      const matchingData = matchingAnswers[q.nomorUrut] || {};
+      // matchingData is { slotId: [itemId1, itemId2] }
+      Object.entries(matchingData).forEach(([slotId, itemIds]) => {
+        if (Array.isArray(itemIds)) {
+          itemIds.forEach(itemId => {
+            userAnswerMap[itemId] = Number(slotId);
+          });
+        }
+      });
+    } else {
+      // ORDERING
+      const order = dragDropAnswers[q.nomorUrut]; // number[] (itemIds)
+      
+      if (order && order.length > 0 && questionProps.slots.length > 0) {
+        // Sort slots by urutan
+        const sortedSlots = [...questionProps.slots].sort((a, b) => a.urutan - b.urutan);
+        
+        order.forEach((itemId, index) => {
+          if (index < sortedSlots.length) {
+            userAnswerMap[itemId] = sortedSlots[index].id;
+          }
+        });
+      }
+    }
+
+    // 3. Handle Answer Change
+    const handleAnswerChange = (newAnswerMap: Record<number, number>) => {
+      // Determine dragType (sometimes q.ddDragType might be capitalized)
+      const isMatching = dragType === 'matching';
+
+      if (isMatching) {
+        // Convert { itemId: slotId } -> { slotId: [itemId...] }
+        const newMatching: Record<number, number[]> = {};
+        Object.entries(newAnswerMap).forEach(([itemIdStr, slotId]) => {
+          const itemId = Number(itemIdStr);
+          if (!newMatching[slotId]) newMatching[slotId] = [];
+          newMatching[slotId].push(itemId);
+        });
+        
+        setMatchingAnswers(prev => ({ ...prev, [q.nomorUrut]: newMatching }));
+        
+        // Submit
+        handleDragDropSubmit(q.nomorUrut, 'MATCHING', newAnswerMap);
+      } else {
+        // ORDERING
+        // Reconstruct order array based on slot assignments
+        // Sort slots by urutan
+        const sortedSlots = [...questionProps.slots].sort((a, b) => a.urutan - b.urutan);
+        const newOrder: number[] = [];
+        
+        // map slotId -> itemId
+        const slotToItem: Record<number, number> = {};
+        Object.entries(newAnswerMap).forEach(([itemIdStr, slotId]) => {
+          slotToItem[slotId] = Number(itemIdStr);
+        });
+        
+        sortedSlots.forEach(slot => {
+          if (slotToItem[slot.id]) {
+            newOrder.push(slotToItem[slot.id]);
+          }
+        });
+        
+        setDragDropAnswers(prev => ({ ...prev, [q.nomorUrut]: newOrder }));
+        
+        // API Submission for ordering: Backend expects ItemID -> SlotID map (same as matching)
+        const apiAnswerMap: Record<number, number> = {};
+        sortedSlots.forEach((slot) => {
+          if (slotToItem[slot.id]) {
+            const itemId = slotToItem[slot.id];
+            apiAnswerMap[itemId] = slot.id;
+          }
+        });
+        
+        handleDragDropSubmit(q.nomorUrut, 'ORDERING', apiAnswerMap);
+      }
+    };
+
+    return {
+      question: questionProps,
+      userAnswer: userAnswerMap,
+      onAnswerChange: handleAnswerChange
+    };
   };
 
   return (
@@ -447,86 +888,725 @@ export default function TestPage() {
                   Soal No. {currentQuestion.nomorUrut}
                 </Badge>
 
-                <Text fontSize="lg" fontWeight="medium">
-                  {currentQuestion.pertanyaan}
-                </Text>
-
-                {currentQuestion.gambar && Array.isArray(currentQuestion.gambar) && currentQuestion.gambar.length > 0 && (
-                  <Box>
-                    <Text fontSize="sm" color="gray.600" mb={2}>
-                      Perhatikan gambar dibawah ini
+                {/* Multiple Choice Question */}
+                {(currentQuestion.questionType === 'QUESTION_TYPE_MULTIPLE_CHOICE' || currentQuestion.mcPertanyaan) && (
+                  <>
+                    <Text fontSize="lg" fontWeight="medium">
+                      {currentQuestion.mcPertanyaan || currentQuestion.pertanyaan}
                     </Text>
-                    <VStack spacing={3}>
-                      {currentQuestion.gambar
-                        .sort((a, b) => a.urutan - b.urutan)
-                        .map((img) => (
-                          <Box key={img.id} borderWidth="1px" borderRadius="md" p={2} bg="gray.50">
-                            <Image
-                              src={img.filePath || ''}
-                              alt={img.keterangan || 'Gambar soal'}
-                              maxH="300px"
-                              objectFit="contain"
-                              mx="auto"
-                            />
-                            {img.keterangan && (
-                              <Text fontSize="sm" color="gray.600" mt={2} textAlign="center">
-                                {img.keterangan}
-                              </Text>
-                            )}
-                          </Box>
-                        ))}
-                    </VStack>
-                  </Box>
+
+                    {((currentQuestion.mcGambar && currentQuestion.mcGambar.length > 0) || 
+                      (currentQuestion.gambar && currentQuestion.gambar.length > 0)) && (
+                      <Box>
+                        <Text fontSize="sm" color="gray.600" mb={2}>
+                          Perhatikan gambar dibawah ini
+                        </Text>
+                        <VStack spacing={3}>
+                          {(currentQuestion.mcGambar || currentQuestion.gambar || [])
+                            .sort((a, b) => a.urutan - b.urutan)
+                            .map((img) => (
+                              <Box key={img.id} borderWidth="1px" borderRadius="md" p={2} bg="gray.50">
+                                <Image
+                                  src={img.filePath || ''}
+                                  alt={img.keterangan || 'Gambar soal'}
+                                  maxH="300px"
+                                  objectFit="contain"
+                                  mx="auto"
+                                />
+                                {img.keterangan && (
+                                  <Text fontSize="sm" color="gray.600" mt={2} textAlign="center">
+                                    {img.keterangan}
+                                  </Text>
+                                )}
+                              </Box>
+                            ))}
+                        </VStack>
+                      </Box>
+                    )}
+
+                    <RadioGroup value={answers[currentQuestion.nomorUrut] || ''}>
+                      <VStack spacing={3} align="stretch">
+                        <Box
+                          p={3}
+                          borderWidth="1px"
+                          borderRadius="md"
+                          cursor="pointer"
+                          _hover={{ bg: 'gray.50' }}
+                          bg={answers[currentQuestion.nomorUrut] === 'A' ? 'orange.50' : 'white'}
+                          onClick={() => handleAnswerChange(currentQuestion.nomorUrut, 'A')}
+                        >
+                          <Radio value="A">A. {currentQuestion.mcOpsiA || currentQuestion.opsiA}</Radio>
+                        </Box>
+                        <Box
+                          p={3}
+                          borderWidth="1px"
+                          borderRadius="md"
+                          cursor="pointer"
+                          _hover={{ bg: 'gray.50' }}
+                          bg={answers[currentQuestion.nomorUrut] === 'B' ? 'orange.50' : 'white'}
+                          onClick={() => handleAnswerChange(currentQuestion.nomorUrut, 'B')}
+                        >
+                          <Radio value="B">B. {currentQuestion.mcOpsiB || currentQuestion.opsiB}</Radio>
+                        </Box>
+                        <Box
+                          p={3}
+                          borderWidth="1px"
+                          borderRadius="md"
+                          cursor="pointer"
+                          _hover={{ bg: 'gray.50' }}
+                          bg={answers[currentQuestion.nomorUrut] === 'C' ? 'orange.50' : 'white'}
+                          onClick={() => handleAnswerChange(currentQuestion.nomorUrut, 'C')}
+                        >
+                          <Radio value="C">C. {currentQuestion.mcOpsiC || currentQuestion.opsiC}</Radio>
+                        </Box>
+                        <Box
+                          p={3}
+                          borderWidth="1px"
+                          borderRadius="md"
+                          cursor="pointer"
+                          _hover={{ bg: 'gray.50' }}
+                          bg={answers[currentQuestion.nomorUrut] === 'D' ? 'orange.50' : 'white'}
+                          onClick={() => handleAnswerChange(currentQuestion.nomorUrut, 'D')}
+                        >
+                          <Radio value="D">D. {currentQuestion.mcOpsiD || currentQuestion.opsiD}</Radio>
+                        </Box>
+                      </VStack>
+                    </RadioGroup>
+                  </>
                 )}
 
-                <RadioGroup value={answers[currentQuestion.nomorUrut] || ''}>
-                  <VStack spacing={3} align="stretch">
-                    <Box
-                      p={3}
-                      borderWidth="1px"
-                      borderRadius="md"
-                      cursor="pointer"
-                      _hover={{ bg: 'gray.50' }}
-                      bg={answers[currentQuestion.nomorUrut] === 'A' ? 'orange.50' : 'white'}
-                      onClick={() => handleAnswerChange(currentQuestion.nomorUrut, 'A')}
-                    >
-                      <Radio value="A">A. {currentQuestion.opsiA}</Radio>
+                {/* Drag-Drop Question */}
+                {/* Drag-Drop Question */}
+                {(currentQuestion.questionType === 'QUESTION_TYPE_DRAG_DROP' || currentQuestion.ddPertanyaan) && (
+                  <DragDropQuestion {...getDragDropQuestionProps()!} />
+                )}
+                
+                {/* Legacy Inline Implementation (Disabled) */}
+                {false && (currentQuestion.questionType === 'QUESTION_TYPE_DRAG_DROP' || currentQuestion.ddPertanyaan) && (
+                  <>
+                    {/* Question Text */}
+                    <Box mb={4} p={4} bg="gray.50" borderRadius="md" borderLeftWidth="4px" borderLeftColor="blue.500">
+                      <Text fontSize="xl" fontWeight="bold" color="gray.800">
+                        {currentQuestion.ddPertanyaan || currentQuestion.pertanyaan}
+                      </Text>
                     </Box>
-                    <Box
-                      p={3}
-                      borderWidth="1px"
-                      borderRadius="md"
-                      cursor="pointer"
-                      _hover={{ bg: 'gray.50' }}
-                      bg={answers[currentQuestion.nomorUrut] === 'B' ? 'orange.50' : 'white'}
-                      onClick={() => handleAnswerChange(currentQuestion.nomorUrut, 'B')}
-                    >
-                      <Radio value="B">B. {currentQuestion.opsiB}</Radio>
+                    
+                    {/* Instructions */}
+                    <Box p={3} bg="blue.50" borderRadius="md" mb={4}>
+                      <HStack spacing={2} align="center">
+                        <Box as="span" fontSize="lg">ℹ️</Box>
+                        <Text fontSize="sm" fontWeight="bold" color="blue.700">
+                          {currentQuestion.ddDragType === 'ORDERING' || currentQuestion.ddDragType === 'ordering' 
+                            ? '🔢 Drag items untuk mengubah urutan dari atas ke bawah' 
+                            : '🎯 Tarik dan letakkan gambar hewan ke kategori habitat yang benar'}
+                        </Text>
+                      </HStack>
                     </Box>
-                    <Box
-                      p={3}
-                      borderWidth="1px"
-                      borderRadius="md"
-                      cursor="pointer"
-                      _hover={{ bg: 'gray.50' }}
-                      bg={answers[currentQuestion.nomorUrut] === 'C' ? 'orange.50' : 'white'}
-                      onClick={() => handleAnswerChange(currentQuestion.nomorUrut, 'C')}
-                    >
-                      <Radio value="C">C. {currentQuestion.opsiC}</Radio>
-                    </Box>
-                    <Box
-                      p={3}
-                      borderWidth="1px"
-                      borderRadius="md"
-                      cursor="pointer"
-                      _hover={{ bg: 'gray.50' }}
-                      bg={answers[currentQuestion.nomorUrut] === 'D' ? 'orange.50' : 'white'}
-                      onClick={() => handleAnswerChange(currentQuestion.nomorUrut, 'D')}
-                    >
-                      <Radio value="D">D. {currentQuestion.opsiD}</Radio>
-                    </Box>
-                  </VStack>
-                </RadioGroup>
+                    
+                    {/* MATCHING Type - Horizontal Tab Layout Style */}
+                    {(currentQuestion.ddDragType?.toUpperCase() === 'MATCHING') && (
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(event) => handleDragEnd(event, currentQuestion.nomorUrut, currentQuestion.ddItems || [], currentQuestion.ddDragType || '')}
+                      >
+                        <SortableContext
+                          items={[...(currentQuestion.ddItems || []).map(item => item.id), ...(currentQuestion.ddSlots || []).map(slot => slot.id)]}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <Box>
+                            {/* Items Section - Top */}
+                            <Box mb={8}>
+                              <Flex align="center" justify="space-between" mb={4}>
+                                <HStack spacing={2}>
+                                  <Box
+                                    w="40px"
+                                    h="40px"
+                                    borderRadius="full"
+                                    bg="purple.500"
+                                    display="flex"
+                                    alignItems="center"
+                                    justifyContent="center"
+                                    color="white"
+                                  >
+                                    <Text fontSize="xl">🐾</Text>
+                                  </Box>
+                                  <Text fontSize="lg" fontWeight="bold" color="gray.700">
+                                    Hewan
+                                  </Text>
+                                </HStack>
+                                <Badge colorScheme="purple" fontSize="xs" px={2} py={1}>
+                                  {(currentQuestion.ddItems || []).length} Items
+                                </Badge>
+                              </Flex>
+                              
+                              <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={4}>
+                                {(currentQuestion.ddItems || []).map((item) => {
+                                  // Check if this item is already placed in a slot
+                                  const isPlaced = matchingAnswers[currentQuestion.nomorUrut] && 
+                                    Object.values(matchingAnswers[currentQuestion.nomorUrut]).some(
+                                      (itemIds) => Array.isArray(itemIds) && itemIds.includes(item.id)
+                                    );
+                                  
+                                  return (
+                                    <DraggableItem key={item.id} id={item.id}>
+                                      <Card
+                                        variant="elevated"
+                                        bg={isPlaced ? "gray.100" : "white"}
+                                        borderWidth="2px"
+                                        borderColor={isPlaced ? "gray.300" : "transparent"}
+                                        cursor={isPlaced ? "not-allowed" : "grab"}
+                                        opacity={isPlaced ? 0.4 : 1}
+                                        _hover={!isPlaced ? { 
+                                          shadow: '2xl', 
+                                          transform: 'translateY(-4px)',
+                                          borderColor: 'purple.400'
+                                        } : {}}
+                                        _active={!isPlaced ? { cursor: 'grabbing', transform: 'scale(0.98)' } : {}}
+                                        transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+                                        overflow="hidden"
+                                      >
+                                        <CardBody p={2} display="flex" flexDirection="column" alignItems="center" justifyContent="center" h="full">
+                                          {item.imageUrl ? (
+                                            <>
+                                              <Box
+                                                w="full"
+                                                h="140px"
+                                                display="flex"
+                                                alignItems="center"
+                                                justifyContent="center"
+                                                bg="white"
+                                                borderRadius="md"
+                                                overflow="hidden"
+                                                mb={2}
+                                              >
+                                                <Image 
+                                                  src={item.imageUrl} 
+                                                  alt={item.label} 
+                                                  maxH="100%" 
+                                                  maxW="100%" 
+                                                  objectFit="contain" 
+                                                  pointerEvents="none" 
+                                                />
+                                              </Box>
+                                              {item.label && (
+                                                <Text 
+                                                  textAlign="center" 
+                                                  fontSize="xs" 
+                                                  color="gray.500" 
+                                                  noOfLines={2}
+                                                  display={item.label.length > 20 ? 'block' : 'none'} // Hide short labels like 'A' if image exists, show long ones
+                                                >
+                                                  {item.label}
+                                                </Text>
+                                              )}
+                                            </>
+                                          ) : (
+                                            <Text 
+                                              textAlign="center" 
+                                              fontWeight="bold" 
+                                              fontSize="md" 
+                                              color={isPlaced ? "gray.400" : "gray.800"}
+                                            >
+                                              {item.label}
+                                            </Text>
+                                          )}
+                                        </CardBody>
+                                      </Card>
+                                    </DraggableItem>
+                                  );
+                                })}
+                              </SimpleGrid>
+                            </Box>
+
+                            {/* Category Slots Section - Bottom with Horizontal Tabs */}
+                            <Box 
+                              bg="white" 
+                              borderRadius="xl" 
+                              borderWidth="2px" 
+                              borderColor="gray.200"
+                              overflow="hidden"
+                            >
+                              {/* Horizontal Tab Headers */}
+                              <Flex 
+                                bg="gray.50" 
+                                borderBottomWidth="2px" 
+                                borderBottomColor="gray.200"
+                                overflowX="auto"
+                              >
+                                {(currentQuestion.ddSlots || []).map((slot, index) => {
+                                  const placedItemIds = (matchingAnswers[currentQuestion.nomorUrut] && matchingAnswers[currentQuestion.nomorUrut][slot.id]) || [];
+                                  const itemCount = placedItemIds.length;
+                                  
+                                  // Icon mapping based on slot label
+                                  const getSlotIcon = (label: string) => {
+                                    const lower = label.toLowerCase();
+                                    if (lower.includes('darat') || lower.includes('land')) return '🌳';
+                                    if (lower.includes('udara') || lower.includes('air') || lower.includes('sky')) return '☁️';
+                                    if (lower.includes('air') || lower.includes('water') || lower.includes('laut') || lower.includes('sea')) return '🌊';
+                                    return '📍';
+                                  };
+                                  
+                                  // Color mapping
+                                  const getSlotColor = (label: string) => {
+                                    const lower = label.toLowerCase();
+                                    if (lower.includes('darat') || lower.includes('land')) return 'green';
+                                    if (lower.includes('udara') || lower.includes('sky')) return 'blue';
+                                    if (lower.includes('air') || lower.includes('water') || lower.includes('laut')) return 'cyan';
+                                    return 'gray';
+                                  };
+                                  
+                                  const slotColor = getSlotColor(slot.label);
+                                  
+                                  return (
+                                    <DroppableSlot key={slot.id} id={slot.id}>
+                                      <Box
+                                        flex="1"
+                                        minW="200px"
+                                        borderRightWidth={index < (currentQuestion.ddSlots || []).length - 1 ? "2px" : "0"}
+                                        borderRightColor="gray.200"
+                                      >
+                                        {/* Tab Header */}
+                                        <Box
+                                          p={4}
+                                          bg={`${slotColor}.50`}
+                                          borderBottomWidth="3px"
+                                          borderBottomColor={`${slotColor}.500`}
+                                        >
+                                          <VStack justify="center" spacing={2}>
+                                            {/* Display slot image if available */}
+                                            {slot.imageUrl ? (
+                                              <Box
+                                                w="100px"
+                                                h="100px"
+                                                display="flex"
+                                                alignItems="center"
+                                                justifyContent="center"
+                                                bg="white"
+                                                borderRadius="lg"
+                                                overflow="hidden"
+                                                borderWidth="2px"
+                                                borderColor={`${slotColor}.300`}
+                                              >
+                                                <Image 
+                                                  src={slot.imageUrl} 
+                                                  alt={slot.label} 
+                                                  maxH="95px"
+                                                  maxW="95px"
+                                                  objectFit="contain"
+                                                />
+                                              </Box>
+                                            ) : (
+                                              <Text fontSize="3xl">{getSlotIcon(slot.label)}</Text>
+                                            )}
+                                            <Text 
+                                              fontWeight="bold" 
+                                              fontSize="md" 
+                                              color={`${slotColor}.700`}
+                                              textAlign="center"
+                                            >
+                                              {slot.label}
+                                            </Text>
+                                          </VStack>
+                                        </Box>
+                                        
+                                        {/* Drop Zone Content */}
+                                        <Box 
+                                          p={6}
+                                          minH="300px"
+                                          display="flex"
+                                          flexDirection="column"
+                                          alignItems="center"
+                                          gap={3}
+                                          bg={placedItemIds.length > 0 ? `${slotColor}.50` : 'white'}
+                                          borderTopWidth="1px"
+                                          borderTopColor="gray.200"
+                                          transition="all 0.2s ease"
+                                          position="relative"
+                                          _before={
+                                            placedItemIds.length === 0 ? {
+                                              content: '""',
+                                              position: 'absolute',
+                                              top: 0,
+                                              left: 0,
+                                              right: 0,
+                                              bottom: 0,
+                                              border: '2px dashed',
+                                              borderColor: `${slotColor}.300`,
+                                              borderRadius: 'inherit',
+                                              pointerEvents: 'none',
+                                              opacity: 0.5,
+                                            } : {}
+                                          }
+                                        >
+                                          {placedItemIds.length > 0 ? (
+                                            <VStack spacing={3} w="full" align="stretch">
+                                              {placedItemIds.map((itemId) => {
+                                                const placedItem = (currentQuestion.ddItems || []).find(item => item.id === itemId);
+                                                if (!placedItem) return null;
+                                                
+                                                return (
+                                                  <Card 
+                                                    key={itemId}
+                                                    variant="outline"
+                                                    bg={`${slotColor}.50`}
+                                                    borderColor={`${slotColor}.300`}
+                                                    borderWidth="2px"
+                                                    cursor="pointer"
+                                                    _hover={{ 
+                                                      shadow: 'md',
+                                                      borderColor: `${slotColor}.500`,
+                                                      transform: 'translateY(-2px)',
+                                                    }}
+                                                    transition="all 0.2s ease"
+                                                  >
+                                                    <CardBody p={3}>
+                                                      <VStack spacing={2}>
+                                                        <HStack w="full" justify="space-between">
+                                                          {placedItem.imageUrl ? (
+                                                            <Box
+                                                              w="60px"
+                                                              h="60px"
+                                                              display="flex"
+                                                              alignItems="center"
+                                                              justifyContent="center"
+                                                              bg="white"
+                                                              borderRadius="md"
+                                                              borderWidth="1px"
+                                                              borderColor={`${slotColor}.200`}
+                                                              overflow="hidden"
+                                                              flexShrink={0}
+                                                            >
+                                                              <Image 
+                                                                src={placedItem.imageUrl} 
+                                                                alt={placedItem.label} 
+                                                                maxH="55px"
+                                                                maxW="55px"
+                                                                objectFit="contain"
+                                                              />
+                                                            </Box>
+                                                          ) : null}
+                                                          <VStack align="flex-start" spacing={0} flex={1}>
+                                                            <Text 
+                                                              textAlign="left" 
+                                                              fontSize="sm" 
+                                                              fontWeight="bold"
+                                                              color={`${slotColor}.800`}
+                                                            >
+                                                              {placedItem.label}
+                                                            </Text>
+                                                            <HStack spacing={1}>
+                                                              <Box
+                                                                w="16px"
+                                                                h="16px"
+                                                                borderRadius="full"
+                                                                bg={`${slotColor}.500`}
+                                                                display="flex"
+                                                                alignItems="center"
+                                                                justifyContent="center"
+                                                                color="white"
+                                                                fontSize="xs"
+                                                              >
+                                                                ✓
+                                                              </Box>
+                                                              <Text fontSize="xs" color={`${slotColor}.600`} fontWeight="semibold">
+                                                                Cocok
+                                                              </Text>
+                                                            </HStack>
+                                                          </VStack>
+                                                        </HStack>
+                                                      </VStack>
+                                                    </CardBody>
+                                                  </Card>
+                                                );
+                                              })}
+                                            </VStack>
+                                          ) : (
+                                            <Flex 
+                                              direction="column" 
+                                              align="center" 
+                                              justify="center"
+                                              h="full"
+                                              color={`${slotColor}.400`}
+                                              zIndex={0}
+                                            >
+                                              <Text fontSize="4xl" mb={2} opacity={0.5}>➕</Text>
+                                              <Text fontSize="sm" fontStyle="italic" color={`${slotColor}.300`}>
+                                                Letakkan di sini
+                                              </Text>
+                                            </Flex>
+                                          )}
+                                        </Box>
+                                      </Box>
+                                    </DroppableSlot>
+                                  );
+                                })}
+                              </Flex>
+                            </Box>
+                          </Box>
+                        </SortableContext>
+                      </DndContext>
+                    )}
+                    
+                    {/* ORDERING Type - Numbered Position Slots (like MATCHING) */}
+                    {(!currentQuestion.ddDragType || currentQuestion.ddDragType?.toUpperCase() === 'ORDERING') && (
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(event) => handleDragEnd(event, currentQuestion.nomorUrut, currentQuestion.ddItems || [], currentQuestion.ddDragType || '')}
+                      >
+                        <SortableContext
+                          items={[...(currentQuestion.ddItems || []).map((item, idx) => `pos-${idx}`)]}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <Box>
+                            {/* Items Section - Top */}
+                            <Box mb={8}>
+                              <Flex align="center" justify="space-between" mb={4}>
+                                <HStack spacing={2}>
+                                  <Box
+                                    w="40px"
+                                    h="40px"
+                                    borderRadius="full"
+                                    bg="purple.500"
+                                    display="flex"
+                                    alignItems="center"
+                                    justifyContent="center"
+                                    color="white"
+                                  >
+                                    <Text fontSize="xl">📋</Text>
+                                  </Box>
+                                  <Text fontSize="lg" fontWeight="bold" color="gray.700">
+                                    Item untuk Diurutkan
+                                  </Text>
+                                </HStack>
+                                <Badge colorScheme="purple" fontSize="xs" px={2} py={1}>
+                                  {(currentQuestion.ddItems || []).length} Items
+                                </Badge>
+                              </Flex>
+                              
+                              <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={4}>
+                                {(currentQuestion.ddItems || []).map((item) => {
+                                  // Check if this item is already placed in a position
+                                  const placedPosition = dragDropAnswers[currentQuestion.nomorUrut]?.indexOf(item.id);
+                                  const isPlaced = placedPosition !== undefined && placedPosition !== -1;
+                                  
+                                  return (
+                                    <DraggableItem key={item.id} id={item.id}>
+                                      <Card
+                                        variant="elevated"
+                                        bg={isPlaced ? "gray.100" : "white"}
+                                        borderWidth="2px"
+                                        borderColor={isPlaced ? "gray.300" : "transparent"}
+                                        cursor={isPlaced ? "not-allowed" : "grab"}
+                                        opacity={isPlaced ? 0.4 : 1}
+                                        _hover={!isPlaced ? { 
+                                          shadow: '2xl', 
+                                          transform: 'translateY(-4px)',
+                                          borderColor: 'purple.400'
+                                        } : {}}
+                                        _active={!isPlaced ? { cursor: 'grabbing', transform: 'scale(0.98)' } : {}}
+                                        transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+                                        overflow="hidden"
+                                      >
+                                        <CardBody p={2} display="flex" flexDirection="column" alignItems="center" justifyContent="center" h="full">
+                                          {item.imageUrl ? (
+                                            <>
+                                              <Box
+                                                w="full"
+                                                h="140px"
+                                                display="flex"
+                                                alignItems="center"
+                                                justifyContent="center"
+                                                bg="white"
+                                                borderRadius="md"
+                                                overflow="hidden"
+                                                mb={2}
+                                              >
+                                                <Image 
+                                                  src={item.imageUrl} 
+                                                  alt={item.label} 
+                                                  maxH="100%" 
+                                                  maxW="100%" 
+                                                  objectFit="contain" 
+                                                  pointerEvents="none" 
+                                                />
+                                              </Box>
+                                              {item.label && (
+                                                <Text 
+                                                  textAlign="center" 
+                                                  fontSize="xs" 
+                                                  color="gray.500" 
+                                                  noOfLines={2}
+                                                  display={item.label.length > 20 ? 'block' : 'none'}
+                                                >
+                                                  {item.label}
+                                                </Text>
+                                              )}
+                                            </>
+                                          ) : (
+                                            <Text 
+                                              textAlign="center" 
+                                              fontWeight="bold" 
+                                              fontSize="md" 
+                                              color={isPlaced ? "gray.400" : "gray.800"}
+                                            >
+                                              {item.label}
+                                            </Text>
+                                          )}
+                                        </CardBody>
+                                      </Card>
+                                    </DraggableItem>
+                                  );
+                                })}
+                              </SimpleGrid>
+                            </Box>
+
+                            {/* Position Slots Section - Bottom with Horizontal Tabs (like MATCHING) */}
+                            <Box 
+                              bg="white" 
+                              borderRadius="xl" 
+                              borderWidth="2px" 
+                              borderColor="gray.200"
+                              overflow="hidden"
+                            >
+                              {/* Horizontal Tab Headers */}
+                              <Flex 
+                                bg="gray.50" 
+                                borderBottomWidth="2px" 
+                                borderBottomColor="gray.200"
+                                overflowX="auto"
+                              >
+                                {(currentQuestion.ddItems || []).map((_, index) => {
+                                  const placedItemIds = dragDropAnswers[currentQuestion.nomorUrut]?.[index];
+                                  const placedItem = placedItemIds ? (currentQuestion.ddItems || []).find(item => item.id === placedItemIds) : null;
+                                  
+                                  return (
+                                    <DroppableSlot key={index} id={index + 1}>
+                                      <Box
+                                        flex="1"
+                                        minW="180px"
+                                        borderRightWidth={index < (currentQuestion.ddItems?.length || 0) - 1 ? "2px" : "0"}
+                                        borderRightColor="gray.200"
+                                      >
+                                        {/* Tab Header */}
+                                        <Box
+                                          p={4}
+                                          bg="blue.50"
+                                          borderBottomWidth="3px"
+                                          borderBottomColor="blue.500"
+                                        >
+                                          <VStack justify="center" spacing={2}>
+                                            <Text fontSize="2xl">
+                                              {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                                            </Text>
+                                            <Text 
+                                              fontWeight="bold" 
+                                              fontSize="md" 
+                                              color="blue.700"
+                                              textAlign="center"
+                                            >
+                                              Posisi {index + 1}
+                                            </Text>
+                                          </VStack>
+                                        </Box>
+                                        
+                                        {/* Drop Zone Content */}
+                                        <Box 
+                                          p={6}
+                                          minH="250px"
+                                          display="flex"
+                                          flexDirection="column"
+                                          alignItems="center"
+                                          justifyContent="center"
+                                          bg="white"
+                                        >
+                                          {placedItem ? (
+                                            <VStack spacing={3} w="full">
+                                              {placedItem.imageUrl ? (
+                                                <Box
+                                                  w="120px"
+                                                  h="120px"
+                                                  display="flex"
+                                                  alignItems="center"
+                                                  justifyContent="center"
+                                                  bg="blue.50"
+                                                  borderRadius="lg"
+                                                  overflow="hidden"
+                                                  borderWidth="2px"
+                                                  borderColor="blue.300"
+                                                >
+                                                  <Image 
+                                                    src={placedItem.imageUrl} 
+                                                    alt={placedItem.label} 
+                                                    maxH="110px"
+                                                    maxW="110px"
+                                                    objectFit="contain"
+                                                  />
+                                                </Box>
+                                              ) : null}
+                                              <VStack spacing={1} align="center">
+                                                <HStack spacing={1}>
+                                                  <Box
+                                                    w="24px"
+                                                    h="24px"
+                                                    borderRadius="full"
+                                                    bg="blue.500"
+                                                    display="flex"
+                                                    alignItems="center"
+                                                    justifyContent="center"
+                                                    color="white"
+                                                    fontSize="sm"
+                                                  >
+                                                    ✓
+                                                  </Box>
+                                                  <Text fontSize="sm" color="blue.600" fontWeight="semibold">
+                                                    Ditempatkan
+                                                  </Text>
+                                                </HStack>
+                                                <Text 
+                                                  fontWeight="bold" 
+                                                  fontSize="sm" 
+                                                  color="gray.800"
+                                                  textAlign="center"
+                                                >
+                                                  {placedItem.label}
+                                                </Text>
+                                              </VStack>
+                                            </VStack>
+                                          ) : (
+                                            <Flex 
+                                              direction="column" 
+                                              align="center" 
+                                              justify="center"
+                                              h="full"
+                                              color="blue.300"
+                                            >
+                                              <Text fontSize="4xl" mb={2} opacity={0.5}>➕</Text>
+                                              <Text fontSize="sm" fontStyle="italic" color="blue.200">
+                                                Letakkan di sini
+                                              </Text>
+                                            </Flex>
+                                          )}
+                                        </Box>
+                                      </Box>
+                                    </DroppableSlot>
+                                  );
+                                })}
+                              </Flex>
+                            </Box>
+                          </Box>
+                        </SortableContext>
+                      </DndContext>
+                    )}
+                    
+                    <Text fontSize="xs" color="gray.600" fontStyle="italic" mt={3}>
+                      {currentQuestion.ddDragType?.toUpperCase() === 'MATCHING'
+                        ? '💡 Tip: Drag setiap item ke slot yang sesuai. Item yang sudah dipasangkan akan muncul di slot.'
+                        : '💡 Tip: Drag untuk mengubah urutan. Nomor akan otomatis berubah sesuai posisi.'}
+                    </Text>
+                  </>
+                )}
 
                 <HStack justify="space-between" pt={4}>
                   <Button
@@ -534,31 +1614,41 @@ export default function TestPage() {
                     isDisabled={currentQuestionIndex === 0}
                     colorScheme="orange"
                     variant="outline"
+                    leftIcon={<Text>←</Text>}
                   >
-                    Sebelum
+                    Sebelumnya
                   </Button>
-                  {answers[currentQuestion.nomorUrut] && (
+                  
+                  {/* Clear/Retry button for current question */}
+                  {((currentQuestion.questionType === 'QUESTION_TYPE_DRAG_DROP' || currentQuestion.ddPertanyaan) ? 
+                    (matchingAnswers[currentQuestion.nomorUrut] && Object.keys(matchingAnswers[currentQuestion.nomorUrut]).length > 0) ||
+                    (dragDropAnswers[currentQuestion.nomorUrut] && dragDropAnswers[currentQuestion.nomorUrut].length > 0)
+                    : answers[currentQuestion.nomorUrut]) && (
                     <Button
-                      colorScheme="red"
+                      colorScheme="gray"
                       variant="outline"
                       onClick={handleClearAnswer}
-                      size="sm"
+                      size="md"
+                      leftIcon={<Text>↻</Text>}
                     >
-                      Batalkan Jawaban
+                      Ulangi
                     </Button>
                   )}
+                  
                   {currentQuestionIndex === sessionData.soal.length - 1 ? (
                     <Button
                       colorScheme="green"
                       onClick={handleFinish}
                       isLoading={submitting}
+                      rightIcon={<Text>✓</Text>}
                     >
                       Selesai
                     </Button>
                   ) : (
                     <Button
                       onClick={goToNextQuestion}
-                      colorScheme="orange"
+                      colorScheme="purple"
+                      rightIcon={<Text>→</Text>}
                     >
                       Selanjutnya
                     </Button>
@@ -580,7 +1670,7 @@ export default function TestPage() {
                     const status = getQuestionStatus(index);
                     return (
                       <Button
-                        key={q.id}
+                        key={`${q.id}-${index}`}
                         onClick={() => goToQuestion(index)}
                         size="sm"
                         colorScheme={
@@ -625,7 +1715,7 @@ export default function TestPage() {
                 const status = getQuestionStatus(index);
                 return (
                   <Button
-                    key={q.id}
+                    key={`${q.id}-${index}`}
                     onClick={() => {
                       goToQuestion(index);
                       onClose();
@@ -709,7 +1799,7 @@ export default function TestPage() {
                     const status = getQuestionStatus(index);
                     return (
                       <Button
-                        key={q.id}
+                        key={`${q.id}-${index}`}
                         size="sm"
                         colorScheme={
                           status === 'answered' ? 'green' : 'gray'

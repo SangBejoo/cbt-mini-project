@@ -19,6 +19,7 @@ func InitRestGatewayDependency(mux *runtime.ServeMux, opts []grpc.DialOption, ct
 	base.RegisterMateriServiceHandlerFromEndpoint(ctx, mux, port, opts)
 	base.RegisterTingkatServiceHandlerFromEndpoint(ctx, mux, port, opts)
 	base.RegisterSoalServiceHandlerFromEndpoint(ctx, mux, port, opts)
+	base.RegisterSoalDragDropServiceHandlerFromEndpoint(ctx, mux, port, opts)
 	base.RegisterTestSessionServiceHandlerFromEndpoint(ctx, mux, port, opts)
 	base.RegisterHistoryServiceHandlerFromEndpoint(ctx, mux, port, opts)
 }
