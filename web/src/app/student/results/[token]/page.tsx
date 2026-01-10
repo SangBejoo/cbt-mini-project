@@ -745,29 +745,53 @@ export default function ResultsPage() {
                                       <Box p={4} bg="green.50" borderRadius="lg" border="1px" borderColor="green.200">
                                         <Text fontWeight="bold" color="green.700" mb={3}>Kunci Urutan Benar:</Text>
                                         <VStack align="stretch" spacing={2}>
-                                          {[...(currentJawaban.items || [])]
-                                            .sort((a, b) => a.urutan - b.urutan)
-                                            .map((item, index) => (
-                                              <HStack key={item.id} spacing={3} p={2} bg="white" borderRadius="md" shadow="sm">
-                                                <Box 
-                                                  w="24px" h="24px" bg="green.500" color="white" 
-                                                  borderRadius="full" fontSize="xs" display="flex" 
-                                                  alignItems="center" justifyContent="center" fontWeight="bold"
-                                                >
-                                                  {index + 1}
-                                                </Box>
-                                                {item.imageUrl && (
-                                                  <Image 
-                                                    src={item.imageUrl} 
-                                                    alt={item.label} 
-                                                    boxSize="36px" 
-                                                    objectFit="cover" 
-                                                    borderRadius="sm"
-                                                  />
-                                                )}
-                                                <Text fontSize="sm">{item.label}</Text>
-                                              </HStack>
-                                            ))}
+                                          {(() => {
+                                            // Build correct order from correctDragAnswer
+                                            // correctDragAnswer: { itemId: slotId } - we need to find which item goes to each slot position
+                                            const slots = [...(currentJawaban.slots || [])].sort((a, b) => a.urutan - b.urutan);
+                                            
+                                            return slots.map((slot, index) => {
+                                              // Find which item should be in this slot
+                                              let correctItem = null;
+                                              
+                                              if (currentJawaban.correctDragAnswer) {
+                                                // Find itemId where correctDragAnswer[itemId] === slot.id
+                                                const itemIdStr = Object.keys(currentJawaban.correctDragAnswer).find(
+                                                  key => currentJawaban.correctDragAnswer![Number(key)] === slot.id
+                                                );
+                                                if (itemIdStr) {
+                                                  correctItem = currentJawaban.items?.find(i => i.id === Number(itemIdStr));
+                                                }
+                                              }
+                                              
+                                              // Fallback: if no correctDragAnswer, use old logic (item.urutan === slot.urutan)
+                                              if (!correctItem && !currentJawaban.correctDragAnswer) {
+                                                correctItem = currentJawaban.items?.find(i => i.urutan === slot.urutan);
+                                              }
+                                              
+                                              return (
+                                                <HStack key={slot.id} spacing={3} p={2} bg="white" borderRadius="md" shadow="sm">
+                                                  <Box 
+                                                    w="24px" h="24px" bg="green.500" color="white" 
+                                                    borderRadius="full" fontSize="xs" display="flex" 
+                                                    alignItems="center" justifyContent="center" fontWeight="bold"
+                                                  >
+                                                    {index + 1}
+                                                  </Box>
+                                                  {correctItem?.imageUrl && (
+                                                    <Image 
+                                                      src={correctItem.imageUrl} 
+                                                      alt={correctItem.label} 
+                                                      boxSize="36px" 
+                                                      objectFit="cover" 
+                                                      borderRadius="sm"
+                                                    />
+                                                  )}
+                                                  <Text fontSize="sm">{correctItem?.label || '?'}</Text>
+                                                </HStack>
+                                              );
+                                            });
+                                          })()}
                                         </VStack>
                                       </Box>
 
