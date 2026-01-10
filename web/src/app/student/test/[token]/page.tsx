@@ -1609,10 +1609,7 @@ export default function TestPage() {
                   </Button>
                   
                   {/* Clear/Retry button for current question */}
-                  {((currentQuestion.questionType === 'QUESTION_TYPE_DRAG_DROP' || currentQuestion.ddPertanyaan) ? 
-                    (matchingAnswers[currentQuestion.nomorUrut] && Object.keys(matchingAnswers[currentQuestion.nomorUrut]).length > 0) ||
-                    (dragDropAnswers[currentQuestion.nomorUrut] && dragDropAnswers[currentQuestion.nomorUrut].length > 0)
-                    : answers[currentQuestion.nomorUrut]) && (
+                  {getQuestionStatus(currentQuestionIndex) === 'answered' && (
                     <Button
                       colorScheme="gray"
                       variant="outline"
@@ -1767,13 +1764,13 @@ export default function TestPage() {
                       <Stat>
                         <StatLabel>Sudah Dijawab</StatLabel>
                         <StatNumber color="green.500">
-                          {Object.keys(answers).length}
+                          {sessionData?.soal.reduce((count, _, index) => getQuestionStatus(index) === 'answered' ? count + 1 : count, 0) || 0}
                         </StatNumber>
                       </Stat>
                       <Stat>
                         <StatLabel>Belum Dijawab</StatLabel>
                         <StatNumber color="red.500">
-                          {(sessionData?.soal.length || 0) - Object.keys(answers).length}
+                          {(sessionData?.soal.length || 0) - (sessionData?.soal.reduce((count, _, index) => getQuestionStatus(index) === 'answered' ? count + 1 : count, 0) || 0)}
                         </StatNumber>
                       </Stat>
                     </StatGroup>
