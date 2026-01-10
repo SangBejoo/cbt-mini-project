@@ -134,8 +134,9 @@ export default function TestPage() {
 
   const [sessionData, setSessionData] = useState<TestSessionData | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [dragDropAnswers, setDragDropAnswers] = useState<Record<number, number[]>>({});  // questionId -> ordered item IDs (for ORDERING)
-  const [matchingAnswers, setMatchingAnswers] = useState<Record<number, Record<number, number[]>>>({});  // questionId -> { slotId: itemId[] } (for MATCHING - multiple items per slot)
+  const [dragDropAnswers, setDragDropAnswers] = useState<Record<number, number[]>>({});  // questionId -> ordered item IDs (for ORDERING) - LEGACY
+  const [orderingMaps, setOrderingMaps] = useState<Record<number, Record<number, number>>>({}); // questionId -> {itemId: slotId} - NEW: Direct map for ORDERING
+  const [matchingAnswers, setMatchingAnswers] = useState<Record<number, Record<number, number[]>>>({}); // questionId -> { slotId: itemId[] } (for MATCHING)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -668,8 +669,8 @@ export default function TestPage() {
           return 'answered';
         }
       } else {
-        // Check if ordering items are in order
-        if (dragDropAnswers[nomorUrut] && dragDropAnswers[nomorUrut].length > 0) {
+        // Check if ordering items are placed (using orderingMaps)
+        if (orderingMaps[nomorUrut] && Object.keys(orderingMaps[nomorUrut]).length > 0) {
           return 'answered';
         }
       }
@@ -693,10 +694,10 @@ export default function TestPage() {
           delete newMatchingAnswers[currentQuestion.nomorUrut];
           setMatchingAnswers(newMatchingAnswers);
         } else {
-          // Clear ordering answers
-          const newDragDropAnswers = { ...dragDropAnswers };
-          delete newDragDropAnswers[currentQuestion.nomorUrut];
-          setDragDropAnswers(newDragDropAnswers);
+          // Clear ordering answers (using orderingMaps)
+          const newOrderingMaps = { ...orderingMaps };
+          delete newOrderingMaps[currentQuestion.nomorUrut];
+          setOrderingMaps(newOrderingMaps);
         }
       } else {
         // Clear multiple choice answer
@@ -766,19 +767,9 @@ export default function TestPage() {
         }
       });
     } else {
-      // ORDERING
-      const order = dragDropAnswers[q.nomorUrut]; // number[] (itemIds)
-      
-      if (order && order.length > 0 && questionProps.slots.length > 0) {
-        // Sort slots by urutan
-        const sortedSlots = [...questionProps.slots].sort((a, b) => a.urutan - b.urutan);
-        
-        order.forEach((itemId, index) => {
-          if (index < sortedSlots.length) {
-            userAnswerMap[itemId] = sortedSlots[index].id;
-          }
-        });
-      }
+      // ORDERING - Use direct map from orderingMaps state
+      const existingMap = orderingMaps[q.nomorUrut] || {};
+      userAnswerMap = { ...existingMap };
     }
 
     // 3. Handle Answer Change
@@ -800,43 +791,41 @@ export default function TestPage() {
         // Submit
         handleDragDropSubmit(q.nomorUrut, 'MATCHING', newAnswerMap);
       } else {
-        // ORDERING
-        // Reconstruct order array based on slot assignments
-        // Sort slots by urutan
-        const sortedSlots = [...questionProps.slots].sort((a, b) => a.urutan - b.urutan);
-        const newOrder: number[] = [];
+        // ORDERING - Store direct itemId->slotId map using orderingMaps
+        // This preserves exact slot positions without lossy array conversion
         
-        // map slotId -> itemId
-        const slotToItem: Record<number, number> = {};
-        Object.entries(newAnswerMap).forEach(([itemIdStr, slotId]) => {
-          slotToItem[slotId] = Number(itemIdStr);
+        setOrderingMaps(prev => {
+          const existingMap = prev[q.nomorUrut] || {};
+          const mergedMap = { ...existingMap, ...newAnswerMap };
+          
+          setTimeout(() => {
+            handleDragDropSubmit(q.nomorUrut, 'ORDERING', mergedMap);
+          }, 0);
+          
+          return { ...prev, [q.nomorUrut]: mergedMap };
         });
-        
-        sortedSlots.forEach(slot => {
-          if (slotToItem[slot.id]) {
-            newOrder.push(slotToItem[slot.id]);
-          }
-        });
-        
-        setDragDropAnswers(prev => ({ ...prev, [q.nomorUrut]: newOrder }));
-        
-        // API Submission for ordering: Backend expects ItemID -> SlotID map (same as matching)
-        const apiAnswerMap: Record<number, number> = {};
-        sortedSlots.forEach((slot) => {
-          if (slotToItem[slot.id]) {
-            const itemId = slotToItem[slot.id];
-            apiAnswerMap[itemId] = slot.id;
-          }
-        });
-        
-        handleDragDropSubmit(q.nomorUrut, 'ORDERING', apiAnswerMap);
       }
+    };
+
+    // Handler for removing an item (ORDERING only)
+    const handleRemoveItem = (itemId: number) => {
+      setOrderingMaps(prev => {
+        const existingMap = { ...(prev[q.nomorUrut] || {}) };
+        delete existingMap[itemId];
+        
+        setTimeout(() => {
+          handleDragDropSubmit(q.nomorUrut, 'ORDERING', existingMap);
+        }, 0);
+        
+        return { ...prev, [q.nomorUrut]: existingMap };
+      });
     };
 
     return {
       question: questionProps,
       userAnswer: userAnswerMap,
-      onAnswerChange: handleAnswerChange
+      onAnswerChange: handleAnswerChange,
+      onRemoveItem: dragType === 'ordering' ? handleRemoveItem : undefined,
     };
   };
 

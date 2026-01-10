@@ -14,6 +14,7 @@ import {
   DragEndEvent,
   useDroppable,
   useDraggable,
+  rectIntersection, // More reliable for overlapping elements
 } from '@dnd-kit/core';
 import {
   Box,
@@ -56,6 +57,7 @@ interface DragDropQuestionProps {
   };
   userAnswer: Record<number, number>; // itemId -> slotId
   onAnswerChange: (answer: Record<number, number>) => void;
+  onRemoveItem?: (itemId: number) => void; // NEW: Direct removal callback
 }
 
 // Draggable Item Component - Premium Card Design like Brilliant
@@ -423,11 +425,28 @@ function OrderingDropZone({
   );
 }
 
+// Safe haptic feedback helper
+const safeVibrate = (pattern: number | number[]) => {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      // Chrome-specific check to avoid "Blocked call to navigator.vibrate" intervention
+      // @ts-ignore - navigator.userActivation might not be in all TS definitions yet
+      if (navigator.userActivation && !navigator.userActivation.hasBeenActive) {
+        return;
+      }
+      navigator.vibrate(pattern);
+    }
+  } catch (e) {
+    // Ignore errors on devices that don't support it
+  }
+};
+
 // Main Component
 export default function DragDropQuestion({
   question,
   userAnswer,
   onAnswerChange,
+  onRemoveItem,
 }: DragDropQuestionProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   
@@ -491,23 +510,27 @@ export default function DragDropQuestion({
   // Remove assignment for slot
   const removeFromSlot = useCallback(
     (slotId: number) => {
-      const newAnswer = { ...userAnswer };
-      Object.entries(newAnswer).forEach(([key, value]) => {
-        if (value === slotId) {
-          delete newAnswer[parseInt(key, 10)];
+      const itemEntry = Object.entries(userAnswer).find(([, sId]) => sId === slotId);
+      
+      if (itemEntry) {
+        const itemId = Number(itemEntry[0]);
+        
+        if (onRemoveItem) {
+          onRemoveItem(itemId);
+        } else {
+          const newAnswer = { ...userAnswer };
+          delete newAnswer[itemId];
+          onAnswerChange(newAnswer);
         }
-      });
-      onAnswerChange(newAnswer);
+      }
     },
-    [userAnswer, onAnswerChange]
+    [userAnswer, onAnswerChange, onRemoveItem]
   );
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
     // Haptic feedback on mobile if available
-    if (navigator.vibrate) {
-      navigator.vibrate(10);
-    }
+    safeVibrate(10);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -526,7 +549,6 @@ export default function DragDropQuestion({
       const newAnswer = { ...userAnswer };
       
       // Remove any existing assignment to this slot ONLY IF ORDERING
-      // For Matching, we allow multiple items in one slot
       if (question.dragType === 'ordering') {
         Object.entries(newAnswer).forEach(([key, value]) => {
           if (value === slotId) {
@@ -540,9 +562,7 @@ export default function DragDropQuestion({
       onAnswerChange(newAnswer);
       
       // Success haptic feedback
-      if (navigator.vibrate) {
-        navigator.vibrate([10, 50, 10]);
-      }
+      safeVibrate([10, 50, 10]);
     }
   };
 
@@ -590,7 +610,7 @@ export default function DragDropQuestion({
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={rectIntersection}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
@@ -628,7 +648,7 @@ export default function DragDropQuestion({
                   minW="min-content"
                   px={2}
                 >
-                  {question.slots.map((slot) => (
+                  {[...question.slots].sort((a, b) => a.urutan - b.urutan).map((slot) => (
                     <OrderingDropZone
                       key={slot.id}
                       slot={slot}
