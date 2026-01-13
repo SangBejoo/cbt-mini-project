@@ -22,7 +22,7 @@ func (u *historyUsecaseImpl) GetStudentHistory(userID int, tingkatan, idMataPela
 		page = 1
 	}
 	if pageSize < 1 {
-		pageSize = 10
+		pageSize = 20
 	}
 
 	histories, total, err := u.repo.GetStudentHistory(userID, tingkatan, idMataPelajaran, pageSize, (page-1)*pageSize)
@@ -98,7 +98,7 @@ func (u *historyUsecaseImpl) ListStudentHistories(userID, tingkatan, idMataPelaj
 		page = 1
 	}
 	if pageSize < 1 {
-		pageSize = 10
+		pageSize = 20
 	}
 
 	return u.repo.ListStudentHistories(userID, tingkatan, idMataPelajaran, pageSize, (page-1)*pageSize)

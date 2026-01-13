@@ -56,30 +56,26 @@ export interface PaginationInfo {
   pageSize: number;
 }
 
-export function useSessions(options: { pageSize?: number } = { pageSize: 10 }) {
+export function useSessions(options: { pageSize?: number } = { pageSize: 20 }) {
   const [sessions, setSessions] = useState<TestSession[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState<PaginationInfo>({
-    totalCount: 0,
-    totalPages: 0,
-    currentPage: 1,
-    pageSize: options.pageSize || 10,
-  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSizeState] = useState(options.pageSize || 20);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const toast = useToast();
 
-  const fetchSessions = useCallback(async (page: number = 1) => {
+  const fetchSessions = useCallback(async (page: number, size: number) => {
     setLoading(true);
     try {
       const response = await apiClient.get<SessionsResponse>(
-        `/admin/sessions?page=${page}&pageSize=${pagination.pageSize}`
+        `/admin/sessions?pagination.page=${page}&pagination.page_size=${size}`
       );
       setSessions(response.data.testSessions || []);
-      setPagination(response.data.pagination || {
-        totalCount: 0,
-        totalPages: 0,
-        currentPage: page,
-        pageSize: options.pageSize || 10,
-      });
+      if (response.data.pagination) {
+        setTotalCount(response.data.pagination.totalCount || 0);
+        setTotalPages(response.data.pagination.totalPages || 0);
+      }
     } catch (error: any) {
       const message = error.response?.data?.message || error.message || 'Gagal memuat sesi';
       toast({
@@ -93,11 +89,20 @@ export function useSessions(options: { pageSize?: number } = { pageSize: 10 }) {
     } finally {
       setLoading(false);
     }
-  }, [toast, pagination.pageSize]);
+  }, [toast]);
+
+  const setPageSize = useCallback((newPageSize: number) => {
+    setPageSizeState(newPageSize);
+    setCurrentPage(1);
+  }, []);
+
+  const goToPage = useCallback((page: number) => {
+    setCurrentPage(page);
+  }, []);
 
   useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+    fetchSessions(currentPage, pageSize);
+  }, [currentPage, pageSize, fetchSessions]);
 
   // Group sessions by peserta > subject > level
   const groupedSessions = useMemo(() => {
@@ -208,12 +213,19 @@ export function useSessions(options: { pageSize?: number } = { pageSize: 10 }) {
   return {
     sessions,
     loading,
-    pagination,
+    pagination: {
+      currentPage,
+      pageSize,
+      totalCount,
+      totalPages,
+    },
     groupedSessions,
-    fetchSessions,
+    fetchSessions: () => fetchSessions(currentPage, pageSize),
     getPesertas,
     getSubjects,
     getLevels,
     getFilteredGroups,
+    setPageSize,
+    goToPage,
   };
 }

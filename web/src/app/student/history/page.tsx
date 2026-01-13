@@ -24,7 +24,9 @@ import {
   AccordionPanel,
   AccordionIcon,
   Spinner,
+  IconButton,
 } from '@chakra-ui/react';
+import { ChevronLeftIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 import { useAuth } from '../../auth-context';
 
@@ -58,20 +60,29 @@ export default function HistoryPage() {
   const { isLoading: isAuthLoading } = useAuth();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [searchPeserta, setSearchPeserta] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('Semua');
   const [selectedLevel, setSelectedLevel] = useState<string>('Semua');
 
   useEffect(() => {
     if (!isAuthLoading) {
-      fetchHistory();
+      fetchHistory(currentPage, pageSize);
     }
-  }, [isAuthLoading]);
+  }, [isAuthLoading, currentPage, pageSize]);
 
-  const fetchHistory = async () => {
+  const fetchHistory = async (page: number, size: number) => {
     try {
-      const response = await axios.get(API_BASE);
-      setHistory(response.data.history);
+      setLoading(true);
+      const response = await axios.get(`${API_BASE}?pagination.page=${page}&pagination.page_size=${size}`);
+      setHistory(response.data.history || []);
+      if (response.data.pagination) {
+        setTotalPages(response.data.pagination.totalPages || 1);
+        setTotalCount(response.data.pagination.totalCount || 0);
+      }
     } catch (error) {
       console.error('Error fetching history:', error);
       toast({ title: 'Error loading history', status: 'error' });
@@ -165,10 +176,13 @@ export default function HistoryPage() {
     return `${secs}s`;
   };
 
-  if (loading || isAuthLoading) {
+  if (isAuthLoading) {
     return (
       <Container maxW="container.xl" py={10}>
-        <Text>Memuat riwayat...</Text>
+        <Box textAlign="center">
+          <Spinner size="xl" color="blue.500" mb={4} />
+          <Text>Memuat riwayat...</Text>
+        </Box>
       </Container>
     );
   }
@@ -318,6 +332,42 @@ export default function HistoryPage() {
             ))}
           </Accordion>
         )}
+
+        {/* Pagination Controls */}
+        <HStack justify="space-between" align="center" mt={4} w="full">
+          <Text fontSize="sm" color="gray.600">
+            {loading ? 'Memuat...' : `Halaman ${currentPage} dari ${totalPages} (${totalCount} sesi)`}
+          </Text>
+          <HStack spacing={2}>
+            <Select
+              size="sm"
+              w="fit-content"
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              isDisabled={loading}
+            >
+              <option value={10}>10 / halaman</option>
+              <option value={20}>20 / halaman</option>
+              <option value={50}>50 / halaman</option>
+              <option value={100}>100 / halaman</option>
+            </Select>
+            <IconButton
+              aria-label="Previous"
+              icon={<ChevronLeftIcon />}
+              isDisabled={currentPage === 1 || loading}
+              onClick={() => setCurrentPage(prev => prev - 1)}
+            />
+            <IconButton
+              aria-label="Next"
+              icon={<ChevronRightIcon />}
+              isDisabled={currentPage >= totalPages || loading}
+              onClick={() => setCurrentPage(prev => prev + 1)}
+            />
+          </HStack>
+        </HStack>
 
         <Link href="/student">
           <Button variant="outline" size="lg" width="full" mt={4}>

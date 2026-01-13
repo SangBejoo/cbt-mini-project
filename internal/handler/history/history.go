@@ -60,13 +60,17 @@ func (h *historyHandler) GetStudentHistory(ctx context.Context, req *base.Studen
 	}
 
 	page := 1
-	pageSize := 10
+	pageSize := 20
 	if req.Pagination != nil {
 		if req.Pagination.Page > 0 {
 			page = int(req.Pagination.Page)
 		}
 		if req.Pagination.PageSize > 0 {
 			pageSize = int(req.Pagination.PageSize)
+			// Cap at 100 for single student history (lighter query)
+			if pageSize > 100 {
+				pageSize = 100
+			}
 		}
 	}
 
@@ -303,13 +307,17 @@ func (h *historyHandler) ListStudentHistories(ctx context.Context, req *base.Lis
 	}
 
 	page := 1
-	pageSize := 10
+	pageSize := 20
 	if req.Pagination != nil {
 		if req.Pagination.Page > 0 {
 			page = int(req.Pagination.Page)
 		}
 		if req.Pagination.PageSize > 0 {
 			pageSize = int(req.Pagination.PageSize)
+			// Cap at 50 for list histories (heavy N+ query)
+			if pageSize > 50 {
+				pageSize = 50
+			}
 		}
 	}
 

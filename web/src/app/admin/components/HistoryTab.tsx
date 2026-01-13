@@ -28,14 +28,13 @@ import { ChevronLeftIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import { useSessions } from '../hooks';
 
 export default function HistoryTab() {
-  const { sessions, loading, pagination, fetchSessions, getPesertas, getSubjects, getLevels, getFilteredGroups } =
-    useSessions();
+  const { sessions, loading, pagination, fetchSessions, getPesertas, getSubjects, getLevels, getFilteredGroups, setPageSize, goToPage } =
+    useSessions({ pageSize: 20 });
 
   const [searchPeserta, setSearchPeserta] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('Semua');
   const [selectedLevel, setSelectedLevel] = useState<string>('Semua');
   const [currentParticipantPage, setCurrentParticipantPage] = useState(1);
-  const [currentSessionPage, setCurrentSessionPage] = useState(1);
 
   const participantPageSize = 5;
 
@@ -71,10 +70,6 @@ export default function HistoryTab() {
   useEffect(() => {
     setCurrentParticipantPage(1);
   }, [searchPeserta, selectedSubject, selectedLevel]);
-
-  useEffect(() => {
-    fetchSessions(currentSessionPage);
-  }, [currentSessionPage, fetchSessions]);
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -329,27 +324,36 @@ export default function HistoryTab() {
         )}
 
         {/* Pagination for Sessions */}
-        {pagination.totalPages > 1 && (
-          <Flex justify="space-between" align="center" mt={6}>
-            <Text fontSize="sm" color="gray.600">
-              Halaman {pagination.currentPage} dari {pagination.totalPages} ({pagination.totalCount} sesi)
-            </Text>
-            <HStack spacing={2}>
-              <IconButton
-                aria-label="Previous"
-                icon={<ChevronLeftIcon />}
-                isDisabled={pagination.currentPage === 1}
-                onClick={() => setCurrentSessionPage(pagination.currentPage - 1)}
-              />
-              <IconButton
-                aria-label="Next"
-                icon={<ChevronRightIcon />}
-                isDisabled={pagination.currentPage === pagination.totalPages}
-                onClick={() => setCurrentSessionPage(pagination.currentPage + 1)}
-              />
-            </HStack>
-          </Flex>
-        )}
+        <Flex justify="space-between" align="center" mt={6}>
+          <Text fontSize="sm" color="gray.600">
+            {loading ? 'Memuat...' : `Halaman ${pagination.currentPage} dari ${pagination.totalPages} (${pagination.totalCount} sesi)`}
+          </Text>
+          <HStack spacing={2}>
+            <Select
+              size="sm"
+              w="fit-content"
+              value={pagination.pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              isDisabled={loading}
+            >
+              <option value={10}>10 / page</option>
+              <option value={20}>20 / page</option>
+              <option value={50}>50 / page</option>
+            </Select>
+            <IconButton
+              aria-label="Previous"
+              icon={<ChevronLeftIcon />}
+              isDisabled={pagination.currentPage === 1 || loading}
+              onClick={() => goToPage(pagination.currentPage - 1)}
+            />
+            <IconButton
+              aria-label="Next"
+              icon={<ChevronRightIcon />}
+              isDisabled={pagination.currentPage >= pagination.totalPages || loading}
+              onClick={() => goToPage(pagination.currentPage + 1)}
+            />
+          </HStack>
+        </Flex>
       </VStack>
     </Container>
   );

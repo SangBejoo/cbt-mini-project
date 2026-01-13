@@ -76,7 +76,9 @@ func (u *usecase) Create(req *CreateRequest) (*entity.SoalDragDrop, error) {
 	}
 
 	// Different validation for ORDERING vs MATCHING
-	if req.DragType == entity.DragTypeMatching {
+	// Different validation for ORDERING vs MATCHING
+	switch req.DragType {
+	case entity.DragTypeMatching:
 		// MATCHING requires manually defined slots and correct answers
 		if len(req.Slots) < 2 {
 			return nil, errors.New("at least 2 slots are required for matching type")
@@ -84,7 +86,7 @@ func (u *usecase) Create(req *CreateRequest) (*entity.SoalDragDrop, error) {
 		if len(req.CorrectAnswers) != len(req.Items) {
 			return nil, errors.New("each item must have exactly one correct slot for matching type")
 		}
-	} else if req.DragType == entity.DragTypeOrdering {
+	case entity.DragTypeOrdering:
 		// ORDERING now also requires correct answers (admin manually maps items to positions)
 		if len(req.CorrectAnswers) != len(req.Items) {
 			return nil, errors.New("each item must be mapped to a position for ordering type")
@@ -202,7 +204,9 @@ func (u *usecase) Update(id int, req *UpdateRequest) (*entity.SoalDragDrop, erro
 	}
 
 	// Different validation for ORDERING vs MATCHING
-	if req.DragType == entity.DragTypeMatching {
+	// Different validation for ORDERING vs MATCHING
+	switch req.DragType {
+	case entity.DragTypeMatching:
 		// MATCHING requires manually defined slots and correct answers
 		if len(req.Slots) < 2 {
 			return nil, errors.New("at least 2 slots are required for matching type")
@@ -210,7 +214,7 @@ func (u *usecase) Update(id int, req *UpdateRequest) (*entity.SoalDragDrop, erro
 		if len(req.CorrectAnswers) != len(req.Items) {
 			return nil, errors.New("each item must have exactly one correct slot for matching type")
 		}
-	} else if req.DragType == entity.DragTypeOrdering {
+	case entity.DragTypeOrdering:
 		// ORDERING now also requires correct answers (admin manually maps items to positions)
 		if len(req.CorrectAnswers) != len(req.Items) {
 			return nil, errors.New("each item must be mapped to a position for ordering type")
