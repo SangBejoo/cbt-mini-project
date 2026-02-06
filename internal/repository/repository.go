@@ -2,18 +2,19 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
-	"gorm.io/gorm"
-
 	"cbt-test-mini-project/init/config"
 	"cbt-test-mini-project/internal/entity"
+
+	"gorm.io/gorm"
 )
 
 // userLimitRepository implements UserLimitRepository
 type userLimitRepository struct {
-	db     *gorm.DB
+	db     *sql.DB
 	config *config.Main
 }
 
@@ -28,7 +29,7 @@ type UserLimitRepository interface {
 }
 
 // NewUserLimitRepository creates a new user limit repository
-func NewUserLimitRepository(db *gorm.DB, config *config.Main) UserLimitRepository {
+func NewUserLimitRepository(db *sql.DB, config *config.Main) UserLimitRepository {
 	return &userLimitRepository{
 		db:     db,
 		config: config,
@@ -39,29 +40,28 @@ func NewUserLimitRepository(db *gorm.DB, config *config.Main) UserLimitRepositor
 func (r *userLimitRepository) GetOrCreateLimit(ctx context.Context, userID int, limitType string) (*entity.UserLimit, error) {
 	var limit entity.UserLimit
 
-	// Try to find existing limit
-	err := r.db.WithContext(ctx).Where("user_id = ? AND limit_type = ?", userID, limitType).First(&limit).Error
+	query := `SELECT id, user_id, limit_type, limit_value, current_used, reset_at, created_at, updated_at FROM user_limits WHERE user_id = $1 AND limit_type = $2`
+
+	err := r.db.QueryRowContext(ctx, query, userID, limitType).Scan(&limit.ID, &limit.UserID, &limit.LimitType, &limit.LimitValue, &limit.CurrentUsed, &limit.ResetAt, &limit.CreatedAt, &limit.UpdatedAt)
+
 	if err == nil {
 		return &limit, nil
 	}
 
-	if err != gorm.ErrRecordNotFound {
+	if err != sql.ErrNoRows {
 		return nil, err
 	}
 
-	// Create new limit with default values
+	// Create new limit
 	defaultLimit := r.getDefaultLimit(limitType)
-	limit = entity.UserLimit{
-		UserID:      userID,
-		LimitType:   limitType,
-		LimitValue:  defaultLimit,
-		CurrentUsed: 0,
-		ResetAt:     r.getNextResetTime(limitType),
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
+	resetAt := r.getNextResetTime(limitType)
+	now := time.Now()
 
-	if err := r.db.WithContext(ctx).Create(&limit).Error; err != nil {
+	insertQuery := `INSERT INTO user_limits (user_id, limit_type, limit_value, current_used, reset_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, user_id, limit_type, limit_value, current_used, reset_at, created_at, updated_at`
+
+	err = r.db.QueryRowContext(ctx, insertQuery, userID, limitType, defaultLimit, 0, resetAt, now, now).Scan(&limit.ID, &limit.UserID, &limit.LimitType, &limit.LimitValue, &limit.CurrentUsed, &limit.ResetAt, &limit.CreatedAt, &limit.UpdatedAt)
+
+	if err != nil {
 		return nil, err
 	}
 
@@ -71,7 +71,9 @@ func (r *userLimitRepository) GetOrCreateLimit(ctx context.Context, userID int, 
 // UpdateLimit updates an existing user limit
 func (r *userLimitRepository) UpdateLimit(ctx context.Context, limit *entity.UserLimit) error {
 	limit.UpdatedAt = time.Now()
-	return r.db.WithContext(ctx).Save(limit).Error
+	query := `UPDATE user_limits SET limit_value = $1, current_used = $2, reset_at = $3, updated_at = $4 WHERE id = $5`
+	_, err := r.db.ExecContext(ctx, query, limit.LimitValue, limit.CurrentUsed, limit.ResetAt, limit.UpdatedAt, limit.ID)
+	return err
 }
 
 // IncrementUsageAtomic atomically increments usage if under limit
@@ -123,25 +125,52 @@ func (r *userLimitRepository) IncrementUsageAtomic(ctx context.Context, userID i
 
 // GetLimitsByUser gets all limits for a user
 func (r *userLimitRepository) GetLimitsByUser(ctx context.Context, userID int) ([]*entity.UserLimit, error) {
+	query := `SELECT id, user_id, limit_type, limit_value, current_used, reset_at, created_at, updated_at FROM user_limits WHERE user_id = $1`
+	rows, err := r.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
 	var limits []*entity.UserLimit
-	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Find(&limits).Error
-	return limits, err
+	for rows.Next() {
+		var limit entity.UserLimit
+		err := rows.Scan(&limit.ID, &limit.UserID, &limit.LimitType, &limit.LimitValue, &limit.CurrentUsed, &limit.ResetAt, &limit.CreatedAt, &limit.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		limits = append(limits, &limit)
+	}
+	return limits, rows.Err()
 }
 
 // RecordUsage records a usage event
 func (r *userLimitRepository) RecordUsage(ctx context.Context, usage *entity.UserLimitUsage) error {
 	usage.CreatedAt = time.Now()
-	return r.db.WithContext(ctx).Create(usage).Error
+	query := `INSERT INTO user_limit_usage (user_id, limit_type, action, resource_id, created_at) VALUES ($1, $2, $3, $4, $5)`
+	_, err := r.db.ExecContext(ctx, query, usage.UserID, usage.LimitType, usage.Action, usage.ResourceID, usage.CreatedAt)
+	return err
 }
 
 // GetUsageHistory gets usage history for a user and limit type
 func (r *userLimitRepository) GetUsageHistory(ctx context.Context, userID int, limitType string, since time.Time) ([]*entity.UserLimitUsage, error) {
+	query := `SELECT id, user_id, limit_type, action, resource_id, created_at FROM user_limit_usage WHERE user_id = $1 AND limit_type = $2 AND created_at >= $3 ORDER BY created_at DESC`
+	rows, err := r.db.QueryContext(ctx, query, userID, limitType, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
 	var usages []*entity.UserLimitUsage
-	err := r.db.WithContext(ctx).
-		Where("user_id = ? AND limit_type = ? AND created_at >= ?", userID, limitType, since).
-		Order("created_at DESC").
-		Find(&usages).Error
-	return usages, err
+	for rows.Next() {
+		var usage entity.UserLimitUsage
+		err := rows.Scan(&usage.ID, &usage.UserID, &usage.LimitType, &usage.Action, &usage.ResourceID, &usage.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		usages = append(usages, &usage)
+	}
+	return usages, rows.Err()
 }
 
 // getDefaultLimit returns the default limit value for a limit type

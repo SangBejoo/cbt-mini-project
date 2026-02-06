@@ -6,25 +6,23 @@ import (
 	"database/sql"
 	"time"
 
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
+	_ "github.com/lib/pq"
 )
 
-func OpenSQL(cfgMain config.Main) (db *gorm.DB, err error) {
+func OpenSQL(cfgMain config.Main) (db *sql.DB, err error) {
 	cfg := cfgMain.Database
-	db, err = gorm.Open(mysql.Open(cfg.DSN), &gorm.Config{})
-	if err != nil {
-		return nil, err
-	}
-
-	// Get underlying sql.DB to configure connection pool
-	sqlDB, err := db.DB()
+	db, err = sql.Open("postgres", cfg.DSN)
 	if err != nil {
 		return nil, err
 	}
 
 	// Configure connection pool
-	configureConnectionPool(sqlDB, cfg)
+	configureConnectionPool(db, cfg)
+
+	// Test the connection
+	if err = db.Ping(); err != nil {
+		return nil, err
+	}
 
 	return db, nil
 }

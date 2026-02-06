@@ -3,8 +3,7 @@ package auth
 import (
 	base "cbt-test-mini-project/gen/proto"
 	"context"
-
-	"gorm.io/gorm"
+	"database/sql"
 )
 
 // AuthRepository defines the interface for auth repository
@@ -20,6 +19,6 @@ type AuthRepository interface {
 }
 
 // InitAuthRepository initializes the auth repository
-func InitAuthRepository(db *gorm.DB) AuthRepository {
+func InitAuthRepository(db *sql.DB) AuthRepository {
 	return NewAuthRepository(db)
 }

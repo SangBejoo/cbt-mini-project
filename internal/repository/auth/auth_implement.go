@@ -4,20 +4,23 @@ import (
 	base "cbt-test-mini-project/gen/proto"
 	"cbt-test-mini-project/internal/entity"
 	"context"
+	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"gorm.io/gorm"
 )
 
 // authRepositoryImpl implements AuthRepository
 type authRepositoryImpl struct {
-	db *gorm.DB
+	db *sql.DB
 }
 
 // NewAuthRepository creates a new auth repository
-func NewAuthRepository(db *gorm.DB) AuthRepository {
+func NewAuthRepository(db *sql.DB) AuthRepository {
 	return &authRepositoryImpl{db: db}
 }
 
@@ -25,8 +28,10 @@ func NewAuthRepository(db *gorm.DB) AuthRepository {
 func (r *authRepositoryImpl) Login(ctx context.Context, email, password string) (*base.User, error) {
 	var userEntity entity.User
 
-	if err := r.db.Where("email = ? AND is_active = ?", email, true).First(&userEntity).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at FROM users WHERE email = $1 AND is_active = $2`
+	err := r.db.QueryRowContext(ctx, query, email, true).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
 			return nil, errors.New("invalid credentials")
 		}
 		return nil, err
@@ -63,7 +68,9 @@ func (r *authRepositoryImpl) Login(ctx context.Context, email, password string) 
 // GetUserByID retrieves a user by ID
 func (r *authRepositoryImpl) GetUserByID(ctx context.Context, id int32) (*base.User, error) {
 	var userEntity entity.User
-	if err := r.db.First(&userEntity, id).Error; err != nil {
+	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at FROM users WHERE id = $1`
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt)
+	if err != nil {
 		return nil, err
 	}
 
@@ -92,7 +99,9 @@ func (r *authRepositoryImpl) GetUserByID(ctx context.Context, id int32) (*base.U
 // GetUserByEmail retrieves a user by email
 func (r *authRepositoryImpl) GetUserByEmail(ctx context.Context, email string) (*base.User, error) {
 	var userEntity entity.User
-	if err := r.db.Where("email = ?", email).First(&userEntity).Error; err != nil {
+	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at FROM users WHERE email = $1`
+	err := r.db.QueryRowContext(ctx, query, email).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt)
+	if err != nil {
 		return nil, err
 	}
 
@@ -144,8 +153,12 @@ func (r *authRepositoryImpl) CreateUser(ctx context.Context, user *base.User) (*
 		return nil, err
 	}
 	userEntity.PasswordHash = string(hashedPassword)
+	userEntity.CreatedAt = time.Now()
+	userEntity.UpdatedAt = time.Now()
 
-	if err := r.db.Create(&userEntity).Error; err != nil {
+	query := `INSERT INTO users (email, password_hash, nama, role, is_active, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+	err = r.db.QueryRowContext(ctx, query, userEntity.Email, userEntity.PasswordHash, userEntity.Nama, userEntity.Role, userEntity.IsActive, userEntity.CreatedAt, userEntity.UpdatedAt).Scan(&userEntity.ID)
+	if err != nil {
 		return nil, err
 	}
 
@@ -158,17 +171,33 @@ func (r *authRepositoryImpl) CreateUser(ctx context.Context, user *base.User) (*
 
 // UpdateUser updates a user
 func (r *authRepositoryImpl) UpdateUser(ctx context.Context, id int32, updates map[string]interface{}) (*base.User, error) {
+	// First get current user
 	var userEntity entity.User
-	if err := r.db.First(&userEntity, id).Error; err != nil {
+	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at FROM users WHERE id = $1`
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt)
+	if err != nil {
 		return nil, err
 	}
 
-	if err := r.db.Model(&userEntity).Updates(updates).Error; err != nil {
-		return nil, err
+	// Apply updates
+	if email, ok := updates["email"].(string); ok {
+		userEntity.Email = email
 	}
+	if nama, ok := updates["nama"].(string); ok {
+		userEntity.Nama = nama
+	}
+	if role, ok := updates["role"].(string); ok {
+		userEntity.Role = role
+	}
+	if isActive, ok := updates["is_active"].(bool); ok {
+		userEntity.IsActive = isActive
+	}
+	userEntity.UpdatedAt = time.Now()
 
-	// Reload user
-	if err := r.db.First(&userEntity, id).Error; err != nil {
+	// Update
+	updateQuery := `UPDATE users SET email = $1, nama = $2, role = $3, is_active = $4, updated_at = $5 WHERE id = $6`
+	_, err = r.db.ExecContext(ctx, updateQuery, userEntity.Email, userEntity.Nama, userEntity.Role, userEntity.IsActive, userEntity.UpdatedAt, userEntity.ID)
+	if err != nil {
 		return nil, err
 	}
 
@@ -196,22 +225,23 @@ func (r *authRepositoryImpl) UpdateUser(ctx context.Context, id int32, updates m
 
 // CheckUserHasTestSessions checks if user has any test sessions
 func (r *authRepositoryImpl) CheckUserHasTestSessions(ctx context.Context, id int32) (bool, error) {
-	var count int64
-	err := r.db.Model(&entity.TestSession{}).Where("user_id = ?", id).Count(&count).Error
+	var count int
+	query := `SELECT COUNT(*) FROM test_session WHERE user_id = $1`
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&count)
 	return count > 0, err
 }
 
 // DeleteUser deletes a user (hard delete)
 func (r *authRepositoryImpl) DeleteUser(ctx context.Context, id int32) error {
-	return r.db.Unscoped().Delete(&entity.User{}, id).Error
+	query := `DELETE FROM users WHERE id = $1`
+	_, err := r.db.ExecContext(ctx, query, id)
+	return err
 }
 
 // ListUsers lists users with filters
 func (r *authRepositoryImpl) ListUsers(ctx context.Context, role int32, statusFilter int32, limit, offset int) ([]*base.User, int, error) {
-	var userEntities []entity.User
-	var total int64
-
-	query := r.db.Model(&entity.User{})
+	var conditions []string
+	var args []interface{}
 
 	if role != 0 {
 		var roleStr string
@@ -221,26 +251,53 @@ func (r *authRepositoryImpl) ListUsers(ctx context.Context, role int32, statusFi
 		case base.UserRole_ADMIN:
 			roleStr = "admin"
 		}
-		query = query.Where("role = ?", roleStr)
+		conditions = append(conditions, "role = $"+fmt.Sprintf("%d", len(args)+1))
+		args = append(args, roleStr)
 	}
 
 	// Filter by active status if specified
 	// 0=all, 1=active only, 2=inactive only
 	switch statusFilter {
 	case 1:
-		query = query.Where("is_active = ?", true)
+		conditions = append(conditions, "is_active = $"+fmt.Sprintf("%d", len(args)+1))
+		args = append(args, true)
 	case 2:
-		query = query.Where("is_active = ?", false)
-	// case 0: show all users (no filter)
+		conditions = append(conditions, "is_active = $"+fmt.Sprintf("%d", len(args)+1))
+		args = append(args, false)
+	}
+
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + strings.Join(conditions, " AND ")
 	}
 
 	// Count total
-	if err := query.Count(&total).Error; err != nil {
+	countQuery := "SELECT COUNT(*) FROM users " + whereClause
+	var total int
+	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
 		return nil, 0, err
 	}
 
 	// Get paginated results
-	if err := query.Limit(limit).Offset(offset).Order("created_at DESC").Find(&userEntities).Error; err != nil {
+	selectQuery := "SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at FROM users " + whereClause + " ORDER BY created_at DESC LIMIT $" + fmt.Sprintf("%d", len(args)+1) + " OFFSET $" + fmt.Sprintf("%d", len(args)+2)
+	args = append(args, limit, offset)
+	rows, err := r.db.QueryContext(ctx, selectQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var userEntities []entity.User
+	for rows.Next() {
+		var userEntity entity.User
+		err := rows.Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt)
+		if err != nil {
+			return nil, 0, err
+		}
+		userEntities = append(userEntities, userEntity)
+	}
+	if err = rows.Err(); err != nil {
 		return nil, 0, err
 	}
 

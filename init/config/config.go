@@ -76,8 +76,8 @@ func Load() *Main {
 	godotenv.Load()
 	return &Main{
 		Database: Database{
-			DriverName:     util.GetEnv("DB_DRIVER", "mysql"),
-			DSN:            util.GetEnv("DB_DSN", "root:root@tcp(localhost:3306)/cbt_test?charset=utf8mb4&parseTime=True&loc=Local"),
+			DriverName:     util.GetEnv("DB_DRIVER", "postgres"),
+			DSN:            util.GetEnv("DB_DSN", "postgres://postgres:root@localhost:5432/cbt?sslmode=disable"),
 			MaxOpenConns:   util.GetEnv("DB_MAX_OPEN_CONNS", 25),
 			MaxIdleConns:   util.GetEnv("DB_MAX_IDLE_CONNS", 25),
 			MinIdleConns:   util.GetEnv("DB_MIN_IDLE_CONNS", 5),

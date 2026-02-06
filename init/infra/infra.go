@@ -3,25 +3,23 @@ package infra
 import (
 	"cbt-test-mini-project/init/config"
 	"cbt-test-mini-project/init/infra/db"
-	userLimitRepo "cbt-test-mini-project/internal/repository/user_limit"
+	"database/sql"
 	"log"
 	"os"
 
 	"go.elastic.co/apm"
-	"gorm.io/gorm"
 
 	"cbt-test-mini-project/internal/repository"
 )
 
 type Repository struct {
-	GormDB        *gorm.DB
+	SQLDB         *sql.DB
 	UserLimitRepo repository.UserLimitRepository
 }
 
 func (r *Repository) Close() error {
-	if r != nil && r.GormDB != nil {
-		sqlDB, _ := r.GormDB.DB()
-		if err := sqlDB.Close(); err != nil {
+	if r != nil && r.SQLDB != nil {
+		if err := r.SQLDB.Close(); err != nil {
 			return err
 		}
 	}
@@ -35,12 +33,17 @@ func LoadRepository(cfg config.Main) *Repository {
 	}
 	log.Println("✓ Database connected successfully")
 
+	sqlDB, err := dbConn.DB()
+	if err != nil {
+		log.Fatalf("Failed to get sql.DB: %v", err)
+	}
+
 	repo := &Repository{
-		GormDB: dbConn,
+		SQLDB: sqlDB,
 	}
 
 	// Initialize user limit repository
-	repo.UserLimitRepo = userLimitRepo.Init(dbConn, &cfg)
+	repo.UserLimitRepo = userLimitRepo.NewUserLimitRepository(sqlDB, &cfg)
 
 	return repo
 }
