@@ -6,9 +6,10 @@ import "time"
 type TestStatus string
 
 const (
-	TestStatusOngoing   TestStatus = "ongoing"
-	TestStatusCompleted TestStatus = "completed"
-	TestStatusTimeout   TestStatus = "timeout"
+	TestStatusOngoing    TestStatus = "ongoing"
+	TestStatusCompleted  TestStatus = "completed"
+	TestStatusTimeout    TestStatus = "timeout"
+	TestStatusScheduled  TestStatus = "scheduled"
 )
 
 // TestSession represents the test_session table
@@ -31,7 +32,9 @@ type TestSession struct {
 	NilaiAkhir  *float64   `json:"nilai_akhir" gorm:"type:decimal(5,2)"`
 	JumlahBenar *int       `json:"jumlah_benar"`
 	TotalSoal   *int       `json:"total_soal"`
-	Status      TestStatus `json:"status" gorm:"type:enum('ongoing','completed','timeout');default:'ongoing'"`
+	Status      TestStatus `json:"status" gorm:"type:enum('ongoing','completed','timeout','scheduled');default:'ongoing'"`
+
+	LMSAssignmentID *int64 `json:"lms_assignment_id" gorm:"column:lms_assignment_id"`
 }
 
 func (TestSession) TableName() string { return "test_session" }
@@ -54,7 +57,7 @@ type TestSessionSoal struct {
 
 	// Multiple-choice question FK (nullable when QuestionType is drag_drop)
 	IDSoal *int `json:"id_soal" gorm:""`
-	Soal   Soal `json:"soal" gorm:"foreignKey:IDSoal"`
+	Soal   *Soal `json:"soal" gorm:"foreignKey:IDSoal"`
 
 	// Drag-drop question FK (nullable when QuestionType is multiple_choice)
 	IDSoalDragDrop *int          `json:"id_soal_drag_drop" gorm:""`

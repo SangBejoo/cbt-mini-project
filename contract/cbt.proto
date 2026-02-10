@@ -53,14 +53,7 @@ service Base {
 
 service AuthService {
     rpc Login(LoginRequest) returns (LoginResponse) {};
-    rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse) {};
     rpc GetProfile(google.protobuf.Empty) returns (UserResponse) {};
-    // User Management (Admin Only)
-    rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {};
-    rpc GetUser(GetUserRequest) returns (UserResponse) {};
-    rpc UpdateUser(UpdateUserRequest) returns (UserResponse) {};
-    rpc DeleteUser(DeleteUserRequest) returns (MessageStatusResponse) {};
-    rpc CreateUser(CreateUserRequest) returns (UserResponse) {};
 }
 
 // ========================================
@@ -68,10 +61,7 @@ service AuthService {
 // ========================================
 
 service MataPelajaranService {
-    rpc CreateMataPelajaran(CreateMataPelajaranRequest) returns (MataPelajaranResponse) {};
     rpc GetMataPelajaran(GetMataPelajaranRequest) returns (MataPelajaranResponse) {};
-    rpc UpdateMataPelajaran(UpdateMataPelajaranRequest) returns (MataPelajaranResponse) {};
-    rpc DeleteMataPelajaran(DeleteMataPelajaranRequest) returns (MessageStatusResponse) {};
     rpc ListMataPelajaran(google.protobuf.Empty) returns (ListMataPelajaranResponse) {};
 }
 
@@ -92,10 +82,7 @@ service MateriService {
 // ========================================
 
 service TingkatService {
-    rpc CreateTingkat(CreateTingkatRequest) returns (TingkatResponse) {};
     rpc GetTingkat(GetTingkatRequest) returns (TingkatResponse) {};
-    rpc UpdateTingkat(UpdateTingkatRequest) returns (TingkatResponse) {};
-    rpc DeleteTingkat(DeleteTingkatRequest) returns (MessageStatusResponse) {};
     rpc ListTingkat(google.protobuf.Empty) returns (ListTingkatResponse) {};
 }
 
@@ -199,6 +186,7 @@ message User {
     google.protobuf.Timestamp created_at = 6;
     google.protobuf.Timestamp updated_at = 7;
     string password_hash = 8;
+    int64 lms_user_id = 9;
 }
 
 message LoginRequest {
@@ -277,6 +265,9 @@ message RefreshTokenResponse {
 message MataPelajaran {
     int32 id = 1;
     string nama = 2;
+    int64 lms_subject_id = 3;
+    int64 lms_school_id = 4;
+    int64 lms_class_id = 5;
 }
 
 message CreateMataPelajaranRequest {
@@ -317,6 +308,8 @@ message Materi {
     int32 default_durasi_menit = 6;
     int32 default_jumlah_soal = 7;
     int32 jumlah_soal_real = 8;  // Actual question count from database
+    int64 lms_module_id = 9;
+    int64 lms_class_id = 10;
 }
 
 message CreateMateriRequest {
@@ -326,6 +319,7 @@ message CreateMateriRequest {
     bool is_active = 4;
     int32 default_durasi_menit = 5;
     int32 default_jumlah_soal = 6;
+    int64 lms_class_id = 7;  // Class scope for the materi
 }
 
 message GetMateriRequest {
@@ -368,6 +362,7 @@ message ListMateriResponse {
 message Tingkat {
     int32 id = 1;
     string nama = 2;
+    int64 lms_level_id = 3;
 }
 
 message CreateTingkatRequest {
@@ -425,6 +420,7 @@ message SoalFull {
     JawabanOption jawaban_benar = 8;
     string pembahasan = 9;
     repeated SoalGambar gambar = 10;
+    int64 lms_class_id = 11;
 }
 
 // Soal for student (no answer exposed)
@@ -453,6 +449,7 @@ message CreateSoalRequest {
     JawabanOption jawaban_benar = 8;
     string pembahasan = 9;
     repeated bytes image_bytes = 10;
+    int64 lms_class_id = 11;  // Class scope for the question
 }
 
 message GetSoalRequest {
@@ -486,6 +483,7 @@ message ListSoalRequest {
     int32 id_tingkat = 2;
     int32 id_mata_pelajaran = 3;
     PaginationRequest pagination = 4;
+    int64 lms_class_id = 5;  // Filter by class
 }
 
 message ListSoalResponse {
@@ -560,6 +558,7 @@ message SoalDragDropFull {
     bool is_active = 9;
     google.protobuf.Timestamp created_at = 10;
     google.protobuf.Timestamp updated_at = 11;
+    int64 lms_class_id = 12;
 }
 
 // Drag-drop for student (no correct answers exposed)
@@ -610,6 +609,7 @@ message CreateSoalDragDropRequest {
     repeated DragSlot slots = 6;
     repeated DragCorrectAnswerByUrutan correct_answers = 7;
     string pembahasan = 8;
+    int64 lms_class_id = 9;  // Class scope
 }
 
 message GetSoalDragDropRequest {
@@ -641,6 +641,7 @@ message ListSoalDragDropRequest {
     int32 id_materi = 1;
     int32 id_tingkat = 2;
     PaginationRequest pagination = 3;
+    int64 lms_class_id = 4;  // Filter by class
 }
 
 message ListSoalDragDropResponse {
@@ -667,6 +668,7 @@ message TestSession {
     int32 jumlah_benar = 12;
     int32 total_soal = 13;
     TestStatus status = 14;
+    int64 lms_class_id = 15;  // Class scope
 }
 
 message CreateTestSessionRequest {
@@ -674,6 +676,7 @@ message CreateTestSessionRequest {
     int32 id_mata_pelajaran = 2;
     int32 durasi_menit = 3;
     int32 jumlah_soal = 4;  // ADDED - critical!
+    int64 lms_class_id = 5;  // Class scope
 }
 
 message GetTestSessionRequest {

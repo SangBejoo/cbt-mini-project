@@ -1,0 +1,51 @@
+{"time":"2026-02-09T09:07:16.9938719+07:00","level":"INFO","msg":"Γ£ô Database connected successfully"}
+{"time":"2026-02-09T09:07:17.0341278+07:00","level":"INFO","msg":"Γ£ô APM initialized: service=cbt-mini-project, version=1.0.0, environment=development, server=http://localhost:8200"}
+{"time":"2026-02-09T09:07:17.079928+07:00","level":"INFO","msg":"server grpc listening at [::]:6001"}
+{"time":"2026-02-09T09:07:17.0804436+07:00","level":"INFO","msg":"servers started successfully","grpc_port":6001,"rest_port":8080}
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+               ≡ƒÜÇ CBT Mini Project Server Started ≡ƒÜÇ
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  gRPC Server   : http://localhost:6001
+  REST Gateway  : http://localhost:8080
+  APM Dashboard : http://localhost:5601
+{"time":"2026-02-09T09:07:17.0804436+07:00","level":"INFO","msg":"starting REST gateway server","port":8080}
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+panic: runtime error: invalid memory address or nil pointer dereference [recovered, repanicked]
+[signal 0xc0000005 code=0x0 addr=0x20 pc=0x7ff7fdc28b2a]
+
+goroutine 141 [running]:
+go.elastic.co/apm/module/apmgrpc/v2.NewUnaryServerInterceptor.func1.1()
+	D:/Program Files/Go/pkg/mod/go.elastic.co/apm/module/apmgrpc/v2@v2.7.2/server.go:90 +0x15a
+panic({0x7ff7fde09de0?, 0x7ff7fe69a6e0?})
+	C:/Program Files/Go/src/runtime/panic.go:783 +0x132
+cbt-test-mini-project/util/interceptor.(*RateLimitMiddleware).checkRateLimitCached(0xc0000f2280, {0x7ff7fe08b028, 0xc000629110}, 0x12, {0x7ff7fdf54daf, 0x20})
+	D:/Kerjaan/CBT/util/interceptor/rate_limit_middleware.go:168 +0x52a
+cbt-test-mini-project/util/interceptor.(*RateLimitMiddleware).UnaryServerInterceptor(0xc0000f2280, {0x7ff7fe08b028, 0xc000629110}, {0x7ff7fde81e20, 0xc000628c00}, 0xc0000f9680, 0xc000372a40)
+	D:/Kerjaan/CBT/util/interceptor/rate_limit_middleware.go:94 +0x225
+google.golang.org/grpc.getChainUnaryHandler.func1({0x7ff7fe08b028?, 0xc000629110?}, {0x7ff7fde81e20?, 0xc000628c00?})
+	D:/Program Files/Go/pkg/mod/google.golang.org/grpc@v1.77.0/server.go:1241 +0x153
+cbt-test-mini-project/init/server.RunGRPCServer.(*JWTMiddleware).UnaryServerInterceptor.func2({0x7ff7fe08b028, 0xc000628db0}, {0x7ff7fde81e20, 0xc000628c00}, 0xc0000f9680?, 0xc000372a00)
+	D:/Kerjaan/CBT/util/interceptor/jwt_middleware.go:60 +0xbb
+google.golang.org/grpc.getChainUnaryHandler.func1.getChainUnaryHandler.1({0x7ff7fe08b028, 0xc000628db0}, {0x7ff7fde81e20, 0xc000628c00})
+	D:/Program Files/Go/pkg/mod/google.golang.org/grpc@v1.77.0/server.go:1241 +0xa8
+go.elastic.co/apm/module/apmgrpc/v2.NewUnaryServerInterceptor.func1({0x7ff7fe08b028, 0xc000628c60}, {0x7ff7fde81e20, 0xc000628c00}, 0xc0000f9680, 0xc0003729c0)
+	D:/Program Files/Go/pkg/mod/go.elastic.co/apm/module/apmgrpc/v2@v2.7.2/server.go:96 +0x1a3
+google.golang.org/grpc.getChainUnaryHandler.func1({0x7ff7fe08b028?, 0xc000628c60?}, {0x7ff7fde81e20?, 0xc000628c00?})
+	D:/Program Files/Go/pkg/mod/google.golang.org/grpc@v1.77.0/server.go:1241 +0x153
+cbt-test-mini-project/init/server.metadataInterceptor({0x7ff7fe08b028, 0xc000628bd0}, {0x7ff7fde81e20, 0xc000628c00}, 0xc0000f9680?, 0xc000372980)
+	D:/Kerjaan/CBT/init/server/grpc.go:85 +0x6b
+google.golang.org/grpc.NewServer.chainUnaryServerInterceptors.chainUnaryInterceptors.func1({0x7ff7fe08b028, 0xc000628bd0}, {0x7ff7fde81e20, 0xc000628c00}, 0xc0000f9680, 0x78?)
+	D:/Program Files/Go/pkg/mod/google.golang.org/grpc@v1.77.0/server.go:1232 +0x7c
+cbt-test-mini-project/gen/proto._TingkatService_ListTingkat_Handler({0x7ff7fdeaa840, 0xc0002b82a0}, {0x7ff7fe08b028, 0xc000628bd0}, 0xc00060b280, 0xc00029ee40)
+	D:/Kerjaan/CBT/gen/proto/cbt_grpc.pb.go:775 +0x143
+google.golang.org/grpc.(*Server).processUnaryRPC(0xc000262008, {0x7ff7fe08b028, 0xc000628b40}, 0xc000c8c1a0, 0xc0002a6ea0, 0x7ff7fe6b6a18, 0x0)
+	D:/Program Files/Go/pkg/mod/google.golang.org/grpc@v1.77.0/server.go:1428 +0x1192
+google.golang.org/grpc.(*Server).handleStream(0xc000262008, {0x7ff7fe08b818, 0xc000c2c000}, 0xc000c8c1a0)
+	D:/Program Files/Go/pkg/mod/google.golang.org/grpc@v1.77.0/server.go:1832 +0xdc6
+google.golang.org/grpc.(*Server).serveStreams.func2.1()
+	D:/Program Files/Go/pkg/mod/google.golang.org/grpc@v1.77.0/server.go:1063 +0x7f
+created by google.golang.org/grpc.(*Server).serveStreams.func2 in goroutine 80
+	D:/Program Files/Go/pkg/mod/google.golang.org/grpc@v1.77.0/server.go:1074 +0x11d
+exit status 2

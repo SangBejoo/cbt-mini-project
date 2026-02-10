@@ -2,8 +2,7 @@ package soal_drag_drop
 
 import (
 	"cbt-test-mini-project/internal/entity"
-
-	"gorm.io/gorm"
+	"database/sql"
 )
 
 // Repository interface for soal_drag_drop operations
@@ -20,10 +19,10 @@ type Repository interface {
 }
 
 type repository struct {
-	db *gorm.DB
+	db *sql.DB
 }
 
 // NewRepository creates a new soal_drag_drop repository
-func NewRepository(db *gorm.DB) Repository {
+func NewRepository(db *sql.DB) Repository {
 	return &repository{db: db}
 }

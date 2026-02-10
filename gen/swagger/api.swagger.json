@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "template.proto",
+    "title": "cbt.proto",
     "version": "version not set"
   },
   "tags": [
@@ -155,193 +155,6 @@
             }
           }
         },
-        "tags": [
-          "AuthService"
-        ]
-      }
-    },
-    "/v1/auth/users": {
-      "get": {
-        "summary": "User Management (Admin Only)",
-        "operationId": "AuthService_ListUsers",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/baseListUsersResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "role",
-            "description": "Optional filter",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "enum": [
-              "ROLE_INVALID",
-              "SISWA",
-              "ADMIN"
-            ],
-            "default": "ROLE_INVALID"
-          },
-          {
-            "name": "statusFilter",
-            "description": "0=all, 1=active only, 2=inactive only",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "pagination.page",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "pagination.pageSize",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          }
-        ],
-        "tags": [
-          "AuthService"
-        ]
-      },
-      "post": {
-        "operationId": "AuthService_CreateUser",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/baseUserResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/baseCreateUserRequest"
-            }
-          }
-        ],
-        "tags": [
-          "AuthService"
-        ]
-      }
-    },
-    "/v1/auth/users/{id}": {
-      "get": {
-        "operationId": "AuthService_GetUser",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/baseUserResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "integer",
-            "format": "int32"
-          }
-        ],
-        "tags": [
-          "AuthService"
-        ]
-      },
-      "delete": {
-        "operationId": "AuthService_DeleteUser",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/baseMessageStatusResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "integer",
-            "format": "int32"
-          }
-        ],
-        "tags": [
-          "AuthService"
-        ]
-      },
-      "put": {
-        "operationId": "AuthService_UpdateUser",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/baseUserResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/AuthServiceUpdateUserBody"
-            }
-          }
-        ],
         "tags": [
           "AuthService"
         ]
@@ -565,36 +378,6 @@
         "tags": [
           "MataPelajaranService"
         ]
-      },
-      "post": {
-        "operationId": "MataPelajaranService_CreateMataPelajaran",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/baseMataPelajaranResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/baseCreateMataPelajaranRequest"
-            }
-          }
-        ],
-        "tags": [
-          "MataPelajaranService"
-        ]
       }
     },
     "/v1/mata-pelajaran/{id}": {
@@ -621,72 +404,6 @@
             "required": true,
             "type": "integer",
             "format": "int32"
-          }
-        ],
-        "tags": [
-          "MataPelajaranService"
-        ]
-      },
-      "delete": {
-        "operationId": "MataPelajaranService_DeleteMataPelajaran",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/baseMessageStatusResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "integer",
-            "format": "int32"
-          }
-        ],
-        "tags": [
-          "MataPelajaranService"
-        ]
-      },
-      "put": {
-        "operationId": "MataPelajaranService_UpdateMataPelajaran",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/baseMataPelajaranResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/MataPelajaranServiceUpdateMataPelajaranBody"
-            }
           }
         ],
         "tags": [
@@ -947,6 +664,14 @@
             "required": false,
             "type": "integer",
             "format": "int32"
+          },
+          {
+            "name": "lmsClassId",
+            "description": "Filter by class",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -1240,6 +965,14 @@
             "required": false,
             "type": "integer",
             "format": "int32"
+          },
+          {
+            "name": "lmsClassId",
+            "description": "Filter by class",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -1322,6 +1055,14 @@
             "required": false,
             "type": "integer",
             "format": "int32"
+          },
+          {
+            "name": "lmsClassId",
+            "description": "Filter by class",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -1880,36 +1621,6 @@
         "tags": [
           "TingkatService"
         ]
-      },
-      "post": {
-        "operationId": "TingkatService_CreateTingkat",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/baseTingkatResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/baseCreateTingkatRequest"
-            }
-          }
-        ],
-        "tags": [
-          "TingkatService"
-        ]
       }
     },
     "/v1/tingkat/{id}": {
@@ -1941,72 +1652,6 @@
         "tags": [
           "TingkatService"
         ]
-      },
-      "delete": {
-        "operationId": "TingkatService_DeleteTingkat",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/baseMessageStatusResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "integer",
-            "format": "int32"
-          }
-        ],
-        "tags": [
-          "TingkatService"
-        ]
-      },
-      "put": {
-        "operationId": "TingkatService_UpdateTingkat",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/baseTingkatResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/TingkatServiceUpdateTingkatBody"
-            }
-          }
-        ],
-        "tags": [
-          "TingkatService"
-        ]
       }
     },
     "/v1/topics": {
@@ -2033,31 +1678,6 @@
     }
   },
   "definitions": {
-    "AuthServiceUpdateUserBody": {
-      "type": "object",
-      "properties": {
-        "email": {
-          "type": "string"
-        },
-        "nama": {
-          "type": "string"
-        },
-        "role": {
-          "$ref": "#/definitions/baseUserRole"
-        },
-        "isActive": {
-          "type": "boolean"
-        }
-      }
-    },
-    "MataPelajaranServiceUpdateMataPelajaranBody": {
-      "type": "object",
-      "properties": {
-        "nama": {
-          "type": "string"
-        }
-      }
-    },
     "MateriServiceUpdateMateriBody": {
       "type": "object",
       "properties": {
@@ -2244,14 +1864,6 @@
         }
       }
     },
-    "TingkatServiceUpdateTingkatBody": {
-      "type": "object",
-      "properties": {
-        "nama": {
-          "type": "string"
-        }
-      }
-    },
     "baseClearAnswerResponse": {
       "type": "object",
       "properties": {
@@ -2265,14 +1877,6 @@
         "dibatalkanPada": {
           "type": "string",
           "format": "date-time"
-        }
-      }
-    },
-    "baseCreateMataPelajaranRequest": {
-      "type": "object",
-      "properties": {
-        "nama": {
-          "type": "string"
         }
       }
     },
@@ -2300,6 +1904,11 @@
         "defaultJumlahSoal": {
           "type": "integer",
           "format": "int32"
+        },
+        "lmsClassId": {
+          "type": "string",
+          "format": "int64",
+          "title": "Class scope for the materi"
         }
       }
     },
@@ -2343,6 +1952,11 @@
         },
         "pembahasan": {
           "type": "string"
+        },
+        "lmsClassId": {
+          "type": "string",
+          "format": "int64",
+          "title": "Class scope"
         }
       }
     },
@@ -2384,6 +1998,11 @@
             "type": "string",
             "format": "byte"
           }
+        },
+        "lmsClassId": {
+          "type": "string",
+          "format": "int64",
+          "title": "Class scope for the question"
         }
       }
     },
@@ -2406,31 +2025,11 @@
           "type": "integer",
           "format": "int32",
           "title": "ADDED - critical!"
-        }
-      }
-    },
-    "baseCreateTingkatRequest": {
-      "type": "object",
-      "properties": {
-        "nama": {
-          "type": "string"
-        }
-      }
-    },
-    "baseCreateUserRequest": {
-      "type": "object",
-      "properties": {
-        "email": {
-          "type": "string"
         },
-        "password": {
-          "type": "string"
-        },
-        "nama": {
-          "type": "string"
-        },
-        "role": {
-          "$ref": "#/definitions/baseUserRole"
+        "lmsClassId": {
+          "type": "string",
+          "format": "int64",
+          "title": "Class scope"
         }
       }
     },
@@ -2760,31 +2359,6 @@
         }
       }
     },
-    "baseListUsersResponse": {
-      "type": "object",
-      "properties": {
-        "users": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/baseUser"
-          }
-        },
-        "pagination": {
-          "$ref": "#/definitions/basePaginationResponse"
-        },
-        "success": {
-          "type": "boolean"
-        },
-        "message": {
-          "type": "string"
-        },
-        "total": {
-          "type": "integer",
-          "format": "int32"
-        }
-      }
-    },
     "baseLoginRequest": {
       "type": "object",
       "properties": {
@@ -2829,6 +2403,18 @@
         },
         "nama": {
           "type": "string"
+        },
+        "lmsSubjectId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "lmsSchoolId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "lmsClassId": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -2872,6 +2458,14 @@
           "type": "integer",
           "format": "int32",
           "title": "Actual question count from database"
+        },
+        "lmsModuleId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "lmsClassId": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -3052,27 +2646,6 @@
       "default": "QUESTION_TYPE_INVALID",
       "title": "Question type for mixed sessions"
     },
-    "baseRefreshTokenResponse": {
-      "type": "object",
-      "properties": {
-        "token": {
-          "type": "string"
-        },
-        "refreshToken": {
-          "type": "string"
-        },
-        "expiresAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "success": {
-          "type": "boolean"
-        },
-        "message": {
-          "type": "string"
-        }
-      }
-    },
     "baseSoalDragDropFull": {
       "type": "object",
       "properties": {
@@ -3123,6 +2696,10 @@
         "updatedAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "lmsClassId": {
+          "type": "string",
+          "format": "int64"
         }
       },
       "title": "Full drag-drop question (admin view with answers)"
@@ -3172,6 +2749,10 @@
             "type": "object",
             "$ref": "#/definitions/baseSoalGambar"
           }
+        },
+        "lmsClassId": {
+          "type": "string",
+          "format": "int64"
         }
       },
       "title": "Full soal with answer (for admin/teacher only)"
@@ -3421,6 +3002,11 @@
         },
         "status": {
           "$ref": "#/definitions/baseTestStatus"
+        },
+        "lmsClassId": {
+          "type": "string",
+          "format": "int64",
+          "title": "Class scope"
         }
       }
     },
@@ -3451,6 +3037,10 @@
         },
         "nama": {
           "type": "string"
+        },
+        "lmsLevelId": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -3512,6 +3102,10 @@
         },
         "passwordHash": {
           "type": "string"
+        },
+        "lmsUserId": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },

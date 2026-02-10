@@ -10,8 +10,17 @@ import (
 
 	"cbt-test-mini-project/init/config"
 	"cbt-test-mini-project/init/infra"
+	infraRedis "cbt-test-mini-project/init/infra/redis"
 	"cbt-test-mini-project/init/logger"
 	"cbt-test-mini-project/init/server"
+	authRepo "cbt-test-mini-project/internal/repository/auth"
+	classRepo "cbt-test-mini-project/internal/repository/class"
+	classStudentRepo "cbt-test-mini-project/internal/repository/class_student"
+	mataPelajaranRepo "cbt-test-mini-project/internal/repository/mata_pelajaran"
+	materiRepo "cbt-test-mini-project/internal/repository/materi"
+	testSessionRepo "cbt-test-mini-project/internal/repository/test_session"
+	tingkatRepo "cbt-test-mini-project/internal/repository/tingkat"
+	"cbt-test-mini-project/internal/sync"
 	"cbt-test-mini-project/util"
 )
 
@@ -23,7 +32,7 @@ func init() {
 }
 
 func main() {
-	// TODO: complete usecase implementation in usecase folder
+	// Load repository
 	repo := infra.LoadRepository(*cfg)
 	defer func() {
 		if errClose := repo.Close(); errClose != nil {
@@ -31,10 +40,55 @@ func main() {
 		}
 	}()
 
+	// Initialize Redis for sync worker
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+	redisPassword := os.Getenv("REDIS_PASSWORD")
+	redisDB := 0 // Default DB
+
+	if err := infraRedis.InitRedis(redisAddr, redisPassword, redisDB); err != nil {
+		slog.Error("failed to initialize redis", "error", err)
+		// Continue without sync - not fatal for CBT to run standalone
+	} else {
+		slog.Info("✓ Redis connected successfully")
+	}
+	defer func() {
+		if err := infraRedis.CloseRedis(); err != nil {
+			slog.Error("failed to close redis", "error", err)
+		}
+	}()
+
 	// Initialize APM monitoring
 	infra.InitAPM(*cfg)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start Sync Worker to listen for LMS events
+	if infraRedis.RedisClient != nil {
+		// Initialize repositories for sync worker
+		materiRepoImpl := materiRepo.NewMateriRepository(repo.SQLDB)
+		tingkatRepoImpl := tingkatRepo.NewTingkatRepository(repo.SQLDB)
+		subjectRepoImpl := mataPelajaranRepo.NewMataPelajaranRepository(repo.SQLDB)
+		authRepoImpl := authRepo.NewAuthRepository(repo.SQLDB)
+		testSessionRepoImpl := testSessionRepo.NewTestSessionRepository(repo.SQLDB)
+		classRepoImpl := classRepo.NewClassRepository(repo.SQLDB)
+		classStudentRepoImpl := classStudentRepo.NewClassStudentRepository(repo.SQLDB)
+
+		syncWorker := sync.NewSyncWorker(
+			materiRepoImpl,
+			tingkatRepoImpl,
+			subjectRepoImpl,
+			authRepoImpl,
+			testSessionRepoImpl,
+			classRepoImpl,
+			classStudentRepoImpl,
+		)
+		go syncWorker.Start(ctx)
+	}
+
 	grpcServer, err := server.RunGRPCServer(ctx, *cfg, *repo)
 	if err != nil {
 		slog.Error("failed to run grpc server", "error", err)
@@ -80,3 +134,4 @@ func main() {
 	<-wait
 	slog.Info("application shutdown complete")
 }
+

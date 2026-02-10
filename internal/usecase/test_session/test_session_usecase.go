@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -24,46 +25,70 @@ func NewTestSessionUsecase(repo test_session.TestSessionRepository, userRepo aut
 
 // CreateTestSession creates a new test session with random questions
 func (u *testSessionUsecaseImpl) CreateTestSession(userID, tingkatan, idMataPelajaran, durasiMenit, jumlahSoal int) (*entity.TestSession, error) {
+	fmt.Printf("=== USECASE CreateTestSession: userID=%d, tingkatan=%d, idMataPelajaran=%d ===\n", userID, tingkatan, idMataPelajaran)
+	
 	if userID < 1 || tingkatan < 1 || idMataPelajaran < 1 || durasiMenit < 1 || jumlahSoal < 1 {
-		return nil, errors.New("invalid input parameters")
+		return nil, fmt.Errorf("invalid input parameters: userID=%d, tingkatan=%d, idMataPelajaran=%d, durasiMenit=%d, jumlahSoal=%d", userID, tingkatan, idMataPelajaran, durasiMenit, jumlahSoal)
+	}
+
+	// Check if userRepo is initialized
+	if u.userRepo == nil {
+		return nil, fmt.Errorf("userRepo is nil - dependency injection issue")
 	}
 
 	// Get user to set nama peserta
+	fmt.Printf("=== USECASE: Getting user by ID %d ===\n", userID)
 	user, err := u.userRepo.GetUserByID(context.Background(), int32(userID))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get user by ID %d: %w", userID, err)
 	}
+	if user == nil {
+		return nil, fmt.Errorf("user not found with ID %d", userID)
+	}
+	fmt.Printf("=== USECASE: Got user: %s ===\n", user.Nama)
 
 	// Generate unique session token
 	token, err := u.generateToken()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
+	fmt.Printf("=== USECASE: Generated token: %s ===\n", token)
 
+	waktuMulai := time.Now()
 	session := &entity.TestSession{
 		SessionToken:    token,
 		UserID:          &userID,
 		NamaPeserta:     user.Nama,
 		IDTingkat:       tingkatan,
 		IDMataPelajaran: idMataPelajaran,
+		WaktuMulai:      waktuMulai,
 		DurasiMenit:     durasiMenit,
 		Status:          entity.TestStatusOngoing,
 	}
 
+	fmt.Printf("=== USECASE: Creating session in DB ===\n")
 	err = u.repo.Create(session)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
+	fmt.Printf("=== USECASE: Session created with ID %d ===\n", session.ID)
 
 	// Select and assign random questions
+	fmt.Printf("=== USECASE: Assigning random questions ===\n")
 	err = u.repo.AssignRandomQuestions(session.ID, idMataPelajaran, tingkatan, jumlahSoal)
 	if err != nil {
 		// Cleanup session if question assignment fails
 		u.repo.Delete(session.ID)
-		return nil, err
+		return nil, fmt.Errorf("failed to assign questions: %w", err)
 	}
+	fmt.Printf("=== USECASE: Questions assigned ===\n")
 
-	return u.repo.GetByToken(token)
+	result, err := u.repo.GetByToken(token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get created session: %w", err)
+	}
+	fmt.Printf("=== USECASE: Session retrieved successfully ===\n")
+	return result, nil
 }
 
 // GetTestSession gets by token

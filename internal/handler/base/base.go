@@ -11,7 +11,9 @@ import (
 func (h *baseHandler) HealthCheck(ctx context.Context, request *emptypb.Empty) (response *base.MessageStatusResponse, err error) {
 
 	span, ctx := apm.StartSpan(ctx, "transport.HealthCheck", "transport.internal")
-	defer span.End()
+	if span != nil {
+		defer span.End()
+	}
 
 	response = &base.MessageStatusResponse{
 		Status:  "OK",

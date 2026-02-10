@@ -5,6 +5,7 @@ import (
 	"cbt-test-mini-project/init/config"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 
@@ -82,17 +83,25 @@ func (m *JWTMiddleware) shouldSkipAuth(method string) bool {
 func ExtractTokenFromContext(ctx context.Context) (string, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
+		fmt.Println("DEBUG JWT: missing metadata")
 		return "", errors.New("missing metadata")
 	}
 
+	// Debug: print all metadata keys
+	fmt.Printf("DEBUG JWT: metadata keys: %v\n", md)
+
 	authHeader, exists := md["authorization"]
 	if !exists || len(authHeader) == 0 {
+		fmt.Println("DEBUG JWT: missing authorization header")
 		return "", errors.New("missing authorization header")
 	}
+
+	fmt.Printf("DEBUG JWT: auth header = %s\n", authHeader[0])
 
 	// Extract token from "Bearer <token>"
 	parts := strings.SplitN(authHeader[0], " ", 2)
 	if len(parts) != 2 || parts[0] != "Bearer" {
+		fmt.Printf("DEBUG JWT: invalid format, parts=%v\n", parts)
 		return "", errors.New("invalid authorization header format")
 	}
 

@@ -328,3 +328,93 @@ func (r *authRepositoryImpl) ListUsers(ctx context.Context, role int32, statusFi
 
 	return users, int(total), nil
 }
+
+// FindOrCreateByLMSID finds a user by LMS ID or creates one if not found
+func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int64, email, name string, role int32) (*base.User, error) {
+	// First try to find existing user by LMS ID
+	var userEntity entity.User
+	findQuery := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE lms_user_id = $1`
+	err := r.db.QueryRowContext(ctx, findQuery, lmsID).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
+
+	if err == nil {
+		// User found, return it
+		var protoRole base.UserRole
+		switch userEntity.Role {
+		case "siswa":
+			protoRole = base.UserRole_SISWA
+		case "admin":
+			protoRole = base.UserRole_ADMIN
+		default:
+			protoRole = base.UserRole_SISWA
+		}
+
+		return &base.User{
+			Id:           int32(userEntity.ID),
+			Email:        userEntity.Email,
+			Nama:         userEntity.Nama,
+			Role:         protoRole,
+			IsActive:     userEntity.IsActive,
+			CreatedAt:    timestamppb.New(userEntity.CreatedAt),
+			UpdatedAt:    timestamppb.New(userEntity.UpdatedAt),
+			PasswordHash: userEntity.PasswordHash,
+		}, nil
+	}
+
+	if err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	// User not found, create new one
+	var roleStr string
+	switch role {
+	case int32(base.UserRole_ADMIN):
+		roleStr = "admin"
+	default:
+		roleStr = "siswa"
+	}
+
+	// Generate a random password hash for LMS users (they won't login directly)
+	randomPassword := fmt.Sprintf("lms_%d", lmsID)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(randomPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	createQuery := `
+		INSERT INTO users (email, password_hash, nama, role, is_active, lms_user_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id`
+	now := time.Now()
+	err = r.db.QueryRowContext(ctx, createQuery, email, string(hashedPassword), name, roleStr, true, lmsID, now, now).Scan(&userEntity.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set the entity fields for return
+	userEntity.Email = email
+	userEntity.Nama = name
+	userEntity.Role = roleStr
+	userEntity.IsActive = true
+	userEntity.CreatedAt = now
+	userEntity.UpdatedAt = now
+	userEntity.LmsUserID = &lmsID
+
+	var protoRole base.UserRole
+	switch roleStr {
+	case "admin":
+		protoRole = base.UserRole_ADMIN
+	default:
+		protoRole = base.UserRole_SISWA
+	}
+
+	return &base.User{
+		Id:           int32(userEntity.ID),
+		Email:        email,
+		Nama:         name,
+		Role:         protoRole,
+		IsActive:     true,
+		CreatedAt:    timestamppb.New(now),
+		UpdatedAt:    timestamppb.New(now),
+		PasswordHash: string(hashedPassword),
+	}, nil
+}

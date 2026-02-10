@@ -89,9 +89,14 @@ func (h *mataPelajaranHandler) ListMataPelajaran(ctx context.Context, req *empty
 
 	var mataPelajarans []*base.MataPelajaran
 	for _, mp := range mps {
+		var lmsSubjectID int64
+		if mp.LmsSubjectID != nil {
+			lmsSubjectID = *mp.LmsSubjectID
+		}
 		mataPelajarans = append(mataPelajarans, &base.MataPelajaran{
-			Id:   int32(mp.ID),
-			Nama: mp.Nama,
+			Id:           int32(mp.ID),
+			Nama:         mp.Nama,
+			LmsSubjectId: lmsSubjectID,
 		})
 	}
 

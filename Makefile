@@ -16,11 +16,11 @@ proto:
 	--go-grpc_out=../gen/proto --go-grpc_opt=paths=source_relative \
 	--grpc-gateway_out=../gen/proto \
 	--grpc-gateway_opt=paths=source_relative \
-	--grpc-gateway_opt=grpc_api_configuration=gateway_template.yaml \
+	--grpc-gateway_opt=grpc_api_configuration=gateway.yaml \
 	--openapiv2_out=../gen/swagger \
 	--openapiv2_opt=allow_merge=true,merge_file_name=api \
-	--openapiv2_opt=grpc_api_configuration=gateway_template.yaml \
-	template.proto
+	--openapiv2_opt=grpc_api_configuration=gateway.yaml \
+	cbt.proto
 
 # Docker build target
 docker-build:

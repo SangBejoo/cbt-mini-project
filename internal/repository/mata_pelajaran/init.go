@@ -23,4 +23,8 @@ type MataPelajaranRepository interface {
 
 	// Get by name
 	GetByName(name string) (*entity.MataPelajaran, error)
+
+	// LMS sync methods
+	UpsertByLMSID(lmsID int64, name string, schoolID int64) error
+	DeleteByLMSID(lmsID int64) error
 }

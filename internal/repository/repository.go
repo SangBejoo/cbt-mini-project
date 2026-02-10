@@ -8,8 +8,6 @@ import (
 
 	"cbt-test-mini-project/init/config"
 	"cbt-test-mini-project/internal/entity"
-
-	"gorm.io/gorm"
 )
 
 // userLimitRepository implements UserLimitRepository
@@ -86,24 +84,28 @@ func (r *userLimitRepository) IncrementUsageAtomic(ctx context.Context, userID i
 
 	fmt.Printf("=== REPO: Executing atomic increment for user %d, type %s ===\n", userID, limitType)
 	// Atomic increment: update only if current_used < limit_value
-	result := r.db.WithContext(ctx).Model(&entity.UserLimit{}).
-		Where("user_id = ? AND limit_type = ? AND current_used < limit_value", userID, limitType).
-		Updates(map[string]interface{}{
-			"current_used": gorm.Expr("current_used + 1"),
-			"updated_at":   time.Now(),
-		})
-
-	if result.Error != nil {
-		fmt.Printf("=== REPO: Atomic increment failed: %v ===\n", result.Error)
-		return result.Error
+	query := `
+		UPDATE user_limits
+		SET current_used = current_used + 1, updated_at = $1
+		WHERE user_id = $2 AND limit_type = $3 AND current_used < limit_value
+	`
+	result, err := r.db.ExecContext(ctx, query, time.Now(), userID, limitType)
+	if err != nil {
+		fmt.Printf("=== REPO: Atomic increment failed: %v ===\n", err)
+		return err
 	}
 
-	if result.RowsAffected == 0 {
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
 		fmt.Printf("=== REPO: Atomic increment: no rows affected (limit exceeded) ===\n")
-		return gorm.ErrRecordNotFound // Indicates limit exceeded
+		return sql.ErrNoRows // Indicates limit exceeded
 	}
 
-	fmt.Printf("=== REPO: Atomic increment success, rows affected: %d ===\n", result.RowsAffected)
+	fmt.Printf("=== REPO: Atomic increment success, rows affected: %d ===\n", rowsAffected)
 
 	// Record usage for analytics - DISABLED FOR PERFORMANCE
 	// usage := &entity.UserLimitUsage{

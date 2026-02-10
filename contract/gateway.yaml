@@ -15,24 +15,6 @@ http:
     - selector: base.AuthService.Login
       post: /v1/auth/login
       body: "*"
-
-    - selector: base.AuthService.ListUsers
-      get: /v1/auth/users
-
-    - selector: base.AuthService.CreateUser
-      post: /v1/auth/users
-      body: "*"
-
-    - selector: base.AuthService.GetUser
-      get: /v1/auth/users/{id}
-
-    - selector: base.AuthService.UpdateUser
-      put: /v1/auth/users/{id}
-      body: "*"
-
-    - selector: base.AuthService.DeleteUser
-      delete: /v1/auth/users/{id}
-
     - selector: base.AuthService.GetProfile
       get: /v1/auth/profile
 
@@ -96,21 +78,10 @@ http:
       get: /v1/history/{session_token}/detail
 
     # ==================================================
-    # MATA PELAJARAN SERVICE (Admin)
+    # MATA PELAJARAN SERVICE (Read-only)
     # ==================================================
-    - selector: base.MataPelajaranService.CreateMataPelajaran
-      post: /v1/mata-pelajaran
-      body: "*"
-
     - selector: base.MataPelajaranService.GetMataPelajaran
       get: /v1/mata-pelajaran/{id}
-
-    - selector: base.MataPelajaranService.UpdateMataPelajaran
-      put: /v1/mata-pelajaran/{id}
-      body: "*"
-
-    - selector: base.MataPelajaranService.DeleteMataPelajaran
-      delete: /v1/mata-pelajaran/{id}
 
     - selector: base.MataPelajaranService.ListMataPelajaran
       get: /v1/mata-pelajaran
@@ -122,6 +93,8 @@ http:
     # Alias for subjects (mata pelajaran)
     - selector: base.MataPelajaranService.ListMataPelajaran
       get: /v1/subjects
+    # ==================================================
+    # MATERI SERVICE
     # ==================================================
     - selector: base.MateriService.CreateMateri
       post: /v1/materi
@@ -141,21 +114,10 @@ http:
       get: /v1/materi
 
     # ==================================================
-    # TINGKAT SERVICE (Admin)
+    # TINGKAT SERVICE (Read-only)
     # ==================================================
-    - selector: base.TingkatService.CreateTingkat
-      post: /v1/tingkat
-      body: "*"
-
     - selector: base.TingkatService.GetTingkat
       get: /v1/tingkat/{id}
-
-    - selector: base.TingkatService.UpdateTingkat
-      put: /v1/tingkat/{id}
-      body: "*"
-
-    - selector: base.TingkatService.DeleteTingkat
-      delete: /v1/tingkat/{id}
 
     - selector: base.TingkatService.ListTingkat
       get: /v1/tingkat

@@ -12,6 +12,7 @@ type User struct {
 	IsActive     bool      `json:"is_active" gorm:"not null;default:true"`
 	CreatedAt    time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt    time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+	LmsUserID    *int64    `json:"lms_user_id" gorm:"column:lms_user_id"`
 }
 
 // TableName specifies the table name for GORM

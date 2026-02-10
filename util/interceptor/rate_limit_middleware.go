@@ -125,7 +125,11 @@ func (m *RateLimitMiddleware) UnaryServerInterceptor(ctx context.Context, req in
 // checkRateLimitCached checks rate limit using cache-first approach
 func (m *RateLimitMiddleware) checkRateLimitCached(ctx context.Context, userID int, method string) (allowed bool, remaining int, resetTime time.Time, err error) {
 	span, _ := apm.StartSpan(ctx, "rate_limit_check_cached", "middleware")
-	defer span.End()
+	defer func() {
+		if span != nil {
+			span.End()
+		}
+	}()
 
 	// Determine limit type based on method
 	limitType := m.getLimitTypeForMethod(method)

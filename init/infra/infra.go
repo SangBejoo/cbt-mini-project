@@ -27,23 +27,18 @@ func (r *Repository) Close() error {
 }
 
 func LoadRepository(cfg config.Main) *Repository {
-	dbConn, err := db.OpenSQL(cfg)
+	sqlDB, err := db.OpenSQL(cfg)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	log.Println("✓ Database connected successfully")
-
-	sqlDB, err := dbConn.DB()
-	if err != nil {
-		log.Fatalf("Failed to get sql.DB: %v", err)
-	}
 
 	repo := &Repository{
 		SQLDB: sqlDB,
 	}
 
 	// Initialize user limit repository
-	repo.UserLimitRepo = userLimitRepo.NewUserLimitRepository(sqlDB, &cfg)
+	repo.UserLimitRepo = repository.NewUserLimitRepository(sqlDB, &cfg)
 
 	return repo
 }

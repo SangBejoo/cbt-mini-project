@@ -38,13 +38,13 @@ import (
 func InitGrpcDependency(server *grpc.Server, repo infra.Repository, config *config.Main) {
 	// Initialize repositories
 	authRepo := authRepo.NewAuthRepository(repo.SQLDB)
-	mataPelajaranRepo := mataPelajaranRepo.NewMataPelajaranRepository(repo.GormDB)
-	materiRepo := materiRepo.NewMateriRepository(repo.GormDB)
-	soalRepo := soalRepo.NewSoalRepository(repo.GormDB)
-	soalDragDropRepo := soalDragDropRepo.NewRepository(repo.GormDB)
-	testSessionRepo := testSessionRepo.NewTestSessionRepository(repo.GormDB)
+	mataPelajaranRepo := mataPelajaranRepo.NewMataPelajaranRepository(repo.SQLDB)
+	materiRepo := materiRepo.NewMateriRepository(repo.SQLDB)
+	soalRepo := soalRepo.NewSoalRepository(repo.SQLDB)
+	soalDragDropRepo := soalDragDropRepo.NewRepository(repo.SQLDB)
+	testSessionRepo := testSessionRepo.NewTestSessionRepository(repo.SQLDB)
 	historyRepo := historyRepo.NewHistoryRepository(repo.SQLDB)
-	tingkatRepo := tingkatRepo.NewTingkatRepository(repo.GormDB)
+	tingkatRepo := tingkatRepo.NewTingkatRepository(repo.SQLDB)
 
 	// Initialize usecases
 	authUsecase := authUsecase.NewAuthUsecase(authRepo, config)

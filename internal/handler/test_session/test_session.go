@@ -40,15 +40,27 @@ func NewTestSessionHandler(usecase test_session.TestSessionUsecase, materiUsecas
 
 // CreateTestSession creates a new test session
 func (h *testSessionHandler) CreateTestSession(ctx context.Context, req *base.CreateTestSessionRequest) (*base.TestSessionResponse, error) {
+	// DEBUG: Catch any panics and log them
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("PANIC in CreateTestSession: %v\n", r)
+		}
+	}()
+	
+	fmt.Printf("=== CreateTestSession called with req: %+v ===\n", req)
+	
 	// Get user_id from JWT context
 	user, err := interceptor.GetUserFromContext(ctx)
+	fmt.Printf("=== GetUserFromContext result: user=%+v, err=%v ===\n", user, err)
 	if err != nil {
 		// For REST gateway, extract token from metadata
 		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
+		fmt.Printf("=== ExtractTokenFromContext: token=%v, err=%v ===\n", token != "", extractErr)
 		if extractErr != nil {
 			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 		}
 		claims, validateErr := interceptor.ValidateToken(token)
+		fmt.Printf("=== ValidateToken: claims=%+v, err=%v ===\n", claims, validateErr)
 		if validateErr != nil {
 			return nil, status.Error(codes.Unauthenticated, "invalid token")
 		}
@@ -62,6 +74,7 @@ func (h *testSessionHandler) CreateTestSession(ctx context.Context, req *base.Cr
 	}
 
 	userID := user.Id
+	fmt.Printf("=== UserID: %d ===\n", userID)
 
 	// Get durasi_menit and jumlah_soal from materi if not provided (or use defaults if provided)
 	// For now we always use materi defaults - siswa tidak bisa custom durasi/jumlah soal
@@ -80,11 +93,14 @@ func (h *testSessionHandler) CreateTestSession(ctx context.Context, req *base.Cr
 
 	session, err := h.usecase.CreateTestSession(int(userID), int(req.IdTingkat), int(req.IdMataPelajaran), durasiMenit, jumlahSoal)
 	if err != nil {
-		// If session creation fails, we should decrement the usage counter
-		// For now, we'll rely on the rate limit middleware to handle this
-		// In a production system, you might want to implement a rollback mechanism
-		return nil, err
+		fmt.Printf("=== HANDLER: CreateTestSession FAILED: %v ===\n", err)
+		return nil, status.Error(codes.Internal, err.Error())
 	}
+	if session == nil {
+		fmt.Printf("=== HANDLER: CreateTestSession returned nil session without error ===\n")
+		return nil, status.Error(codes.Internal, "session creation returned nil")
+	}
+	fmt.Printf("=== HANDLER: CreateTestSession SUCCESS: sessionID=%d, token=%s ===\n", session.ID, session.SessionToken)
 
 	// Check user limits after successful session creation
 	fmt.Printf("=== HANDLER: About to increment usage for user %d ===\n", userID)
@@ -678,6 +694,10 @@ func (h *testSessionHandler) ListTestSessions(ctx context.Context, req *base.Lis
 
 // Helper function to convert entity to proto
 func (h *testSessionHandler) convertToProtoTestSession(session *entity.TestSession) *base.TestSession {
+	if session == nil {
+		return nil
+	}
+	
 	var waktuSelesai, batasWaktu *timestamppb.Timestamp
 	if session.WaktuSelesai != nil {
 		waktuSelesai = timestamppb.New(*session.WaktuSelesai)

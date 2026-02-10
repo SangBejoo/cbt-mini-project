@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.0--rc3
-// source: template.proto
+// source: cbt.proto
 
 package base
 
@@ -118,18 +118,12 @@ var Base_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "template.proto",
+	Metadata: "cbt.proto",
 }
 
 const (
-	AuthService_Login_FullMethodName        = "/base.AuthService/Login"
-	AuthService_RefreshToken_FullMethodName = "/base.AuthService/RefreshToken"
-	AuthService_GetProfile_FullMethodName   = "/base.AuthService/GetProfile"
-	AuthService_ListUsers_FullMethodName    = "/base.AuthService/ListUsers"
-	AuthService_GetUser_FullMethodName      = "/base.AuthService/GetUser"
-	AuthService_UpdateUser_FullMethodName   = "/base.AuthService/UpdateUser"
-	AuthService_DeleteUser_FullMethodName   = "/base.AuthService/DeleteUser"
-	AuthService_CreateUser_FullMethodName   = "/base.AuthService/CreateUser"
+	AuthService_Login_FullMethodName      = "/base.AuthService/Login"
+	AuthService_GetProfile_FullMethodName = "/base.AuthService/GetProfile"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -137,14 +131,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuthServiceClient interface {
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
-	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error)
 	GetProfile(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*UserResponse, error)
-	// User Management (Admin Only)
-	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
-	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*UserResponse, error)
-	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UserResponse, error)
-	DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error)
-	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*UserResponse, error)
 }
 
 type authServiceClient struct {
@@ -165,70 +152,10 @@ func (c *authServiceClient) Login(ctx context.Context, in *LoginRequest, opts ..
 	return out, nil
 }
 
-func (c *authServiceClient) RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RefreshTokenResponse)
-	err := c.cc.Invoke(ctx, AuthService_RefreshToken_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *authServiceClient) GetProfile(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*UserResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UserResponse)
 	err := c.cc.Invoke(ctx, AuthService_GetProfile_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListUsersResponse)
-	err := c.cc.Invoke(ctx, AuthService_ListUsers_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*UserResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UserResponse)
-	err := c.cc.Invoke(ctx, AuthService_GetUser_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UserResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UserResponse)
-	err := c.cc.Invoke(ctx, AuthService_UpdateUser_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MessageStatusResponse)
-	err := c.cc.Invoke(ctx, AuthService_DeleteUser_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*UserResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UserResponse)
-	err := c.cc.Invoke(ctx, AuthService_CreateUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -240,14 +167,7 @@ func (c *authServiceClient) CreateUser(ctx context.Context, in *CreateUserReques
 // for forward compatibility.
 type AuthServiceServer interface {
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
-	RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error)
 	GetProfile(context.Context, *emptypb.Empty) (*UserResponse, error)
-	// User Management (Admin Only)
-	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
-	GetUser(context.Context, *GetUserRequest) (*UserResponse, error)
-	UpdateUser(context.Context, *UpdateUserRequest) (*UserResponse, error)
-	DeleteUser(context.Context, *DeleteUserRequest) (*MessageStatusResponse, error)
-	CreateUser(context.Context, *CreateUserRequest) (*UserResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -261,26 +181,8 @@ type UnimplementedAuthServiceServer struct{}
 func (UnimplementedAuthServiceServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
 }
-func (UnimplementedAuthServiceServer) RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RefreshToken not implemented")
-}
 func (UnimplementedAuthServiceServer) GetProfile(context.Context, *emptypb.Empty) (*UserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetProfile not implemented")
-}
-func (UnimplementedAuthServiceServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListUsers not implemented")
-}
-func (UnimplementedAuthServiceServer) GetUser(context.Context, *GetUserRequest) (*UserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
-}
-func (UnimplementedAuthServiceServer) UpdateUser(context.Context, *UpdateUserRequest) (*UserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateUser not implemented")
-}
-func (UnimplementedAuthServiceServer) DeleteUser(context.Context, *DeleteUserRequest) (*MessageStatusResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteUser not implemented")
-}
-func (UnimplementedAuthServiceServer) CreateUser(context.Context, *CreateUserRequest) (*UserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -321,24 +223,6 @@ func _AuthService_Login_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_RefreshToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RefreshTokenRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).RefreshToken(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_RefreshToken_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).RefreshToken(ctx, req.(*RefreshTokenRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _AuthService_GetProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -357,96 +241,6 @@ func _AuthService_GetProfile_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_ListUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListUsersRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).ListUsers(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_ListUsers_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).ListUsers(ctx, req.(*ListUsersRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_GetUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).GetUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_GetUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).GetUser(ctx, req.(*GetUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_UpdateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).UpdateUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_UpdateUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).UpdateUser(ctx, req.(*UpdateUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_DeleteUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).DeleteUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_DeleteUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).DeleteUser(ctx, req.(*DeleteUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_CreateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).CreateUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_CreateUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).CreateUser(ctx, req.(*CreateUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -459,54 +253,24 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AuthService_Login_Handler,
 		},
 		{
-			MethodName: "RefreshToken",
-			Handler:    _AuthService_RefreshToken_Handler,
-		},
-		{
 			MethodName: "GetProfile",
 			Handler:    _AuthService_GetProfile_Handler,
 		},
-		{
-			MethodName: "ListUsers",
-			Handler:    _AuthService_ListUsers_Handler,
-		},
-		{
-			MethodName: "GetUser",
-			Handler:    _AuthService_GetUser_Handler,
-		},
-		{
-			MethodName: "UpdateUser",
-			Handler:    _AuthService_UpdateUser_Handler,
-		},
-		{
-			MethodName: "DeleteUser",
-			Handler:    _AuthService_DeleteUser_Handler,
-		},
-		{
-			MethodName: "CreateUser",
-			Handler:    _AuthService_CreateUser_Handler,
-		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "template.proto",
+	Metadata: "cbt.proto",
 }
 
 const (
-	MataPelajaranService_CreateMataPelajaran_FullMethodName = "/base.MataPelajaranService/CreateMataPelajaran"
-	MataPelajaranService_GetMataPelajaran_FullMethodName    = "/base.MataPelajaranService/GetMataPelajaran"
-	MataPelajaranService_UpdateMataPelajaran_FullMethodName = "/base.MataPelajaranService/UpdateMataPelajaran"
-	MataPelajaranService_DeleteMataPelajaran_FullMethodName = "/base.MataPelajaranService/DeleteMataPelajaran"
-	MataPelajaranService_ListMataPelajaran_FullMethodName   = "/base.MataPelajaranService/ListMataPelajaran"
+	MataPelajaranService_GetMataPelajaran_FullMethodName  = "/base.MataPelajaranService/GetMataPelajaran"
+	MataPelajaranService_ListMataPelajaran_FullMethodName = "/base.MataPelajaranService/ListMataPelajaran"
 )
 
 // MataPelajaranServiceClient is the client API for MataPelajaranService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MataPelajaranServiceClient interface {
-	CreateMataPelajaran(ctx context.Context, in *CreateMataPelajaranRequest, opts ...grpc.CallOption) (*MataPelajaranResponse, error)
 	GetMataPelajaran(ctx context.Context, in *GetMataPelajaranRequest, opts ...grpc.CallOption) (*MataPelajaranResponse, error)
-	UpdateMataPelajaran(ctx context.Context, in *UpdateMataPelajaranRequest, opts ...grpc.CallOption) (*MataPelajaranResponse, error)
-	DeleteMataPelajaran(ctx context.Context, in *DeleteMataPelajaranRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error)
 	ListMataPelajaran(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListMataPelajaranResponse, error)
 }
 
@@ -518,40 +282,10 @@ func NewMataPelajaranServiceClient(cc grpc.ClientConnInterface) MataPelajaranSer
 	return &mataPelajaranServiceClient{cc}
 }
 
-func (c *mataPelajaranServiceClient) CreateMataPelajaran(ctx context.Context, in *CreateMataPelajaranRequest, opts ...grpc.CallOption) (*MataPelajaranResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MataPelajaranResponse)
-	err := c.cc.Invoke(ctx, MataPelajaranService_CreateMataPelajaran_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *mataPelajaranServiceClient) GetMataPelajaran(ctx context.Context, in *GetMataPelajaranRequest, opts ...grpc.CallOption) (*MataPelajaranResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MataPelajaranResponse)
 	err := c.cc.Invoke(ctx, MataPelajaranService_GetMataPelajaran_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *mataPelajaranServiceClient) UpdateMataPelajaran(ctx context.Context, in *UpdateMataPelajaranRequest, opts ...grpc.CallOption) (*MataPelajaranResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MataPelajaranResponse)
-	err := c.cc.Invoke(ctx, MataPelajaranService_UpdateMataPelajaran_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *mataPelajaranServiceClient) DeleteMataPelajaran(ctx context.Context, in *DeleteMataPelajaranRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MessageStatusResponse)
-	err := c.cc.Invoke(ctx, MataPelajaranService_DeleteMataPelajaran_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -572,10 +306,7 @@ func (c *mataPelajaranServiceClient) ListMataPelajaran(ctx context.Context, in *
 // All implementations must embed UnimplementedMataPelajaranServiceServer
 // for forward compatibility.
 type MataPelajaranServiceServer interface {
-	CreateMataPelajaran(context.Context, *CreateMataPelajaranRequest) (*MataPelajaranResponse, error)
 	GetMataPelajaran(context.Context, *GetMataPelajaranRequest) (*MataPelajaranResponse, error)
-	UpdateMataPelajaran(context.Context, *UpdateMataPelajaranRequest) (*MataPelajaranResponse, error)
-	DeleteMataPelajaran(context.Context, *DeleteMataPelajaranRequest) (*MessageStatusResponse, error)
 	ListMataPelajaran(context.Context, *emptypb.Empty) (*ListMataPelajaranResponse, error)
 	mustEmbedUnimplementedMataPelajaranServiceServer()
 }
@@ -587,17 +318,8 @@ type MataPelajaranServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedMataPelajaranServiceServer struct{}
 
-func (UnimplementedMataPelajaranServiceServer) CreateMataPelajaran(context.Context, *CreateMataPelajaranRequest) (*MataPelajaranResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateMataPelajaran not implemented")
-}
 func (UnimplementedMataPelajaranServiceServer) GetMataPelajaran(context.Context, *GetMataPelajaranRequest) (*MataPelajaranResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMataPelajaran not implemented")
-}
-func (UnimplementedMataPelajaranServiceServer) UpdateMataPelajaran(context.Context, *UpdateMataPelajaranRequest) (*MataPelajaranResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateMataPelajaran not implemented")
-}
-func (UnimplementedMataPelajaranServiceServer) DeleteMataPelajaran(context.Context, *DeleteMataPelajaranRequest) (*MessageStatusResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteMataPelajaran not implemented")
 }
 func (UnimplementedMataPelajaranServiceServer) ListMataPelajaran(context.Context, *emptypb.Empty) (*ListMataPelajaranResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListMataPelajaran not implemented")
@@ -623,24 +345,6 @@ func RegisterMataPelajaranServiceServer(s grpc.ServiceRegistrar, srv MataPelajar
 	s.RegisterService(&MataPelajaranService_ServiceDesc, srv)
 }
 
-func _MataPelajaranService_CreateMataPelajaran_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateMataPelajaranRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MataPelajaranServiceServer).CreateMataPelajaran(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MataPelajaranService_CreateMataPelajaran_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MataPelajaranServiceServer).CreateMataPelajaran(ctx, req.(*CreateMataPelajaranRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _MataPelajaranService_GetMataPelajaran_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetMataPelajaranRequest)
 	if err := dec(in); err != nil {
@@ -655,42 +359,6 @@ func _MataPelajaranService_GetMataPelajaran_Handler(srv interface{}, ctx context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MataPelajaranServiceServer).GetMataPelajaran(ctx, req.(*GetMataPelajaranRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _MataPelajaranService_UpdateMataPelajaran_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateMataPelajaranRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MataPelajaranServiceServer).UpdateMataPelajaran(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MataPelajaranService_UpdateMataPelajaran_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MataPelajaranServiceServer).UpdateMataPelajaran(ctx, req.(*UpdateMataPelajaranRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _MataPelajaranService_DeleteMataPelajaran_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteMataPelajaranRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MataPelajaranServiceServer).DeleteMataPelajaran(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MataPelajaranService_DeleteMataPelajaran_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MataPelajaranServiceServer).DeleteMataPelajaran(ctx, req.(*DeleteMataPelajaranRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -721,20 +389,8 @@ var MataPelajaranService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*MataPelajaranServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CreateMataPelajaran",
-			Handler:    _MataPelajaranService_CreateMataPelajaran_Handler,
-		},
-		{
 			MethodName: "GetMataPelajaran",
 			Handler:    _MataPelajaranService_GetMataPelajaran_Handler,
-		},
-		{
-			MethodName: "UpdateMataPelajaran",
-			Handler:    _MataPelajaranService_UpdateMataPelajaran_Handler,
-		},
-		{
-			MethodName: "DeleteMataPelajaran",
-			Handler:    _MataPelajaranService_DeleteMataPelajaran_Handler,
 		},
 		{
 			MethodName: "ListMataPelajaran",
@@ -742,7 +398,7 @@ var MataPelajaranService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "template.proto",
+	Metadata: "cbt.proto",
 }
 
 const (
@@ -996,25 +652,19 @@ var MateriService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "template.proto",
+	Metadata: "cbt.proto",
 }
 
 const (
-	TingkatService_CreateTingkat_FullMethodName = "/base.TingkatService/CreateTingkat"
-	TingkatService_GetTingkat_FullMethodName    = "/base.TingkatService/GetTingkat"
-	TingkatService_UpdateTingkat_FullMethodName = "/base.TingkatService/UpdateTingkat"
-	TingkatService_DeleteTingkat_FullMethodName = "/base.TingkatService/DeleteTingkat"
-	TingkatService_ListTingkat_FullMethodName   = "/base.TingkatService/ListTingkat"
+	TingkatService_GetTingkat_FullMethodName  = "/base.TingkatService/GetTingkat"
+	TingkatService_ListTingkat_FullMethodName = "/base.TingkatService/ListTingkat"
 )
 
 // TingkatServiceClient is the client API for TingkatService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TingkatServiceClient interface {
-	CreateTingkat(ctx context.Context, in *CreateTingkatRequest, opts ...grpc.CallOption) (*TingkatResponse, error)
 	GetTingkat(ctx context.Context, in *GetTingkatRequest, opts ...grpc.CallOption) (*TingkatResponse, error)
-	UpdateTingkat(ctx context.Context, in *UpdateTingkatRequest, opts ...grpc.CallOption) (*TingkatResponse, error)
-	DeleteTingkat(ctx context.Context, in *DeleteTingkatRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error)
 	ListTingkat(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListTingkatResponse, error)
 }
 
@@ -1026,40 +676,10 @@ func NewTingkatServiceClient(cc grpc.ClientConnInterface) TingkatServiceClient {
 	return &tingkatServiceClient{cc}
 }
 
-func (c *tingkatServiceClient) CreateTingkat(ctx context.Context, in *CreateTingkatRequest, opts ...grpc.CallOption) (*TingkatResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TingkatResponse)
-	err := c.cc.Invoke(ctx, TingkatService_CreateTingkat_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *tingkatServiceClient) GetTingkat(ctx context.Context, in *GetTingkatRequest, opts ...grpc.CallOption) (*TingkatResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(TingkatResponse)
 	err := c.cc.Invoke(ctx, TingkatService_GetTingkat_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *tingkatServiceClient) UpdateTingkat(ctx context.Context, in *UpdateTingkatRequest, opts ...grpc.CallOption) (*TingkatResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TingkatResponse)
-	err := c.cc.Invoke(ctx, TingkatService_UpdateTingkat_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *tingkatServiceClient) DeleteTingkat(ctx context.Context, in *DeleteTingkatRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MessageStatusResponse)
-	err := c.cc.Invoke(ctx, TingkatService_DeleteTingkat_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1080,10 +700,7 @@ func (c *tingkatServiceClient) ListTingkat(ctx context.Context, in *emptypb.Empt
 // All implementations must embed UnimplementedTingkatServiceServer
 // for forward compatibility.
 type TingkatServiceServer interface {
-	CreateTingkat(context.Context, *CreateTingkatRequest) (*TingkatResponse, error)
 	GetTingkat(context.Context, *GetTingkatRequest) (*TingkatResponse, error)
-	UpdateTingkat(context.Context, *UpdateTingkatRequest) (*TingkatResponse, error)
-	DeleteTingkat(context.Context, *DeleteTingkatRequest) (*MessageStatusResponse, error)
 	ListTingkat(context.Context, *emptypb.Empty) (*ListTingkatResponse, error)
 	mustEmbedUnimplementedTingkatServiceServer()
 }
@@ -1095,17 +712,8 @@ type TingkatServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedTingkatServiceServer struct{}
 
-func (UnimplementedTingkatServiceServer) CreateTingkat(context.Context, *CreateTingkatRequest) (*TingkatResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateTingkat not implemented")
-}
 func (UnimplementedTingkatServiceServer) GetTingkat(context.Context, *GetTingkatRequest) (*TingkatResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTingkat not implemented")
-}
-func (UnimplementedTingkatServiceServer) UpdateTingkat(context.Context, *UpdateTingkatRequest) (*TingkatResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateTingkat not implemented")
-}
-func (UnimplementedTingkatServiceServer) DeleteTingkat(context.Context, *DeleteTingkatRequest) (*MessageStatusResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteTingkat not implemented")
 }
 func (UnimplementedTingkatServiceServer) ListTingkat(context.Context, *emptypb.Empty) (*ListTingkatResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListTingkat not implemented")
@@ -1131,24 +739,6 @@ func RegisterTingkatServiceServer(s grpc.ServiceRegistrar, srv TingkatServiceSer
 	s.RegisterService(&TingkatService_ServiceDesc, srv)
 }
 
-func _TingkatService_CreateTingkat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateTingkatRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TingkatServiceServer).CreateTingkat(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: TingkatService_CreateTingkat_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TingkatServiceServer).CreateTingkat(ctx, req.(*CreateTingkatRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _TingkatService_GetTingkat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetTingkatRequest)
 	if err := dec(in); err != nil {
@@ -1163,42 +753,6 @@ func _TingkatService_GetTingkat_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TingkatServiceServer).GetTingkat(ctx, req.(*GetTingkatRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _TingkatService_UpdateTingkat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateTingkatRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TingkatServiceServer).UpdateTingkat(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: TingkatService_UpdateTingkat_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TingkatServiceServer).UpdateTingkat(ctx, req.(*UpdateTingkatRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _TingkatService_DeleteTingkat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteTingkatRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TingkatServiceServer).DeleteTingkat(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: TingkatService_DeleteTingkat_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TingkatServiceServer).DeleteTingkat(ctx, req.(*DeleteTingkatRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1229,20 +783,8 @@ var TingkatService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*TingkatServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CreateTingkat",
-			Handler:    _TingkatService_CreateTingkat_Handler,
-		},
-		{
 			MethodName: "GetTingkat",
 			Handler:    _TingkatService_GetTingkat_Handler,
-		},
-		{
-			MethodName: "UpdateTingkat",
-			Handler:    _TingkatService_UpdateTingkat_Handler,
-		},
-		{
-			MethodName: "DeleteTingkat",
-			Handler:    _TingkatService_DeleteTingkat_Handler,
 		},
 		{
 			MethodName: "ListTingkat",
@@ -1250,7 +792,7 @@ var TingkatService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "template.proto",
+	Metadata: "cbt.proto",
 }
 
 const (
@@ -1656,7 +1198,7 @@ var SoalService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "template.proto",
+	Metadata: "cbt.proto",
 }
 
 const (
@@ -1910,7 +1452,7 @@ var SoalDragDropService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "template.proto",
+	Metadata: "cbt.proto",
 }
 
 const (
@@ -2324,7 +1866,7 @@ var TestSessionService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "template.proto",
+	Metadata: "cbt.proto",
 }
 
 const (
@@ -2464,5 +2006,5 @@ var HistoryService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "template.proto",
+	Metadata: "cbt.proto",
 }

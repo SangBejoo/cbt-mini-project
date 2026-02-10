@@ -20,4 +20,8 @@ type TingkatRepository interface {
 
 	// List all
 	List(limit, offset int) ([]entity.Tingkat, int, error)
+
+	// LMS sync methods
+	UpsertByLMSID(lmsID int64, name string) error
+	DeleteByLMSID(lmsID int64) error
 }

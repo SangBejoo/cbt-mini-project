@@ -36,7 +36,9 @@ func NewUserLimitUsecase(userLimitRepo repository.UserLimitRepository) UserLimit
 // CheckLimit checks if a user is within their limit for a specific type
 func (u *userLimitUsecase) CheckLimit(ctx context.Context, userID int, limitType string) (*entity.UserLimit, error) {
 	span, ctx := apm.StartSpan(ctx, "check_limit", "usecase")
-	defer span.End()
+	if span != nil {
+		defer span.End()
+	}
 
 	limit, err := u.userLimitRepo.GetOrCreateLimit(ctx, userID, limitType)
 	if err != nil {
@@ -59,7 +61,9 @@ func (u *userLimitUsecase) CheckLimit(ctx context.Context, userID int, limitType
 // IncrementUsage increments the usage counter for a limit type
 func (u *userLimitUsecase) IncrementUsage(ctx context.Context, userID int, limitType string, resourceID *int) error {
 	span, ctx := apm.StartSpan(ctx, "increment_usage", "usecase")
-	defer span.End()
+	if span != nil {
+		defer span.End()
+	}
 
 	fmt.Printf("=== USECASE: IncrementUsage called for user %d, type %s ===\n", userID, limitType)
 	// Use atomic increment to prevent race conditions
@@ -78,7 +82,9 @@ func (u *userLimitUsecase) IncrementUsage(ctx context.Context, userID int, limit
 // GetUserLimits gets all limits for a user
 func (u *userLimitUsecase) GetUserLimits(ctx context.Context, userID int) ([]*entity.UserLimit, error) {
 	span, ctx := apm.StartSpan(ctx, "get_user_limits", "usecase")
-	defer span.End()
+	if span != nil {
+		defer span.End()
+	}
 
 	limits, err := u.userLimitRepo.GetLimitsByUser(ctx, userID)
 	if err != nil {
@@ -103,7 +109,9 @@ func (u *userLimitUsecase) GetUserLimits(ctx context.Context, userID int) ([]*en
 // GetUsageHistory gets usage history for a user and limit type
 func (u *userLimitUsecase) GetUsageHistory(ctx context.Context, userID int, limitType string, days int) ([]*entity.UserLimitUsage, error) {
 	span, ctx := apm.StartSpan(ctx, "get_usage_history", "usecase")
-	defer span.End()
+	if span != nil {
+		defer span.End()
+	}
 
 	since := time.Now().AddDate(0, 0, -days)
 	usages, err := u.userLimitRepo.GetUsageHistory(ctx, userID, limitType, since)
@@ -117,7 +125,9 @@ func (u *userLimitUsecase) GetUsageHistory(ctx context.Context, userID int, limi
 // ResetLimit manually resets a user's limit (admin function)
 func (u *userLimitUsecase) ResetLimit(ctx context.Context, userID int, limitType string) error {
 	span, ctx := apm.StartSpan(ctx, "reset_limit", "usecase")
-	defer span.End()
+	if span != nil {
+		defer span.End()
+	}
 
 	limit, err := u.userLimitRepo.GetOrCreateLimit(ctx, userID, limitType)
 	if err != nil {

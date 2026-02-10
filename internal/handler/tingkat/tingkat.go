@@ -89,9 +89,14 @@ func (h *tingkatHandler) ListTingkat(ctx context.Context, req *emptypb.Empty) (*
 
 	var tingkatList []*base.Tingkat
 	for _, t := range tingkats {
+		var lmsLevelID int64
+		if t.LmsLevelID != nil {
+			lmsLevelID = *t.LmsLevelID
+		}
 		tingkatList = append(tingkatList, &base.Tingkat{
-			Id:   int32(t.ID),
-			Nama: t.Nama,
+			Id:         int32(t.ID),
+			Nama:       t.Nama,
+			LmsLevelId: lmsLevelID,
 		})
 	}
 

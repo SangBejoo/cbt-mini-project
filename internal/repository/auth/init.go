@@ -16,6 +16,9 @@ type AuthRepository interface {
 	DeleteUser(ctx context.Context, id int32) error
 	ListUsers(ctx context.Context, role int32, statusFilter int32, limit, offset int) ([]*base.User, int, error)
 	CheckUserHasTestSessions(ctx context.Context, id int32) (bool, error)
+
+	// LMS sync methods
+	FindOrCreateByLMSID(ctx context.Context, lmsID int64, email, name string, role int32) (*base.User, error)
 }
 
 // InitAuthRepository initializes the auth repository
