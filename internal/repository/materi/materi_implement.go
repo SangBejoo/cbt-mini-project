@@ -3,6 +3,7 @@ package materi
 import (
 	"cbt-test-mini-project/internal/entity"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 )
 
@@ -18,9 +19,11 @@ func NewMateriRepository(db *sql.DB) MateriRepository {
 
 // Create a new materi
 func (r *materiRepositoryImpl) Create(materi *entity.Materi) error {
-	query := `INSERT INTO materi (id_mata_pelajaran, id_tingkat, nama, is_active, default_durasi_menit, default_jumlah_soal, lms_module_id, lms_class_id) 
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
-	err := r.db.QueryRow(query, materi.IDMataPelajaran, materi.IDTingkat, materi.Nama, materi.IsActive, materi.DefaultDurasiMenit, materi.DefaultJumlahSoal, materi.LmsModuleID, materi.LmsClassID).Scan(&materi.ID)
+query := `INSERT INTO materi (id_mata_pelajaran, id_tingkat, nama, is_active, default_durasi_menit, default_jumlah_soal, lms_module_id, lms_class_id, owner_user_id, school_id, labels) 
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
+
+	labelsJSON, _ := json.Marshal(materi.Labels)
+	err := r.db.QueryRow(query, materi.IDMataPelajaran, materi.IDTingkat, materi.Nama, materi.IsActive, materi.DefaultDurasiMenit, materi.DefaultJumlahSoal, materi.LmsModuleID, materi.LmsClassID, materi.OwnerUserID, materi.SchoolID, string(labelsJSON)).Scan(&materi.ID)
 	return err
 }
 
@@ -28,21 +31,28 @@ func (r *materiRepositoryImpl) Create(materi *entity.Materi) error {
 func (r *materiRepositoryImpl) GetByID(id int) (*entity.Materi, error) {
 	var materi entity.Materi
 	query := `
-		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id,
+		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id, m.owner_user_id, m.school_id, m.labels,
 		       mp.id, mp.nama, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.lms_level_id
 		FROM materi m
 		JOIN mata_pelajaran mp ON m.id_mata_pelajaran = mp.id
 		JOIN tingkat t ON m.id_tingkat = t.id
 		WHERE m.id = $1 AND m.is_active = true
-	`
+		`
+	var labelsSQL []byte
 	err := r.db.QueryRow(query, id).Scan(
-		&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsClassID,
+		&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsClassID, &materi.OwnerUserID, &materi.SchoolID, &labelsSQL,
 		&materi.MataPelajaran.ID, &materi.MataPelajaran.Nama, &materi.MataPelajaran.LmsSubjectID, &materi.MataPelajaran.LmsSchoolID, &materi.MataPelajaran.LmsClassID,
 		&materi.Tingkat.ID, &materi.Tingkat.Nama, &materi.Tingkat.LmsLevelID,
 	)
 	if err != nil {
 		return nil, err
+	}
+	if labelsSQL != nil {
+		var ls []string
+		if err := json.Unmarshal(labelsSQL, &ls); err == nil {
+			materi.Labels = ls
+		}
 	}
 	return &materi, nil
 }
@@ -96,7 +106,7 @@ func (r *materiRepositoryImpl) List(idMataPelajaran, idTingkat *int, limit, offs
 
 	// List query
 	listQuery := fmt.Sprintf(`
-		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id,
+		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id, m.owner_user_id, m.school_id, m.labels,
 		       mp.id, mp.nama, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.lms_level_id
 		FROM materi m
@@ -116,13 +126,20 @@ func (r *materiRepositoryImpl) List(idMataPelajaran, idTingkat *int, limit, offs
 
 	for rows.Next() {
 		var materi entity.Materi
+		var labelsSQL []byte
 		err := rows.Scan(
-			&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsClassID,
+			&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsClassID, &materi.OwnerUserID, &materi.SchoolID, &labelsSQL,
 			&materi.MataPelajaran.ID, &materi.MataPelajaran.Nama, &materi.MataPelajaran.LmsSubjectID, &materi.MataPelajaran.LmsSchoolID, &materi.MataPelajaran.LmsClassID,
 			&materi.Tingkat.ID, &materi.Tingkat.Nama, &materi.Tingkat.LmsLevelID,
 		)
 		if err != nil {
 			return nil, 0, err
+		}
+		if labelsSQL != nil {
+			var ls []string
+			if err := json.Unmarshal(labelsSQL, &ls); err == nil {
+				materi.Labels = ls
+			}
 		}
 		materis = append(materis, materi)
 	}
@@ -134,7 +151,7 @@ func (r *materiRepositoryImpl) List(idMataPelajaran, idTingkat *int, limit, offs
 func (r *materiRepositoryImpl) GetByMataPelajaranID(idMataPelajaran int) ([]entity.Materi, error) {
 	var materis []entity.Materi
 	query := `
-		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id,
+		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id, m.owner_user_id, m.school_id, m.labels,
 		       mp.id, mp.nama, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.lms_level_id
 		FROM materi m
@@ -151,13 +168,20 @@ func (r *materiRepositoryImpl) GetByMataPelajaranID(idMataPelajaran int) ([]enti
 
 	for rows.Next() {
 		var materi entity.Materi
+		var labelsSQL []byte
 		err := rows.Scan(
-			&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsClassID,
+			&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsClassID, &materi.OwnerUserID, &materi.SchoolID, &labelsSQL,
 			&materi.MataPelajaran.ID, &materi.MataPelajaran.Nama, &materi.MataPelajaran.LmsSubjectID, &materi.MataPelajaran.LmsSchoolID, &materi.MataPelajaran.LmsClassID,
 			&materi.Tingkat.ID, &materi.Tingkat.Nama, &materi.Tingkat.LmsLevelID,
 		)
 		if err != nil {
 			return nil, err
+		}
+		if labelsSQL != nil {
+			var ls []string
+			if err := json.Unmarshal(labelsSQL, &ls); err == nil {
+				materi.Labels = ls
+			}
 		}
 		materis = append(materis, materi)
 	}

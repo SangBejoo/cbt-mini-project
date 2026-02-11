@@ -3,9 +3,14 @@ package materi
 import (
 	base "cbt-test-mini-project/gen/proto"
 	"cbt-test-mini-project/internal/entity"
+	"cbt-test-mini-project/internal/usecase/mata_pelajaran"
 	"cbt-test-mini-project/internal/usecase/materi"
 	"cbt-test-mini-project/internal/usecase/soal"
+	"cbt-test-mini-project/util/interceptor"
 	"context"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // materiHandler implements base.MateriServiceServer
@@ -13,15 +18,28 @@ type materiHandler struct {
 	base.UnimplementedMateriServiceServer
 	usecase     materi.MateriUsecase
 	soalUsecase soal.SoalUsecase
+	mataUsecase mata_pelajaran.MataPelajaranUsecase
 }
 
 // NewMateriHandler creates a new MateriHandler
-func NewMateriHandler(usecase materi.MateriUsecase, soalUsecase soal.SoalUsecase) base.MateriServiceServer {
-	return &materiHandler{usecase: usecase, soalUsecase: soalUsecase}
+func NewMateriHandler(usecase materi.MateriUsecase, soalUsecase soal.SoalUsecase, mataUsecase mata_pelajaran.MataPelajaranUsecase) base.MateriServiceServer {
+	return &materiHandler{usecase: usecase, soalUsecase: soalUsecase, mataUsecase: mataUsecase}
 }
 
 // Helper function to convert entity.Materi to proto.Materi
 func (h *materiHandler) convertToProtoMateri(m *entity.Materi, questionCount int) *base.Materi {
+	var labels []string
+	if m.Labels != nil {
+		labels = m.Labels
+	}
+	var owner int64
+	if m.OwnerUserID != nil {
+		owner = int64(*m.OwnerUserID)
+	}
+	var school int64
+	if m.SchoolID != nil {
+		school = *m.SchoolID
+	}
 	return &base.Materi{
 		Id:                    int32(m.ID),
 		MataPelajaran:         &base.MataPelajaran{Id: int32(m.MataPelajaran.ID), Nama: m.MataPelajaran.Nama},
@@ -31,12 +49,46 @@ func (h *materiHandler) convertToProtoMateri(m *entity.Materi, questionCount int
 		DefaultDurasiMenit:    int32(m.DefaultDurasiMenit),
 		DefaultJumlahSoal:     int32(m.DefaultJumlahSoal),
 		JumlahSoalReal:        int32(questionCount),
+		OwnerUserId:           owner,
+		SchoolId:              school,
+		Labels:                labels,
 	}
 }
 
 // CreateMateri creates a new materi
 func (h *materiHandler) CreateMateri(ctx context.Context, req *base.CreateMateriRequest) (*base.MateriResponse, error) {
-	m, err := h.usecase.CreateMateri(int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat), req.IsActive, int(req.DefaultDurasiMenit), int(req.DefaultJumlahSoal))
+	// Get user from context
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		// REST gateway fallback
+		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
+		if extractErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+		}
+		claims, validateErr := interceptor.ValidateToken(token)
+		if validateErr != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
+		user = &base.User{Id: claims.UserID}
+	}
+	ownerUserID := int(user.Id)
+
+	// Resolve school_id from mata pelajaran if available
+	var schoolID int64
+	if req.IdMataPelajaran != 0 {
+		mp, err := h.mataUsecase.GetMataPelajaran(int(req.IdMataPelajaran))
+		if err == nil && mp != nil && mp.LmsSchoolID != nil {
+			schoolID = *mp.LmsSchoolID
+		}
+	}
+
+	// Collect labels from request
+	var labels []string
+	if len(req.Labels) > 0 {
+		labels = req.Labels
+	}
+
+	m, err := h.usecase.CreateMateri(int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat), req.IsActive, int(req.DefaultDurasiMenit), int(req.DefaultJumlahSoal), ownerUserID, schoolID, labels)
 	if err != nil {
 		return nil, err
 	}

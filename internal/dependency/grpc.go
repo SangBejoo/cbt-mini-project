@@ -61,7 +61,7 @@ func InitGrpcDependency(server *grpc.Server, repo infra.Repository, config *conf
 	baseServer := baseGrpcServer.NewBaseHandler()
 	authServer := authHandler.NewAuthHandler(authUsecase)
 	mataPelajaranServer := mataPelajaranHandler.NewMataPelajaranHandler(mataPelajaranUsecase)
-	materiServer := materiHandler.NewMateriHandler(materiUsecase, soalUsecase)
+	materiServer := materiHandler.NewMateriHandler(materiUsecase, soalUsecase, mataPelajaranUsecase)
 	soalServer := soalHandler.NewSoalHandler(soalUsecase)
 	soalDragDropServer := soalDragDropHandler.NewGrpcHandler(soalDragDropUsecase)
 	testSessionServer := testSessionHandler.NewTestSessionHandler(testSessionUsecase, materiUsecase, tingkatUsecase, userLimitUsecase)

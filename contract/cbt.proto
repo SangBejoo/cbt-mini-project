@@ -310,6 +310,9 @@ message Materi {
     int32 jumlah_soal_real = 8;  // Actual question count from database
     int64 lms_module_id = 9;
     int64 lms_class_id = 10;
+    int64 owner_user_id = 11; // ID dari guru pembuat materi
+    int64 school_id = 12; // Sekolah pemilik materi (multi-tenancy)
+    repeated string labels = 13; // Tags / labels untuk materi
 }
 
 message CreateMateriRequest {
@@ -320,6 +323,7 @@ message CreateMateriRequest {
     int32 default_durasi_menit = 5;
     int32 default_jumlah_soal = 6;
     int64 lms_class_id = 7;  // Class scope for the materi
+    repeated string labels = 8; // Optional labels/tags for the materi
 }
 
 message GetMateriRequest {

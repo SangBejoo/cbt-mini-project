@@ -17,7 +17,7 @@ func NewMateriUsecase(repo materi.MateriRepository) MateriUsecase {
 }
 
 // CreateMateri creates a new materi
-func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, idTingkat int, isActive bool, defaultDurasiMenit, defaultJumlahSoal int) (*entity.Materi, error) {
+func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, idTingkat int, isActive bool, defaultDurasiMenit, defaultJumlahSoal int, ownerUserID int, schoolID int64, labels []string) (*entity.Materi, error) {
 	if nama == "" {
 		return nil, errors.New("nama cannot be empty")
 	}
@@ -33,6 +33,9 @@ func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, idTin
 	if defaultJumlahSoal < 1 {
 		defaultJumlahSoal = 20
 	}
+	if ownerUserID < 1 {
+		return nil, errors.New("owner_user_id is required")
+	}
 
 	m := &entity.Materi{
 		IDMataPelajaran:    idMataPelajaran,
@@ -41,6 +44,9 @@ func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, idTin
 		IsActive:           isActive,
 		DefaultDurasiMenit: defaultDurasiMenit,
 		DefaultJumlahSoal:  defaultJumlahSoal,
+		OwnerUserID:        &ownerUserID,
+		SchoolID:           &schoolID,
+		Labels:             labels,
 	}
 	err := u.repo.Create(m)
 	if err != nil {

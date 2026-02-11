@@ -47,6 +47,7 @@ func RunGRPCServer(ctx context.Context, cfg config.Main, repo infra.Repository) 
 			apmgrpc.NewUnaryServerInterceptor(),
 			jwtMiddleware.UnaryServerInterceptor(),
 			rateLimitMiddleware.UnaryServerInterceptor,
+			interceptor.GRPCValidationInterceptor(), // Add validation
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandlerContext(grpcRecoveryHandler)),
 		),
 		grpc.ChainStreamInterceptor(

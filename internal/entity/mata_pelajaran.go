@@ -26,6 +26,9 @@ type Materi struct {
 	DefaultJumlahSoal   int           `json:"default_jumlah_soal" gorm:"default:20"`
 	LmsModuleID         *int64        `json:"lms_module_id" gorm:"column:lms_module_id"`
 	LmsClassID          *int64        `json:"lms_class_id" gorm:"column:lms_class_id"`
+	OwnerUserID         *int          `json:"owner_user_id" gorm:"column:owner_user_id"`
+	SchoolID            *int64        `json:"school_id" gorm:"column:school_id"`
+	Labels              []string      `json:"labels" gorm:"type:jsonb;default:'[]'"`
 }
 
 func (Materi) TableName() string { return "materi" }

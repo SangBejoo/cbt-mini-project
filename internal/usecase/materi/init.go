@@ -6,7 +6,7 @@ import (
 
 // MateriUsecase defines the interface for Materi usecase operations
 type MateriUsecase interface {
-	CreateMateri(idMataPelajaran int, nama string, idTingkat int, isActive bool, defaultDurasiMenit, defaultJumlahSoal int) (*entity.Materi, error)
+	CreateMateri(idMataPelajaran int, nama string, idTingkat int, isActive bool, defaultDurasiMenit, defaultJumlahSoal int, ownerUserID int, schoolID int64, labels []string) (*entity.Materi, error)
 	GetMateri(id int) (*entity.Materi, error)
 	UpdateMateri(id, idMataPelajaran int, nama string, idTingkat int, isActive bool, defaultDurasiMenit, defaultJumlahSoal int) (*entity.Materi, error)
 	DeleteMateri(id int) error

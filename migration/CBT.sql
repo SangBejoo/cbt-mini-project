@@ -75,6 +75,9 @@ CREATE TABLE "materi" (
   "is_active" boolean NOT NULL DEFAULT true,
   "default_durasi_menit" int NOT NULL DEFAULT 60,
   "default_jumlah_soal" int NOT NULL DEFAULT 20,
+  "owner_user_id" int DEFAULT NULL,
+  "school_id" int DEFAULT NULL,
+  "labels" json DEFAULT '[]',
   "created_at" timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP),
   "updated_at" timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 );
@@ -263,6 +266,10 @@ CREATE INDEX "idx_materi_active_mata_pelajaran" ON "materi" ("is_active", "id_ma
 CREATE INDEX "idx_materi_composite" ON "materi" ("id_mata_pelajaran", "id_tingkat", "is_active");
 
 CREATE INDEX "idx_materi_active" ON "materi" ("is_active");
+
+CREATE INDEX "idx_materi_school" ON "materi" ("school_id");
+
+CREATE INDEX "idx_materi_owner_user" ON "materi" ("owner_user_id");
 
 CREATE INDEX "idx_soal_materi" ON "soal" ("id_materi");
 

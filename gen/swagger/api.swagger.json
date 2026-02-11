@@ -1909,6 +1909,13 @@
           "type": "string",
           "format": "int64",
           "title": "Class scope for the materi"
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "Optional labels/tags for the materi"
         }
       }
     },
@@ -2466,6 +2473,23 @@
         "lmsClassId": {
           "type": "string",
           "format": "int64"
+        },
+        "ownerUserId": {
+          "type": "string",
+          "format": "int64",
+          "title": "ID dari guru pembuat materi"
+        },
+        "schoolId": {
+          "type": "string",
+          "format": "int64",
+          "title": "Sekolah pemilik materi (multi-tenancy)"
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags / labels untuk materi"
         }
       }
     },
