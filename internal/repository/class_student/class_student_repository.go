@@ -14,6 +14,7 @@ type ClassStudentRepository interface {
 	GetStudentClasses(lmsUserID int64) ([]int64, error)
 	GetByClassAndUser(lmsClassID, lmsUserID int64) (*entity.ClassStudent, error)
 	GetStudentIDsByClassID(lmsClassID int64) ([]int64, error)
+	ListByClassID(lmsClassID int64) ([]entity.ClassStudent, error)
 }
 
 type classStudentRepository struct {
@@ -106,4 +107,25 @@ func (r *classStudentRepository) GetStudentIDsByClassID(lmsClassID int64) ([]int
 		studentIDs = append(studentIDs, studentID)
 	}
 	return studentIDs, rows.Err()
+}
+
+// ListByClassID returns detailed class-student rows for a class
+func (r *classStudentRepository) ListByClassID(lmsClassID int64) ([]entity.ClassStudent, error) {
+	query := `SELECT id, lms_class_id, lms_user_id, joined_at FROM class_students WHERE lms_class_id = $1 ORDER BY joined_at ASC`
+	rows, err := r.db.Query(query, lmsClassID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	students := make([]entity.ClassStudent, 0)
+	for rows.Next() {
+		var item entity.ClassStudent
+		if err := rows.Scan(&item.ID, &item.LMSClassID, &item.LMSUserID, &item.JoinedAt); err != nil {
+			return nil, err
+		}
+		students = append(students, item)
+	}
+
+	return students, rows.Err()
 }

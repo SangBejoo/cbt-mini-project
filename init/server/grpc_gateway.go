@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"net/smtp"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,8 +21,11 @@ import (
 	// Update this import path
 	"cbt-test-mini-project/init/config"
 	"cbt-test-mini-project/init/infra"
+	infraRedis "cbt-test-mini-project/init/infra/redis"
 	"cbt-test-mini-project/internal/dependency"
 	"cbt-test-mini-project/internal/event"
+	classRepo "cbt-test-mini-project/internal/repository/class"
+	classStudentRepo "cbt-test-mini-project/internal/repository/class_student"
 )
 
 // ShareEmailRequest represents the request payload for sharing results via email
@@ -48,6 +53,51 @@ type ShareEmailResponse struct {
 	Message string `json:"message"`
 }
 
+type SyncOpsHandler struct {
+	classRepo        classRepo.ClassRepository
+	classStudentRepo classStudentRepo.ClassStudentRepository
+	db               *sql.DB
+}
+
+func NewSyncOpsHandler(db *sql.DB) *SyncOpsHandler {
+	return &SyncOpsHandler{
+		classRepo:        classRepo.NewClassRepository(db),
+		classStudentRepo: classStudentRepo.NewClassStudentRepository(db),
+		db:               db,
+	}
+}
+
+type SyncHealthResponse struct {
+	Status    string    `json:"status"`
+	Database  string    `json:"database"`
+	Redis     string    `json:"redis"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+type SyncClassDTO struct {
+	LMSClassID  int64  `json:"lms_class_id"`
+	LMSSchoolID int64  `json:"lms_school_id"`
+	Name        string `json:"name"`
+	IsActive    bool   `json:"is_active"`
+}
+
+type SyncClassStudentDTO struct {
+	LMSClassID int64     `json:"lms_class_id"`
+	LMSUserID  int64     `json:"lms_user_id"`
+	JoinedAt   time.Time `json:"joined_at"`
+}
+
+type SyncClassesResponse struct {
+	Data  []SyncClassDTO `json:"data"`
+	Total int            `json:"total"`
+}
+
+type SyncClassStudentsResponse struct {
+	LMSClassID int64                `json:"lms_class_id"`
+	Data       []SyncClassStudentDTO `json:"data"`
+	Total      int                  `json:"total"`
+}
+
 func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repository, publisher *event.Publisher) (*http.Server, error) {
 	gwMux := runtime.NewServeMux(
 		runtime.WithIncomingHeaderMatcher(customHeaderMatcher),
@@ -64,9 +114,13 @@ func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repos
 
 	// Create a custom mux to handle both API and static files
 	mux := http.NewServeMux()
+	syncOpsHandler := NewSyncOpsHandler(repo.SQLDB)
 
 	// Custom endpoints
 	mux.HandleFunc("/v1/sessions/share-email", handleShareEmail)
+	mux.HandleFunc("/v1/sync/health", syncOpsHandler.HandleSyncHealth)
+	mux.HandleFunc("/v1/sync/classes", syncOpsHandler.HandleSyncClasses)
+	mux.HandleFunc("/v1/sync/classes/", syncOpsHandler.HandleSyncClassStudents)
 
 	// Serve static files (uploads)
 	fs := http.FileServer(http.Dir("uploads"))
@@ -163,6 +217,111 @@ func handleShareEmail(w http.ResponseWriter, r *http.Request) {
 			Message: "Failed to send email",
 		})
 	}
+}
+
+func (h *SyncOpsHandler) HandleSyncHealth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	dbStatus := "ok"
+	if err := h.db.PingContext(r.Context()); err != nil {
+		dbStatus = "error"
+	}
+
+	redisStatus := "disconnected"
+	if infraRedis.RedisClient != nil {
+		if _, err := infraRedis.RedisClient.Ping(r.Context()).Result(); err == nil {
+			redisStatus = "ok"
+		} else {
+			redisStatus = "error"
+		}
+	}
+
+	status := "ok"
+	if dbStatus != "ok" || redisStatus == "error" {
+		status = "degraded"
+	}
+
+	_ = json.NewEncoder(w).Encode(SyncHealthResponse{
+		Status:    status,
+		Database:  dbStatus,
+		Redis:     redisStatus,
+		Timestamp: time.Now(),
+	})
+}
+
+func (h *SyncOpsHandler) HandleSyncClasses(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	classes, err := h.classRepo.List()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "failed to list classes"})
+		return
+	}
+
+	result := make([]SyncClassDTO, 0, len(classes))
+	for _, item := range classes {
+		result = append(result, SyncClassDTO{
+			LMSClassID:  item.LMSClassID,
+			LMSSchoolID: item.LMSSchoolID,
+			Name:        item.Name,
+			IsActive:    item.IsActive,
+		})
+	}
+
+	_ = json.NewEncoder(w).Encode(SyncClassesResponse{Data: result, Total: len(result)})
+}
+
+func (h *SyncOpsHandler) HandleSyncClassStudents(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	path := strings.TrimPrefix(r.URL.Path, "/v1/sync/classes/")
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) != 2 || parts[1] != "students" {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid path, expected /v1/sync/classes/{lms_class_id}/students"})
+		return
+	}
+
+	lmsClassID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil || lmsClassID <= 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid lms_class_id"})
+		return
+	}
+
+	students, err := h.classStudentRepo.ListByClassID(lmsClassID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "failed to list class students"})
+		return
+	}
+
+	result := make([]SyncClassStudentDTO, 0, len(students))
+	for _, item := range students {
+		result = append(result, SyncClassStudentDTO{
+			LMSClassID: item.LMSClassID,
+			LMSUserID:  item.LMSUserID,
+			JoinedAt:   item.JoinedAt,
+		})
+	}
+
+	_ = json.NewEncoder(w).Encode(SyncClassStudentsResponse{LMSClassID: lmsClassID, Data: result, Total: len(result)})
 }
 
 // sendEmailNotification sends an email notification

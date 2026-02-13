@@ -18,7 +18,7 @@ SET default_tablespace = '';
 -- =============================================
 
 CREATE TYPE user_role_enum AS ENUM ('siswa', 'admin');
-CREATE TYPE test_session_status_enum AS ENUM ('ongoing', 'completed', 'timeout');
+CREATE TYPE test_session_status_enum AS ENUM ('scheduled', 'ongoing', 'completed', 'timeout');
 CREATE TYPE drag_type_enum AS ENUM ('ordering', 'matching');
 CREATE TYPE question_type_enum AS ENUM ('multiple_choice', 'drag_drop');
 
@@ -34,6 +34,7 @@ CREATE TABLE users (
     nama VARCHAR(100) NOT NULL,
     role user_role_enum NOT NULL DEFAULT 'siswa',
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    lms_user_id BIGINT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -42,56 +43,65 @@ CREATE INDEX idx_users_role ON users (role);
 CREATE INDEX idx_users_is_active ON users (is_active);
 CREATE INDEX idx_users_active_role ON users (is_active, role);
 CREATE INDEX idx_users_created_at ON users (created_at);
+CREATE INDEX idx_users_lms_id ON users (lms_user_id);
 
 -- Table: Mata Pelajaran
 CREATE TABLE mata_pelajaran (
     id SERIAL PRIMARY KEY,
     nama VARCHAR(50) NOT NULL UNIQUE,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    lms_subject_id BIGINT NULL,
+    lms_school_id BIGINT NULL,
+    lms_class_id BIGINT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_mata_pelajaran_is_active ON mata_pelajaran (is_active);
+CREATE UNIQUE INDEX uq_mata_pelajaran_lms_subject_id ON mata_pelajaran (lms_subject_id) WHERE lms_subject_id IS NOT NULL;
+CREATE INDEX idx_mp_school ON mata_pelajaran (lms_school_id);
+CREATE INDEX idx_mp_class ON mata_pelajaran (lms_class_id);
 
 -- Table: Tingkat
 CREATE TABLE tingkat (
     id SERIAL PRIMARY KEY,
     nama VARCHAR(50) NOT NULL UNIQUE,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    lms_level_id BIGINT NULL,
+    lms_school_id BIGINT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_tingkat_is_active ON tingkat (is_active);
+CREATE UNIQUE INDEX uq_tingkat_lms_level_id ON tingkat (lms_level_id) WHERE lms_level_id IS NOT NULL;
+CREATE INDEX idx_tingkat_school ON tingkat (lms_school_id);
 
 -- Table: Classes
 CREATE TABLE classes (
     id SERIAL PRIMARY KEY,
-    teacher_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    name VARCHAR(100) NOT NULL,
-    description TEXT NULL,
-    enrollment_code VARCHAR(20) UNIQUE,
+    lms_class_id BIGINT UNIQUE NOT NULL,
+    lms_school_id BIGINT NOT NULL,
+    name VARCHAR(255) NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_classes_teacher ON classes (teacher_id);
-CREATE INDEX idx_classes_code ON classes (enrollment_code);
+CREATE INDEX idx_classes_school ON classes (lms_school_id);
 CREATE INDEX idx_classes_is_active ON classes (is_active);
 
 -- Table: Class Students
 CREATE TABLE class_students (
     id SERIAL PRIMARY KEY,
-    class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (class_id, student_id)
+    lms_class_id BIGINT NOT NULL,
+    lms_user_id BIGINT NOT NULL,
+    joined_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (lms_class_id, lms_user_id)
 );
 
-CREATE INDEX idx_class_students_class ON class_students (class_id);
-CREATE INDEX idx_class_students_student ON class_students (student_id);
+CREATE INDEX idx_class_students_lms_class ON class_students (lms_class_id);
+CREATE INDEX idx_class_students_lms_user ON class_students (lms_user_id);
 
 -- =============================================
 -- CONTENT TABLES
@@ -106,6 +116,11 @@ CREATE TABLE materi (
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     default_durasi_menit INTEGER NOT NULL DEFAULT 60,
     default_jumlah_soal INTEGER NOT NULL DEFAULT 20,
+    lms_module_id BIGINT NULL,
+    lms_class_id BIGINT NULL,
+    owner_user_id INTEGER NULL,
+    school_id BIGINT NULL,
+    labels JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (id_mata_pelajaran, id_tingkat, nama)
@@ -117,6 +132,9 @@ CREATE INDEX idx_materi_is_active ON materi (is_active);
 CREATE INDEX idx_materi_active_tingkat ON materi (is_active, id_tingkat);
 CREATE INDEX idx_materi_active_mata_pelajaran ON materi (is_active, id_mata_pelajaran);
 CREATE INDEX idx_materi_composite ON materi (id_mata_pelajaran, id_tingkat, is_active);
+CREATE UNIQUE INDEX uq_materi_lms_module_id ON materi (lms_module_id) WHERE lms_module_id IS NOT NULL;
+CREATE INDEX idx_materi_class ON materi (lms_class_id);
+CREATE INDEX idx_materi_school ON materi (school_id);
 
 -- Table: Soal (Multiple Choice)
 CREATE TABLE soal (
