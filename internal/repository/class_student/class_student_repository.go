@@ -13,6 +13,7 @@ type ClassStudentRepository interface {
 	IsStudentInClass(lmsClassID, lmsUserID int64) (bool, error)
 	GetStudentClasses(lmsUserID int64) ([]int64, error)
 	GetByClassAndUser(lmsClassID, lmsUserID int64) (*entity.ClassStudent, error)
+	GetStudentIDsByClassID(lmsClassID int64) ([]int64, error)
 }
 
 type classStudentRepository struct {
@@ -85,4 +86,24 @@ func (r *classStudentRepository) GetByClassAndUser(lmsClassID, lmsUserID int64) 
 		return nil, err
 	}
 	return &cs, nil
+}
+
+// GetStudentIDsByClassID returns all student IDs enrolled in a class
+func (r *classStudentRepository) GetStudentIDsByClassID(lmsClassID int64) ([]int64, error) {
+	query := `SELECT lms_user_id FROM class_students WHERE lms_class_id = $1`
+	rows, err := r.db.Query(query, lmsClassID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var studentIDs []int64
+	for rows.Next() {
+		var studentID int64
+		if err := rows.Scan(&studentID); err != nil {
+			return nil, err
+		}
+		studentIDs = append(studentIDs, studentID)
+	}
+	return studentIDs, rows.Err()
 }

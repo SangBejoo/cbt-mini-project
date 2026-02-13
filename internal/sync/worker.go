@@ -216,13 +216,14 @@ func (w *SyncWorker) handleUserUpsert(payload string) {
 	slog.Info("Synced User from LMS", "id", p.ID, "email", p.Email)
 }
 
+// ExamAssignmentPayload represents the payload for exam assignment created events
 type ExamAssignmentPayload struct {
-	ID            int64     `json:"id"`
-	UserID        int64     `json:"user_id"`
-	ModuleID      int64     `json:"module_id"`
-	ScheduledTime time.Time `json:"scheduled_time"`
-	DurationMins  int       `json:"duration_mins"`
-	QuestionCount int       `json:"question_count"`
+	LMSAssignmentID int64  `json:"lms_assignment_id"`
+	LMSClassID      int64  `json:"lms_class_id"`
+	Title           string `json:"title"`
+	MaxScore        int    `json:"max_score"`
+	ModuleID        int64  `json:"module_id"`
+	ScheduledTime   string `json:"scheduled_time"`
 }
 
 func (w *SyncWorker) handleExamAssignmentCreated(payload string) {
@@ -231,24 +232,61 @@ func (w *SyncWorker) handleExamAssignmentCreated(payload string) {
 		slog.Error("failed to unmarshal exam assignment payload", "error", err)
 		return
 	}
-	
-	// Create test session for the assignment
-	userID := int(p.UserID)
-	session := &entity.TestSession{
-		UserID:          &userID,
-		IDMataPelajaran: int(p.ModuleID),
-		LMSAssignmentID: &p.ID,
-		WaktuMulai:      p.ScheduledTime,
-		DurasiMenit:     p.DurationMins,
-		TotalSoal:       &p.QuestionCount,
-		Status:          entity.TestStatusScheduled,
-	}
-	
-	if err := w.testSessionRepo.Create(session); err != nil {
-		slog.Error("failed to create test session from assignment", "assignment_id", p.ID, "error", err)
+
+	if p.ModuleID == 0 {
+		slog.Warn("skipping exam assignment sync: missing module_id", "assignment_id", p.LMSAssignmentID)
 		return
 	}
-	slog.Info("Created test session from LMS assignment", "assignment_id", p.ID, "user_id", p.UserID)
+
+	// 1. Get module (materi) details to get duration and question count
+	materi, err := w.materiRepo.GetByLMSID(p.ModuleID)
+	if err != nil {
+		slog.Error("failed to get materi details", "module_id", p.ModuleID, "error", err)
+		// Fallback defaults if not found? Or return?
+		// Better to return as we need valid config
+		return
+	}
+
+	// 2. Get all students in the class
+	studentIDs, err := w.classStudentRepo.GetStudentIDsByClassID(p.LMSClassID)
+	if err != nil {
+		slog.Error("failed to get students for class", "class_id", p.LMSClassID, "error", err)
+		return
+	}
+
+	// 3. Create test session for each student
+	scheduledTime := time.Now()
+	if p.ScheduledTime != "" {
+		if t, err := time.Parse(time.RFC3339, p.ScheduledTime); err == nil {
+			scheduledTime = t
+		}
+	}
+
+	successCount := 0
+	for _, studentID := range studentIDs {
+		// user_id in test_session is the local user ID. 
+		// classStudentRepo returns local user IDs (mapped from LMS user IDs via sync).
+		
+		stdID := int(studentID)
+		session := &entity.TestSession{
+			UserID:          &stdID,
+			IDMataPelajaran: int(materi.IDMataPelajaran), // From materi
+			IDTingkat:       int(materi.IDTingkat),       // From materi
+			LMSAssignmentID: &p.LMSAssignmentID,
+			WaktuMulai:      scheduledTime,
+			DurasiMenit:     materi.DefaultDurasiMenit,
+			TotalSoal:       &materi.DefaultJumlahSoal,
+			Status:          entity.TestStatusScheduled,
+		}
+
+		if err := w.testSessionRepo.Create(session); err != nil {
+			slog.Error("failed to create test session", "assignment_id", p.LMSAssignmentID, "student_id", studentID, "error", err)
+			continue
+		}
+		successCount++
+	}
+
+	slog.Info("Synced Exam Assignment", "assignment_id", p.LMSAssignmentID, "class_id", p.LMSClassID, "sessions_created", successCount)
 }
 
 type DeletePayload struct {

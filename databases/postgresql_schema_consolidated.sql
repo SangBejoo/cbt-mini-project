@@ -65,6 +65,34 @@ CREATE TABLE tingkat (
 
 CREATE INDEX idx_tingkat_is_active ON tingkat (is_active);
 
+-- Table: Classes
+CREATE TABLE classes (
+    id SERIAL PRIMARY KEY,
+    teacher_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    description TEXT NULL,
+    enrollment_code VARCHAR(20) UNIQUE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_classes_teacher ON classes (teacher_id);
+CREATE INDEX idx_classes_code ON classes (enrollment_code);
+CREATE INDEX idx_classes_is_active ON classes (is_active);
+
+-- Table: Class Students
+CREATE TABLE class_students (
+    id SERIAL PRIMARY KEY,
+    class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (class_id, student_id)
+);
+
+CREATE INDEX idx_class_students_class ON class_students (class_id);
+CREATE INDEX idx_class_students_student ON class_students (student_id);
+
 -- =============================================
 -- CONTENT TABLES
 -- =============================================
@@ -230,6 +258,7 @@ CREATE TABLE test_session (
     jumlah_benar INTEGER NULL,
     total_soal INTEGER NULL,
     status test_session_status_enum NOT NULL DEFAULT 'ongoing',
+    lms_assignment_id INTEGER NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -240,7 +269,9 @@ CREATE INDEX idx_test_session_user ON test_session (user_id);
 CREATE INDEX idx_test_session_waktu_mulai ON test_session (waktu_mulai);
 CREATE INDEX idx_test_session_status ON test_session (status);
 CREATE INDEX idx_test_session_user_status ON test_session (user_id, status);
+CREATE INDEX idx_test_session_user_status ON test_session (user_id, status);
 CREATE INDEX idx_test_session_status_waktu ON test_session (status, waktu_mulai);
+CREATE INDEX idx_test_session_lms_assignment ON test_session (lms_assignment_id);
 
 -- Table: Test Session Soal (Unified)
 CREATE TABLE test_session_soal (
@@ -327,7 +358,9 @@ $$ language 'plpgsql';
 
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_mata_pelajaran_updated_at BEFORE UPDATE ON mata_pelajaran FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_mata_pelajaran_updated_at BEFORE UPDATE ON mata_pelajaran FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_tingkat_updated_at BEFORE UPDATE ON tingkat FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_classes_updated_at BEFORE UPDATE ON classes FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_materi_updated_at BEFORE UPDATE ON materi FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_soal_updated_at BEFORE UPDATE ON soal FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_soal_drag_drop_updated_at BEFORE UPDATE ON soal_drag_drop FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();

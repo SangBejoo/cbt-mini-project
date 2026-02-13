@@ -27,4 +27,5 @@ type MateriRepository interface {
 	// LMS sync methods
 	UpsertByLMSID(lmsID int64, subjectID int64, levelID int64, name string) error
 	DeleteByLMSID(lmsID int64) error
+	GetByLMSID(lmsID int64) (*entity.Materi, error)
 }

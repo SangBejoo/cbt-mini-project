@@ -211,3 +211,27 @@ func (r *materiRepositoryImpl) DeleteByLMSID(lmsID int64) error {
 	_, err := r.db.Exec(query, lmsID)
 	return err
 }
+
+// GetByLMSID retrieves materi by LMS ID
+func (r *materiRepositoryImpl) GetByLMSID(lmsID int64) (*entity.Materi, error) {
+	var materi entity.Materi
+	query := `
+		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id, m.owner_user_id, m.school_id, m.labels
+		FROM materi m
+		WHERE m.lms_module_id = $1 AND m.is_active = true
+	`
+	var labelsSQL []byte
+	err := r.db.QueryRow(query, lmsID).Scan(
+		&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsClassID, &materi.OwnerUserID, &materi.SchoolID, &labelsSQL,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if labelsSQL != nil {
+		var ls []string
+		if err := json.Unmarshal(labelsSQL, &ls); err == nil {
+			materi.Labels = ls
+		}
+	}
+	return &materi, nil
+}
