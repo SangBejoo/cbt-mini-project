@@ -35,6 +35,7 @@ type TestSession struct {
 	Status      TestStatus `json:"status" gorm:"type:enum('ongoing','completed','timeout','scheduled');default:'ongoing'"`
 
 	LMSAssignmentID *int64 `json:"lms_assignment_id" gorm:"column:lms_assignment_id"`
+	LMSClassID      *int64 `json:"lms_class_id" gorm:"column:lms_class_id"`
 }
 
 func (TestSession) TableName() string { return "test_session" }

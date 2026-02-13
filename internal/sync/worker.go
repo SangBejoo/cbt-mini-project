@@ -273,6 +273,7 @@ func (w *SyncWorker) handleExamAssignmentCreated(payload string) {
 			IDMataPelajaran: int(materi.IDMataPelajaran), // From materi
 			IDTingkat:       int(materi.IDTingkat),       // From materi
 			LMSAssignmentID: &p.LMSAssignmentID,
+			LMSClassID:      &p.LMSClassID,
 			WaktuMulai:      scheduledTime,
 			DurasiMenit:     materi.DefaultDurasiMenit,
 			TotalSoal:       &materi.DefaultJumlahSoal,

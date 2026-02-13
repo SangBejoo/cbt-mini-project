@@ -34,6 +34,7 @@ CREATE TABLE users (
     nama VARCHAR(100) NOT NULL,
     role user_role_enum NOT NULL DEFAULT 'siswa',
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    lms_user_id BIGINT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -42,6 +43,7 @@ CREATE INDEX idx_users_role ON users (role);
 CREATE INDEX idx_users_is_active ON users (is_active);
 CREATE INDEX idx_users_active_role ON users (is_active, role);
 CREATE INDEX idx_users_created_at ON users (created_at);
+CREATE INDEX idx_users_lms_id ON users (lms_user_id);
 
 -- Table: Mata Pelajaran
 CREATE TABLE mata_pelajaran (
@@ -230,8 +232,11 @@ CREATE TABLE test_session (
     jumlah_benar INTEGER NULL,
     total_soal INTEGER NULL,
     status test_session_status_enum NOT NULL DEFAULT 'ongoing',
+    lms_assignment_id BIGINT NULL,
+    lms_class_id BIGINT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+
 );
 
 CREATE INDEX idx_test_session_tingkat ON test_session (id_tingkat);

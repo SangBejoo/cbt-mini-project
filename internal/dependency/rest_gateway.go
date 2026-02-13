@@ -7,11 +7,13 @@ import (
 	base "cbt-test-mini-project/gen/proto"
 	"cbt-test-mini-project/init/config"
 
+	"cbt-test-mini-project/internal/event"
+
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 )
 
-func InitRestGatewayDependency(mux *runtime.ServeMux, opts []grpc.DialOption, ctx context.Context, cfg config.Main) {
+func InitRestGatewayDependency(mux *runtime.ServeMux, opts []grpc.DialOption, ctx context.Context, cfg config.Main, publisher *event.Publisher) {
 	port := fmt.Sprintf(":%d", cfg.GrpcServer.Port)
 	base.RegisterBaseHandlerFromEndpoint(ctx, mux, port, opts)
 	base.RegisterAuthServiceHandlerFromEndpoint(ctx, mux, port, opts)

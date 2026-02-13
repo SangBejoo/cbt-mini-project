@@ -12,15 +12,127 @@ import (
 	"time"
 )
 
+// EventPublisher defines the interface for publishing events
+type EventPublisher interface {
+	PublishExamResult(ctx context.Context, sessionID int, lmsAssignmentID, lmsUserID, lmsClassID int64, score float64, correctCount, totalCount int) error
+}
+
 // testSessionUsecaseImpl implements TestSessionUsecase
 type testSessionUsecaseImpl struct {
-	repo     test_session.TestSessionRepository
-	userRepo auth.AuthRepository
+	repo      test_session.TestSessionRepository
+	userRepo  auth.AuthRepository
+	publisher EventPublisher
 }
 
 // NewTestSessionUsecase creates a new TestSessionUsecase instance
-func NewTestSessionUsecase(repo test_session.TestSessionRepository, userRepo auth.AuthRepository) TestSessionUsecase {
-	return &testSessionUsecaseImpl{repo: repo, userRepo: userRepo}
+func NewTestSessionUsecase(repo test_session.TestSessionRepository, userRepo auth.AuthRepository, publisher EventPublisher) TestSessionUsecase {
+	return &testSessionUsecaseImpl{
+		repo:      repo,
+		userRepo:  userRepo,
+		publisher: publisher,
+	}
+}
+
+// ... existing code ...
+
+// CompleteSession completes the session and calculates score
+func (u *testSessionUsecaseImpl) CompleteSession(sessionToken string) (*entity.TestSession, error) {
+	session, err := u.repo.GetByToken(sessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	if session.Status != entity.TestStatusOngoing && session.Status != entity.TestStatusTimeout {
+		return nil, errors.New("session is already completed")
+	}
+
+	// Get all assigned questions
+	allQuestions, err := u.repo.GetAllQuestionsForSession(sessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get all answers
+	answers, err := u.repo.GetSessionAnswers(sessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a map of answered question numbers
+	answeredMap := make(map[int]bool)
+	for _, ans := range answers {
+		answeredMap[ans.TestSessionSoal.NomorUrut] = true
+	}
+
+	// For each unanswered question, create an entry directly in repository with nil answer
+	for _, question := range allQuestions {
+		if !answeredMap[question.NomorUrut] {
+			// Create unanswered record with NULL jawaban_dipilih
+			err := u.repo.CreateUnansweredRecord(question.ID, question.IDTestSession)
+			if err != nil {
+				// Log error but continue
+				continue
+			}
+		}
+	}
+
+	// Get updated answers after filling in unanswered questions
+	answers, err = u.repo.GetSessionAnswers(sessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate score
+	jumlahBenar := 0
+	for _, ans := range answers {
+		if ans.IsCorrect {
+			jumlahBenar++
+		}
+	}
+
+	totalSoal := len(allQuestions)
+	var nilaiAkhir float64
+	if totalSoal > 0 {
+		nilaiAkhir = float64(jumlahBenar) / float64(totalSoal) * 100
+	}
+
+	err = u.repo.CompleteSession(sessionToken, time.Now(), &nilaiAkhir, &jumlahBenar, &totalSoal)
+	if err != nil {
+		return nil, err
+	}
+
+	// Publish logic
+	updatedSession, err := u.repo.GetByToken(sessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Publish event if publisher is available and session has LMS linkage
+	if u.publisher != nil && session.LMSAssignmentID != nil && session.LMSClassID != nil && session.UserID != nil {
+		// Get User to retrieve LMS User ID
+		user, err := u.userRepo.GetUserByID(context.Background(), int32(*session.UserID))
+		if err != nil {
+			// Log error but assume we can't publish
+			fmt.Printf("Error getting user for publishing result: %v\n", err)
+		} else if user != nil && user.LmsUserId != 0 {
+			// Use correct LMS User ID (Note: Proto generated field is LmsUserId)
+			err = u.publisher.PublishExamResult(
+				context.Background(),
+				session.ID,
+				*session.LMSAssignmentID,
+				user.LmsUserId,
+				*session.LMSClassID,
+				nilaiAkhir,
+				jumlahBenar,
+				totalSoal,
+			)
+			if err != nil {
+				fmt.Printf("Error publishing exam result: %v\n", err)
+			}
+		}
+	}
+    
+	return updatedSession, nil
 }
 
 // CreateTestSession creates a new test session with random questions
@@ -340,74 +452,7 @@ func (u *testSessionUsecaseImpl) ClearAnswer(sessionToken string, nomorUrut int)
 	return u.repo.ClearAnswer(sessionToken, nomorUrut)
 }
 
-// CompleteSession completes the session and calculates score
-func (u *testSessionUsecaseImpl) CompleteSession(sessionToken string) (*entity.TestSession, error) {
-	session, err := u.repo.GetByToken(sessionToken)
-	if err != nil {
-		return nil, err
-	}
 
-	if session.Status != entity.TestStatusOngoing && session.Status != entity.TestStatusTimeout {
-		return nil, errors.New("session is already completed")
-	}
-
-	// Get all assigned questions
-	allQuestions, err := u.repo.GetAllQuestionsForSession(sessionToken)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get all answers
-	answers, err := u.repo.GetSessionAnswers(sessionToken)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create a map of answered question numbers
-	answeredMap := make(map[int]bool)
-	for _, ans := range answers {
-		answeredMap[ans.TestSessionSoal.NomorUrut] = true
-	}
-
-	// For each unanswered question, create an entry directly in repository with nil answer
-	for _, question := range allQuestions {
-		if !answeredMap[question.NomorUrut] {
-			// Create unanswered record with NULL jawaban_dipilih
-			err := u.repo.CreateUnansweredRecord(question.ID, question.IDTestSession)
-			if err != nil {
-				// Log error but continue
-				continue
-			}
-		}
-	}
-
-	// Get updated answers after filling in unanswered questions
-	answers, err = u.repo.GetSessionAnswers(sessionToken)
-	if err != nil {
-		return nil, err
-	}
-
-	// Calculate score
-	jumlahBenar := 0
-	for _, ans := range answers {
-		if ans.IsCorrect {
-			jumlahBenar++
-		}
-	}
-
-	totalSoal := len(allQuestions)
-	var nilaiAkhir float64
-	if totalSoal > 0 {
-		nilaiAkhir = float64(jumlahBenar) / float64(totalSoal) * 100
-	}
-
-	err = u.repo.CompleteSession(sessionToken, time.Now(), &nilaiAkhir, &jumlahBenar, &totalSoal)
-	if err != nil {
-		return nil, err
-	}
-
-	return u.repo.GetByToken(sessionToken)
-}
 
 // GetTestResult gets the test result
 func (u *testSessionUsecaseImpl) GetTestResult(sessionToken string) (*entity.TestSession, []entity.JawabanDetail, error) {

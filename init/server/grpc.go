@@ -22,10 +22,11 @@ import (
 	"cbt-test-mini-project/init/config"
 	"cbt-test-mini-project/init/infra"
 	"cbt-test-mini-project/internal/dependency"
+	"cbt-test-mini-project/internal/event"
 	"cbt-test-mini-project/util/interceptor"
 )
 
-func RunGRPCServer(ctx context.Context, cfg config.Main, repo infra.Repository) (*grpc.Server, error) {
+func RunGRPCServer(ctx context.Context, cfg config.Main, repo infra.Repository, publisher *event.Publisher) (*grpc.Server, error) {
 	grpcPort := fmt.Sprintf(":%d", cfg.GrpcServer.Port)
 	grpcConn, err := net.Listen("tcp", grpcPort)
 	if err != nil {
@@ -56,7 +57,7 @@ func RunGRPCServer(ctx context.Context, cfg config.Main, repo infra.Repository) 
 		),
 	)
 
-	dependency.InitGrpcDependency(grpcServer, repo, &cfg)
+	dependency.InitGrpcDependency(grpcServer, repo, &cfg, publisher)
 	reflection.Register(grpcServer)
 
 	healthServer := health.NewServer()

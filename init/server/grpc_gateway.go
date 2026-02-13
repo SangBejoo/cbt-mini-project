@@ -20,6 +20,7 @@ import (
 	"cbt-test-mini-project/init/config"
 	"cbt-test-mini-project/init/infra"
 	"cbt-test-mini-project/internal/dependency"
+	"cbt-test-mini-project/internal/event"
 )
 
 // ShareEmailRequest represents the request payload for sharing results via email
@@ -47,7 +48,7 @@ type ShareEmailResponse struct {
 	Message string `json:"message"`
 }
 
-func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repository) (*http.Server, error) {
+func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repository, publisher *event.Publisher) (*http.Server, error) {
 	gwMux := runtime.NewServeMux(
 		runtime.WithIncomingHeaderMatcher(customHeaderMatcher),
 		runtime.WithOutgoingHeaderMatcher(customHeaderMatcher),
@@ -59,7 +60,7 @@ func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repos
 	}
 
 	// Register your services here
-	dependency.InitRestGatewayDependency(gwMux, opts, ctx, cfg)
+	dependency.InitRestGatewayDependency(gwMux, opts, ctx, cfg, publisher)
 
 	// Create a custom mux to handle both API and static files
 	mux := http.NewServeMux()

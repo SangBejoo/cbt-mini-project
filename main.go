@@ -13,6 +13,7 @@ import (
 	infraRedis "cbt-test-mini-project/init/infra/redis"
 	"cbt-test-mini-project/init/logger"
 	"cbt-test-mini-project/init/server"
+	"cbt-test-mini-project/internal/event"
 	authRepo "cbt-test-mini-project/internal/repository/auth"
 	classRepo "cbt-test-mini-project/internal/repository/class"
 	classStudentRepo "cbt-test-mini-project/internal/repository/class_student"
@@ -89,13 +90,17 @@ func main() {
 		go syncWorker.Start(ctx)
 	}
 
-	grpcServer, err := server.RunGRPCServer(ctx, *cfg, *repo)
+	// Initialize Event Publisher
+	publisher := event.NewPublisher(infraRedis.RedisClient)
+
+	grpcServer, err := server.RunGRPCServer(ctx, *cfg, *repo, publisher)
 	if err != nil {
 		slog.Error("failed to run grpc server", "error", err)
 		os.Exit(1)
 	}
 
-	restServer, err := server.RunGatewayRestServer(ctx, *cfg, *repo)
+	restServer, err := server.RunGatewayRestServer(ctx, *cfg, *repo, publisher)
+
 	if err != nil {
 		slog.Error("failed to run gateway rest server", "error", err)
 		os.Exit(1)

@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc"
 
 	base "cbt-test-mini-project/gen/proto"
+	"cbt-test-mini-project/internal/event"
 	authHandler "cbt-test-mini-project/internal/handler/auth"
 	baseGrpcServer "cbt-test-mini-project/internal/handler/base"
 	historyHandler "cbt-test-mini-project/internal/handler/history"
@@ -35,7 +36,7 @@ import (
 	tingkatUsecase "cbt-test-mini-project/internal/usecase/tingkat"
 )
 
-func InitGrpcDependency(server *grpc.Server, repo infra.Repository, config *config.Main) {
+func InitGrpcDependency(server *grpc.Server, repo infra.Repository, config *config.Main, publisher *event.Publisher) {
 	// Initialize repositories
 	authRepo := authRepo.NewAuthRepository(repo.SQLDB)
 	mataPelajaranRepo := mataPelajaranRepo.NewMataPelajaranRepository(repo.SQLDB)
@@ -52,7 +53,7 @@ func InitGrpcDependency(server *grpc.Server, repo infra.Repository, config *conf
 	materiUsecase := materiUsecase.NewMateriUsecase(materiRepo)
 	soalUsecase := soalUsecase.NewSoalUsecase(soalRepo, config)
 	soalDragDropUsecase := soalDragDropUsecase.NewUsecase(soalDragDropRepo, config)
-	testSessionUsecase := testSessionUsecase.NewTestSessionUsecase(testSessionRepo, authRepo)
+	testSessionUsecase := testSessionUsecase.NewTestSessionUsecase(testSessionRepo, authRepo, publisher)
 	historyUsecase := historyUsecase.NewHistoryUsecase(historyRepo)
 	tingkatUsecase := tingkatUsecase.NewTingkatUsecase(tingkatRepo)
 	userLimitUsecase := userLimitUsecase.NewUserLimitUsecase(repo.UserLimitRepo)

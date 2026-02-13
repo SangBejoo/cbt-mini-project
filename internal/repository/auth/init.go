@@ -19,6 +19,7 @@ type AuthRepository interface {
 
 	// LMS sync methods
 	FindOrCreateByLMSID(ctx context.Context, lmsID int64, email, name string, role int32) (*base.User, error)
+	GetLMSUserIDByLocalID(ctx context.Context, id int32) (int64, error)
 }
 
 // InitAuthRepository initializes the auth repository

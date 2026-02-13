@@ -418,3 +418,18 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 		PasswordHash: string(hashedPassword),
 	}, nil
 }
+
+// GetLMSUserIDByLocalID retrieves the LMS User ID mapped to a local User ID
+func (r *authRepositoryImpl) GetLMSUserIDByLocalID(ctx context.Context, id int32) (int64, error) {
+	var lmsUserID sql.NullInt64
+	query := `SELECT lms_user_id FROM users WHERE id = $1`
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&lmsUserID)
+	if err != nil {
+		return 0, err
+	}
+	if !lmsUserID.Valid {
+		return 0, fmt.Errorf("user %d has no LMS ID link", id)
+	}
+	return lmsUserID.Int64, nil
+}
+
