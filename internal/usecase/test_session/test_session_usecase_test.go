@@ -198,6 +198,31 @@ func (m *MockTestSessionRepo) Delete(id int) error {
 	return args.Error(0)
 }
 
+func (m *MockTestSessionRepo) CreateSessionForLMSUserIfMissing(lmsAssignmentID, lmsClassID, lmsUserID int64, idMataPelajaran, idTingkat, durasiMenit int, totalSoal *int, scheduledTime time.Time, status entity.TestStatus) (bool, error) {
+	args := m.Called(lmsAssignmentID, lmsClassID, lmsUserID, idMataPelajaran, idTingkat, durasiMenit, totalSoal, scheduledTime, status)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockTestSessionRepo) BackfillSessionsForJoinedStudent(lmsClassID, lmsUserID int64) (int, error) {
+	args := m.Called(lmsClassID, lmsUserID)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *MockTestSessionRepo) BackfillMissingSessions(lmsClassID *int64, lmsAssignmentID *int64) (int, error) {
+	args := m.Called(lmsClassID, lmsAssignmentID)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *MockTestSessionRepo) UpdateScheduledSessionsByAssignment(lmsAssignmentID int64, lmsClassID int64, idMataPelajaran, idTingkat, durasiMenit int, totalSoal *int, scheduledTime time.Time) (int64, error) {
+	args := m.Called(lmsAssignmentID, lmsClassID, idMataPelajaran, idTingkat, durasiMenit, totalSoal, scheduledTime)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockTestSessionRepo) DeleteSessionsByAssignment(lmsAssignmentID int64) (int64, error) {
+	args := m.Called(lmsAssignmentID)
+	return args.Get(0).(int64), args.Error(1)
+}
+
 type MockPublisher struct {
 	mock.Mock
 }

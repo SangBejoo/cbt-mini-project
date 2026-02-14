@@ -10,6 +10,21 @@ type TestSessionRepository interface {
 	// Create a new test session
 	Create(session *entity.TestSession) error
 
+	// LMS sync: create session for LMS assignment/student if missing (idempotent)
+	CreateSessionForLMSUserIfMissing(lmsAssignmentID, lmsClassID, lmsUserID int64, idMataPelajaran, idTingkat, durasiMenit int, totalSoal *int, scheduledTime time.Time, status entity.TestStatus) (bool, error)
+
+	// LMS sync: backfill missing sessions for a newly joined student based on active class assignments
+	BackfillSessionsForJoinedStudent(lmsClassID, lmsUserID int64) (int, error)
+
+	// LMS sync: backfill missing sessions across all enrolled students from active assignment sessions
+	BackfillMissingSessions(lmsClassID *int64, lmsAssignmentID *int64) (int, error)
+
+	// LMS sync: update scheduled sessions for assignment lifecycle update
+	UpdateScheduledSessionsByAssignment(lmsAssignmentID int64, lmsClassID int64, idMataPelajaran, idTingkat, durasiMenit int, totalSoal *int, scheduledTime time.Time) (int64, error)
+
+	// LMS sync: delete all sessions for an LMS assignment
+	DeleteSessionsByAssignment(lmsAssignmentID int64) (int64, error)
+
 	// Get session by token
 	GetByToken(token string) (*entity.TestSession, error)
 

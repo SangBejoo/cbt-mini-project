@@ -26,25 +26,26 @@ import (
 	"cbt-test-mini-project/internal/event"
 	classRepo "cbt-test-mini-project/internal/repository/class"
 	classStudentRepo "cbt-test-mini-project/internal/repository/class_student"
+	testSessionRepo "cbt-test-mini-project/internal/repository/test_session"
 )
 
 // ShareEmailRequest represents the request payload for sharing results via email
 type ShareEmailRequest struct {
-	To              string `json:"to"`
-	Subject         string `json:"subject"`
-	NamaSekolah     string `json:"namaSekolah"`
-	Kelas           string `json:"kelas"`
-	StudentName     string `json:"studentName"`
-	SubjectName     string `json:"subject_name"`
-	LevelName       string `json:"level_name"`
-	Score           float64 `json:"score"`
-	CorrectAnswers  int32 `json:"correctAnswers"`
-	TotalQuestions  int32 `json:"totalQuestions"`
-	StartTime       string `json:"startTime"`
-	EndTime         string `json:"endTime"`
-	Duration        int32 `json:"duration"`
-	Status          string `json:"status"`
-	SessionToken    string `json:"sessionToken"`
+	To             string  `json:"to"`
+	Subject        string  `json:"subject"`
+	NamaSekolah    string  `json:"namaSekolah"`
+	Kelas          string  `json:"kelas"`
+	StudentName    string  `json:"studentName"`
+	SubjectName    string  `json:"subject_name"`
+	LevelName      string  `json:"level_name"`
+	Score          float64 `json:"score"`
+	CorrectAnswers int32   `json:"correctAnswers"`
+	TotalQuestions int32   `json:"totalQuestions"`
+	StartTime      string  `json:"startTime"`
+	EndTime        string  `json:"endTime"`
+	Duration       int32   `json:"duration"`
+	Status         string  `json:"status"`
+	SessionToken   string  `json:"sessionToken"`
 }
 
 // ShareEmailResponse represents the response for email sharing
@@ -56,6 +57,7 @@ type ShareEmailResponse struct {
 type SyncOpsHandler struct {
 	classRepo        classRepo.ClassRepository
 	classStudentRepo classStudentRepo.ClassStudentRepository
+	testSessionRepo  testSessionRepo.TestSessionRepository
 	db               *sql.DB
 }
 
@@ -63,6 +65,7 @@ func NewSyncOpsHandler(db *sql.DB) *SyncOpsHandler {
 	return &SyncOpsHandler{
 		classRepo:        classRepo.NewClassRepository(db),
 		classStudentRepo: classStudentRepo.NewClassStudentRepository(db),
+		testSessionRepo:  testSessionRepo.NewTestSessionRepository(db),
 		db:               db,
 	}
 }
@@ -93,9 +96,21 @@ type SyncClassesResponse struct {
 }
 
 type SyncClassStudentsResponse struct {
-	LMSClassID int64                `json:"lms_class_id"`
+	LMSClassID int64                 `json:"lms_class_id"`
 	Data       []SyncClassStudentDTO `json:"data"`
-	Total      int                  `json:"total"`
+	Total      int                   `json:"total"`
+}
+
+type SyncResyncRequest struct {
+	LMSClassID      *int64 `json:"lms_class_id,omitempty"`
+	LMSAssignmentID *int64 `json:"lms_assignment_id,omitempty"`
+}
+
+type SyncResyncResponse struct {
+	Status          string `json:"status"`
+	Inserted        int    `json:"inserted"`
+	LMSClassID      *int64 `json:"lms_class_id,omitempty"`
+	LMSAssignmentID *int64 `json:"lms_assignment_id,omitempty"`
 }
 
 func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repository, publisher *event.Publisher) (*http.Server, error) {
@@ -121,6 +136,7 @@ func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repos
 	mux.HandleFunc("/v1/sync/health", syncOpsHandler.HandleSyncHealth)
 	mux.HandleFunc("/v1/sync/classes", syncOpsHandler.HandleSyncClasses)
 	mux.HandleFunc("/v1/sync/classes/", syncOpsHandler.HandleSyncClassStudents)
+	mux.HandleFunc("/v1/sync/resync/sessions", syncOpsHandler.HandleSyncResyncSessions)
 
 	// Serve static files (uploads)
 	fs := http.FileServer(http.Dir("uploads"))
@@ -322,6 +338,50 @@ func (h *SyncOpsHandler) HandleSyncClassStudents(w http.ResponseWriter, r *http.
 	}
 
 	_ = json.NewEncoder(w).Encode(SyncClassStudentsResponse{LMSClassID: lmsClassID, Data: result, Total: len(result)})
+}
+
+func (h *SyncOpsHandler) HandleSyncResyncSessions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	var req SyncResyncRequest
+	if r.Body != nil {
+		defer r.Body.Close()
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err.Error() != "EOF" {
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid request payload"})
+			return
+		}
+	}
+
+	if req.LMSClassID != nil && *req.LMSClassID <= 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid lms_class_id"})
+		return
+	}
+	if req.LMSAssignmentID != nil && *req.LMSAssignmentID <= 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid lms_assignment_id"})
+		return
+	}
+
+	inserted, err := h.testSessionRepo.BackfillMissingSessions(req.LMSClassID, req.LMSAssignmentID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "failed to run session resync"})
+		return
+	}
+
+	_ = json.NewEncoder(w).Encode(SyncResyncResponse{
+		Status:          "ok",
+		Inserted:        inserted,
+		LMSClassID:      req.LMSClassID,
+		LMSAssignmentID: req.LMSAssignmentID,
+	})
 }
 
 // sendEmailNotification sends an email notification
