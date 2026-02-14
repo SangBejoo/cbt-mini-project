@@ -29,22 +29,7 @@ func (h *historyHandler) GetStudentHistory(ctx context.Context, req *base.Studen
 	// Try to get user from context first (for gRPC calls)
 	user, err := interceptor.GetUserFromContext(ctx)
 	if err != nil {
-		// For REST gateway, extract token from metadata
-		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
-		if extractErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
-		}
-		claims, validateErr := interceptor.ValidateToken(token)
-		if validateErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-		user = &base.User{
-			Id:    claims.UserID,
-			Email: claims.Email,
-			Role:  base.UserRole(claims.Role),
-		}
-		// Add to context for consistency
-		ctx = interceptor.AddUserToContext(ctx, claims)
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 
 	userID := user.Id
@@ -103,10 +88,10 @@ func (h *historyHandler) GetStudentHistory(ctx context.Context, req *base.Studen
 	}
 
 	return &base.StudentHistoryResponse{
-		User:              h.convertUserToProto(response.User),
-		Tingkatan:         req.Tingkatan,
-		History:           histories,
-		RataRataNilai:     response.RataRataNilai,
+		User:               h.convertUserToProto(response.User),
+		Tingkatan:          req.Tingkatan,
+		History:            histories,
+		RataRataNilai:      response.RataRataNilai,
 		TotalTestCompleted: int32(response.TotalTestCompleted),
 		Pagination: &base.PaginationResponse{
 			TotalCount:  int32(response.Pagination.TotalCount),
@@ -122,22 +107,7 @@ func (h *historyHandler) GetHistoryDetail(ctx context.Context, req *base.GetHist
 	// Get user from JWT context
 	user, err := interceptor.GetUserFromContext(ctx)
 	if err != nil {
-		// For REST gateway, extract token from metadata
-		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
-		if extractErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
-		}
-		claims, validateErr := interceptor.ValidateToken(token)
-		if validateErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-		user = &base.User{
-			Id:    claims.UserID,
-			Email: claims.Email,
-			Role:  base.UserRole(claims.Role),
-		}
-		// Add to context for consistency
-		ctx = interceptor.AddUserToContext(ctx, claims)
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 
 	response, err := h.usecase.GetHistoryDetail(req.SessionToken)
@@ -211,19 +181,19 @@ func (h *historyHandler) convertToProtoTestSession(session *entity.TestSession) 
 	status := base.TestStatus(base.TestStatus_value[strings.ToUpper(string(session.Status))])
 
 	return &base.TestSession{
-		Id:              int32(session.ID),
-		SessionToken:    session.SessionToken,
-		User:            h.convertUserToProto(session.User),
-		Tingkat:         &base.Tingkat{Id: int32(session.Tingkat.ID), Nama: session.Tingkat.Nama},
-		MataPelajaran:   &base.MataPelajaran{Id: int32(session.MataPelajaran.ID), Nama: session.MataPelajaran.Nama},
-		WaktuMulai:      timestamppb.New(session.WaktuMulai),
-		WaktuSelesai:    waktuSelesai,
-		BatasWaktu:      batasWaktu,
-		DurasiMenit:     int32(session.DurasiMenit),
-		NilaiAkhir:      nilaiAkhir,
-		JumlahBenar:     jumlahBenar,
-		TotalSoal:       totalSoal,
-		Status:          status,
+		Id:            int32(session.ID),
+		SessionToken:  session.SessionToken,
+		User:          h.convertUserToProto(session.User),
+		Tingkat:       &base.Tingkat{Id: int32(session.Tingkat.ID), Nama: session.Tingkat.Nama},
+		MataPelajaran: &base.MataPelajaran{Id: int32(session.MataPelajaran.ID), Nama: session.MataPelajaran.Nama},
+		WaktuMulai:    timestamppb.New(session.WaktuMulai),
+		WaktuSelesai:  waktuSelesai,
+		BatasWaktu:    batasWaktu,
+		DurasiMenit:   int32(session.DurasiMenit),
+		NilaiAkhir:    nilaiAkhir,
+		JumlahBenar:   jumlahBenar,
+		TotalSoal:     totalSoal,
+		Status:        status,
 	}
 }
 
@@ -236,11 +206,11 @@ func (h *historyHandler) convertUserToProto(user *entity.User) *base.User {
 	role := base.UserRole(base.UserRole_value[strings.ToUpper(user.Role)])
 
 	return &base.User{
-		Id:       int32(user.ID),
-		Email:    user.Email,
-		Nama:     user.Nama,
-		Role:     role,
-		IsActive: user.IsActive,
+		Id:        int32(user.ID),
+		Email:     user.Email,
+		Nama:      user.Nama,
+		Role:      role,
+		IsActive:  user.IsActive,
 		CreatedAt: timestamppb.New(user.CreatedAt),
 		UpdatedAt: timestamppb.New(user.UpdatedAt),
 	}
@@ -283,22 +253,7 @@ func (h *historyHandler) ListStudentHistories(ctx context.Context, req *base.Lis
 	// Get user from context
 	user, err := interceptor.GetUserFromContext(ctx)
 	if err != nil {
-		// For REST gateway, extract token from metadata
-		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
-		if extractErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
-		}
-		claims, validateErr := interceptor.ValidateToken(token)
-		if validateErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-		user = &base.User{
-			Id:    claims.UserID,
-			Email: claims.Email,
-			Role:  base.UserRole(claims.Role),
-		}
-		// Add to context for consistency
-		ctx = interceptor.AddUserToContext(ctx, claims)
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 
 	// Check if user is admin

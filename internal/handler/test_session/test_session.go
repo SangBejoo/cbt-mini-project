@@ -46,31 +46,14 @@ func (h *testSessionHandler) CreateTestSession(ctx context.Context, req *base.Cr
 			fmt.Printf("PANIC in CreateTestSession: %v\n", r)
 		}
 	}()
-	
+
 	fmt.Printf("=== CreateTestSession called with req: %+v ===\n", req)
-	
+
 	// Get user_id from JWT context
 	user, err := interceptor.GetUserFromContext(ctx)
 	fmt.Printf("=== GetUserFromContext result: user=%+v, err=%v ===\n", user, err)
 	if err != nil {
-		// For REST gateway, extract token from metadata
-		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
-		fmt.Printf("=== ExtractTokenFromContext: token=%v, err=%v ===\n", token != "", extractErr)
-		if extractErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
-		}
-		claims, validateErr := interceptor.ValidateToken(token)
-		fmt.Printf("=== ValidateToken: claims=%+v, err=%v ===\n", claims, validateErr)
-		if validateErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-		user = &base.User{
-			Id:    claims.UserID,
-			Email: claims.Email,
-			Role:  base.UserRole(claims.Role),
-		}
-		// Add to context for consistency
-		ctx = interceptor.AddUserToContext(ctx, claims)
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 
 	userID := user.Id
@@ -80,7 +63,7 @@ func (h *testSessionHandler) CreateTestSession(ctx context.Context, req *base.Cr
 	// For now we always use materi defaults - siswa tidak bisa custom durasi/jumlah soal
 	durasiMenit := int(req.DurasiMenit)
 	jumlahSoal := int(req.JumlahSoal)
-	
+
 	// If client provides 0, get from materi defaults
 	// Query to get a materi with these tingkat dan mataPelajaran to get its defaults
 	// For now, we'll use the request values or defaults
@@ -120,22 +103,7 @@ func (h *testSessionHandler) GetTestSession(ctx context.Context, req *base.GetTe
 	// Get user from JWT context
 	user, err := interceptor.GetUserFromContext(ctx)
 	if err != nil {
-		// For REST gateway, extract token from metadata
-		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
-		if extractErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
-		}
-		claims, validateErr := interceptor.ValidateToken(token)
-		if validateErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-		user = &base.User{
-			Id:    claims.UserID,
-			Email: claims.Email,
-			Role:  base.UserRole(claims.Role),
-		}
-		// Add to context for consistency
-		ctx = interceptor.AddUserToContext(ctx, claims)
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 
 	session, err := h.usecase.GetTestSession(req.SessionToken)
@@ -160,26 +128,11 @@ func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.Get
 			fmt.Printf("PANIC in GetTestQuestions: %v\n", r)
 		}
 	}()
-	
+
 	// Get user from JWT context
 	user, err := interceptor.GetUserFromContext(ctx)
 	if err != nil {
-		// For REST gateway, extract token from metadata
-		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
-		if extractErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
-		}
-		claims, validateErr := interceptor.ValidateToken(token)
-		if validateErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-		user = &base.User{
-			Id:    claims.UserID,
-			Email: claims.Email,
-			Role:  base.UserRole(claims.Role),
-		}
-		// Add to context for consistency
-		ctx = interceptor.AddUserToContext(ctx, claims)
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 
 	session, err := h.usecase.GetTestSession(req.SessionToken)
@@ -201,7 +154,7 @@ func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.Get
 	}
 
 	// DEBUG: Log session and soals info
-	fmt.Printf("DEBUG GetTestQuestions - Token: %s, SessionID: %d, Status: %s, WaktuMulai: %v, BatasWaktu: %v, Soals count: %d, Now: %v\n", 
+	fmt.Printf("DEBUG GetTestQuestions - Token: %s, SessionID: %d, Status: %s, WaktuMulai: %v, BatasWaktu: %v, Soals count: %d, Now: %v\n",
 		req.SessionToken, session.ID, session.Status, session.WaktuMulai, session.BatasWaktu(), len(soals), time.Now())
 
 	// Get answers status
@@ -296,14 +249,14 @@ func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.Get
 	fmt.Printf("DEBUG: Creating response with %d questions\n", len(protoQuestions))
 
 	response := &base.TestQuestionsResponse{
-		SessionToken:      req.SessionToken,
-		Questions:         protoQuestions,
-		TotalSoal:         int32(len(protoQuestions)),
-		CurrentNomorUrut:  1, // Not used
-		DijawabCount:      int32(len(answers)),
-		IsAnsweredStatus:  isAnsweredStatus,
+		SessionToken:     req.SessionToken,
+		Questions:        protoQuestions,
+		TotalSoal:        int32(len(protoQuestions)),
+		CurrentNomorUrut: 1, // Not used
+		DijawabCount:     int32(len(answers)),
+		IsAnsweredStatus: isAnsweredStatus,
 	}
-	
+
 	// Add BatasWaktu carefully to avoid panic
 	if session.BatasWaktu() != (time.Time{}) {
 		response.BatasWaktu = timestamppb.New(session.BatasWaktu())
@@ -312,7 +265,7 @@ func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.Get
 		// Use current time + 1 hour as fallback
 		response.BatasWaktu = timestamppb.New(time.Now().Add(time.Hour))
 	}
-	
+
 	fmt.Printf("DEBUG: Response created successfully\n")
 	return response, nil
 }
@@ -322,22 +275,7 @@ func (h *testSessionHandler) SubmitAnswer(ctx context.Context, req *base.SubmitA
 	// Get user from JWT context
 	user, err := interceptor.GetUserFromContext(ctx)
 	if err != nil {
-		// For REST gateway, extract token from metadata
-		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
-		if extractErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
-		}
-		claims, validateErr := interceptor.ValidateToken(token)
-		if validateErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-		user = &base.User{
-			Id:    claims.UserID,
-			Email: claims.Email,
-			Role:  base.UserRole(claims.Role),
-		}
-		// Add to context for consistency
-		ctx = interceptor.AddUserToContext(ctx, claims)
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 
 	// Get session to check ownership
@@ -358,11 +296,11 @@ func (h *testSessionHandler) SubmitAnswer(ctx context.Context, req *base.SubmitA
 	}
 
 	return &base.SubmitAnswerResponse{
-		SessionToken:    req.SessionToken,
-		NomorUrut:       req.NomorUrut,
-		JawabanDipilih:  req.JawabanDipilih,
-		IsCorrect:       true, // TODO: get from usecase
-		DijawabPada:     timestamppb.Now(),
+		SessionToken:   req.SessionToken,
+		NomorUrut:      req.NomorUrut,
+		JawabanDipilih: req.JawabanDipilih,
+		IsCorrect:      true, // TODO: get from usecase
+		DijawabPada:    timestamppb.Now(),
 	}, nil
 }
 
@@ -371,22 +309,7 @@ func (h *testSessionHandler) SubmitDragDropAnswer(ctx context.Context, req *base
 	// Get user from JWT context
 	user, err := interceptor.GetUserFromContext(ctx)
 	if err != nil {
-		// For REST gateway, extract token from metadata
-		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
-		if extractErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
-		}
-		claims, validateErr := interceptor.ValidateToken(token)
-		if validateErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-		user = &base.User{
-			Id:    claims.UserID,
-			Email: claims.Email,
-			Role:  base.UserRole(claims.Role),
-		}
-		// Add to context for consistency
-		ctx = interceptor.AddUserToContext(ctx, claims)
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 
 	// Get session to check ownership
@@ -425,22 +348,7 @@ func (h *testSessionHandler) ClearAnswer(ctx context.Context, req *base.ClearAns
 	// Get user from JWT context
 	user, err := interceptor.GetUserFromContext(ctx)
 	if err != nil {
-		// For REST gateway, extract token from metadata
-		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
-		if extractErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
-		}
-		claims, validateErr := interceptor.ValidateToken(token)
-		if validateErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-		user = &base.User{
-			Id:    claims.UserID,
-			Email: claims.Email,
-			Role:  base.UserRole(claims.Role),
-		}
-		// Add to context for consistency
-		ctx = interceptor.AddUserToContext(ctx, claims)
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 
 	// Get session to check ownership
@@ -471,22 +379,7 @@ func (h *testSessionHandler) CompleteSession(ctx context.Context, req *base.Comp
 	// Get user from JWT context
 	user, err := interceptor.GetUserFromContext(ctx)
 	if err != nil {
-		// For REST gateway, extract token from metadata
-		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
-		if extractErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
-		}
-		claims, validateErr := interceptor.ValidateToken(token)
-		if validateErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-		user = &base.User{
-			Id:    claims.UserID,
-			Email: claims.Email,
-			Role:  base.UserRole(claims.Role),
-		}
-		// Add to context for consistency
-		ctx = interceptor.AddUserToContext(ctx, claims)
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 
 	// Get session to check ownership
@@ -515,22 +408,7 @@ func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTes
 	// Get user from JWT context
 	user, err := interceptor.GetUserFromContext(ctx)
 	if err != nil {
-		// For REST gateway, extract token from metadata
-		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
-		if extractErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
-		}
-		claims, validateErr := interceptor.ValidateToken(token)
-		if validateErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-		user = &base.User{
-			Id:    claims.UserID,
-			Email: claims.Email,
-			Role:  base.UserRole(claims.Role),
-		}
-		// Add to context for consistency
-		ctx = interceptor.AddUserToContext(ctx, claims)
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 
 	session, details, err := h.usecase.GetTestResult(req.SessionToken)
@@ -621,22 +499,7 @@ func (h *testSessionHandler) ListTestSessions(ctx context.Context, req *base.Lis
 	// Get user from JWT context for admin access
 	user, err := interceptor.GetUserFromContext(ctx)
 	if err != nil {
-		// For REST gateway, extract token from metadata
-		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
-		if extractErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
-		}
-		claims, validateErr := interceptor.ValidateToken(token)
-		if validateErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-		user = &base.User{
-			Id:    claims.UserID,
-			Email: claims.Email,
-			Role:  base.UserRole(claims.Role),
-		}
-		// Add to context for consistency
-		ctx = interceptor.AddUserToContext(ctx, claims)
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 
 	// Check if user is admin
@@ -697,7 +560,7 @@ func (h *testSessionHandler) convertToProtoTestSession(session *entity.TestSessi
 	if session == nil {
 		return nil
 	}
-	
+
 	var waktuSelesai, batasWaktu *timestamppb.Timestamp
 	if session.WaktuSelesai != nil {
 		waktuSelesai = timestamppb.New(*session.WaktuSelesai)
@@ -720,20 +583,20 @@ func (h *testSessionHandler) convertToProtoTestSession(session *entity.TestSessi
 	status := base.TestStatus(base.TestStatus_value[strings.ToUpper(string(session.Status))])
 
 	return &base.TestSession{
-		Id:              int32(session.ID),
-		SessionToken:    session.SessionToken,
-		User:            h.convertUserToProto(session.User),
-		NamaPeserta:     session.NamaPeserta,
-		Tingkat:         &base.Tingkat{Id: int32(session.Tingkat.ID), Nama: session.Tingkat.Nama},
-		MataPelajaran:   &base.MataPelajaran{Id: int32(session.MataPelajaran.ID), Nama: session.MataPelajaran.Nama},
-		WaktuMulai:      timestamppb.New(session.WaktuMulai),
-		WaktuSelesai:    waktuSelesai,
-		BatasWaktu:      batasWaktu,
-		DurasiMenit:     int32(session.DurasiMenit),
-		NilaiAkhir:      nilaiAkhir,
-		JumlahBenar:     jumlahBenar,
-		TotalSoal:       totalSoal,
-		Status:          status,
+		Id:            int32(session.ID),
+		SessionToken:  session.SessionToken,
+		User:          h.convertUserToProto(session.User),
+		NamaPeserta:   session.NamaPeserta,
+		Tingkat:       &base.Tingkat{Id: int32(session.Tingkat.ID), Nama: session.Tingkat.Nama},
+		MataPelajaran: &base.MataPelajaran{Id: int32(session.MataPelajaran.ID), Nama: session.MataPelajaran.Nama},
+		WaktuMulai:    timestamppb.New(session.WaktuMulai),
+		WaktuSelesai:  waktuSelesai,
+		BatasWaktu:    batasWaktu,
+		DurasiMenit:   int32(session.DurasiMenit),
+		NilaiAkhir:    nilaiAkhir,
+		JumlahBenar:   jumlahBenar,
+		TotalSoal:     totalSoal,
+		Status:        status,
 	}
 }
 
@@ -746,11 +609,11 @@ func (h *testSessionHandler) convertUserToProto(user *entity.User) *base.User {
 	role := base.UserRole(base.UserRole_value[strings.ToUpper(user.Role)])
 
 	return &base.User{
-		Id:       int32(user.ID),
-		Email:    user.Email,
-		Nama:     user.Nama,
-		Role:     role,
-		IsActive: user.IsActive,
+		Id:        int32(user.ID),
+		Email:     user.Email,
+		Nama:      user.Nama,
+		Role:      role,
+		IsActive:  user.IsActive,
 		CreatedAt: timestamppb.New(user.CreatedAt),
 		UpdatedAt: timestamppb.New(user.UpdatedAt),
 	}
@@ -759,24 +622,24 @@ func convertSoalGambarToProto(gambar []entity.SoalGambar) []*base.SoalGambar {
 	if len(gambar) == 0 {
 		return nil
 	}
-	
+
 	var protoGambar []*base.SoalGambar
 	for _, g := range gambar {
 		keterangan := ""
 		if g.Keterangan != nil {
 			keterangan = *g.Keterangan
 		}
-		
+
 		cloudId := ""
 		if g.CloudId != nil {
 			cloudId = *g.CloudId
 		}
-		
+
 		publicId := ""
 		if g.PublicId != nil {
 			publicId = *g.PublicId
 		}
-		
+
 		protoGambar = append(protoGambar, &base.SoalGambar{
 			Id:         int32(g.ID),
 			NamaFile:   g.NamaFile,
@@ -801,9 +664,9 @@ func convertDragItemsToProto(items []entity.DragItem) []*base.DragItem {
 	var protoItems []*base.DragItem
 	for _, item := range items {
 		protoItem := &base.DragItem{
-			Id:       int32(item.ID),
-			Label:    item.Label,
-			Urutan:   int32(item.Urutan),
+			Id:     int32(item.ID),
+			Label:  item.Label,
+			Urutan: int32(item.Urutan),
 		}
 		if item.ImageURL != nil {
 			protoItem.ImageUrl = *item.ImageURL
@@ -821,9 +684,9 @@ func convertDragSlotsToProto(slots []entity.DragSlot) []*base.DragSlot {
 	var protoSlots []*base.DragSlot
 	for _, slot := range slots {
 		protoSlot := &base.DragSlot{
-			Id:       int32(slot.ID),
-			Label:    slot.Label,
-			Urutan:   int32(slot.Urutan),
+			Id:     int32(slot.ID),
+			Label:  slot.Label,
+			Urutan: int32(slot.Urutan),
 		}
 		protoSlots = append(protoSlots, protoSlot)
 	}

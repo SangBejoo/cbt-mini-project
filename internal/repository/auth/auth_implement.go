@@ -28,7 +28,7 @@ func NewAuthRepository(db *sql.DB) AuthRepository {
 func (r *authRepositoryImpl) Login(ctx context.Context, email, password string) (*base.User, error) {
 	var userEntity entity.User
 
-	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at FROM users WHERE email = $1 AND is_active = $2`
+	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at FROM users WHERE email = $1 AND is_active = $2 AND role = 'admin'`
 	err := r.db.QueryRowContext(ctx, query, email, true).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -337,11 +337,44 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 	err := r.db.QueryRowContext(ctx, findQuery, lmsID).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
 
 	if err == nil {
-		// User found, return it
+		// User found, JIT-update stale fields from claims.
+		var roleStr string
+		switch role {
+		case int32(base.UserRole_ADMIN):
+			roleStr = "admin"
+		default:
+			roleStr = "siswa"
+		}
+
+		trimmedEmail := strings.TrimSpace(email)
+		trimmedName := strings.TrimSpace(name)
+		if trimmedEmail == "" {
+			trimmedEmail = userEntity.Email
+		}
+		if trimmedName == "" {
+			trimmedName = userEntity.Nama
+		}
+
+		if userEntity.Email != trimmedEmail || userEntity.Nama != trimmedName || userEntity.Role != roleStr {
+			_, updateErr := r.db.ExecContext(
+				ctx,
+				`UPDATE users SET email = $1, nama = $2, role = $3, updated_at = $4 WHERE id = $5`,
+				trimmedEmail,
+				trimmedName,
+				roleStr,
+				time.Now(),
+				userEntity.ID,
+			)
+			if updateErr != nil {
+				return nil, updateErr
+			}
+			userEntity.Email = trimmedEmail
+			userEntity.Nama = trimmedName
+			userEntity.Role = roleStr
+		}
+
 		var protoRole base.UserRole
 		switch userEntity.Role {
-		case "siswa":
-			protoRole = base.UserRole_SISWA
 		case "admin":
 			protoRole = base.UserRole_ADMIN
 		default:
@@ -373,7 +406,7 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 		roleStr = "siswa"
 	}
 
-	// Generate a random password hash for LMS users (they won't login directly)
+	// Generate random hash for LMS users (non-admin local password login is disabled)
 	randomPassword := fmt.Sprintf("lms_%d", lmsID)
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(randomPassword), bcrypt.DefaultCost)
 	if err != nil {

@@ -44,6 +44,9 @@ type jwt struct {
 	Secret           string
 	AccessTokenTTL   int // in minutes
 	RefreshTokenTTL  int // in days
+	LMSTokenSecret   string
+	LMSIssuer        string
+	LMSAudience      string
 }
 
 type apm struct {
@@ -97,6 +100,9 @@ func Load() *Main {
 			Secret:          util.GetEnv("JWT_SECRET", "your-super-secret-jwt-key-change-this-in-production"),
 			AccessTokenTTL:  util.GetEnv("JWT_ACCESS_TTL_MINUTES", 120), // 2 hours default
 			RefreshTokenTTL: util.GetEnv("JWT_REFRESH_TTL_MINUTES", 240),     // 4 hours default
+			LMSTokenSecret:  util.GetEnv("LMS_JWT_SECRET", ""),
+			LMSIssuer:       util.GetEnv("LMS_JWT_ISSUER", "lms-erlangga"),
+			LMSAudience:     util.GetEnv("LMS_JWT_AUDIENCE", ""),
 		},
 		APM: apm{
 			ServerURL:      util.GetEnv("ELASTIC_APM_SERVER_URL", "http://localhost:8200"),

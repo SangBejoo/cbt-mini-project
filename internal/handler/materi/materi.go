@@ -41,17 +41,17 @@ func (h *materiHandler) convertToProtoMateri(m *entity.Materi, questionCount int
 		school = *m.SchoolID
 	}
 	return &base.Materi{
-		Id:                    int32(m.ID),
-		MataPelajaran:         &base.MataPelajaran{Id: int32(m.MataPelajaran.ID), Nama: m.MataPelajaran.Nama},
-		Tingkat:               &base.Tingkat{Id: int32(m.Tingkat.ID), Nama: m.Tingkat.Nama},
-		Nama:                  m.Nama,
-		IsActive:              m.IsActive,
-		DefaultDurasiMenit:    int32(m.DefaultDurasiMenit),
-		DefaultJumlahSoal:     int32(m.DefaultJumlahSoal),
-		JumlahSoalReal:        int32(questionCount),
-		OwnerUserId:           owner,
-		SchoolId:              school,
-		Labels:                labels,
+		Id:                 int32(m.ID),
+		MataPelajaran:      &base.MataPelajaran{Id: int32(m.MataPelajaran.ID), Nama: m.MataPelajaran.Nama},
+		Tingkat:            &base.Tingkat{Id: int32(m.Tingkat.ID), Nama: m.Tingkat.Nama},
+		Nama:               m.Nama,
+		IsActive:           m.IsActive,
+		DefaultDurasiMenit: int32(m.DefaultDurasiMenit),
+		DefaultJumlahSoal:  int32(m.DefaultJumlahSoal),
+		JumlahSoalReal:     int32(questionCount),
+		OwnerUserId:        owner,
+		SchoolId:           school,
+		Labels:             labels,
 	}
 }
 
@@ -60,16 +60,7 @@ func (h *materiHandler) CreateMateri(ctx context.Context, req *base.CreateMateri
 	// Get user from context
 	user, err := interceptor.GetUserFromContext(ctx)
 	if err != nil {
-		// REST gateway fallback
-		token, extractErr := interceptor.ExtractTokenFromContext(ctx)
-		if extractErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "user not authenticated")
-		}
-		claims, validateErr := interceptor.ValidateToken(token)
-		if validateErr != nil {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-		user = &base.User{Id: claims.UserID}
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 	ownerUserID := int(user.Id)
 
@@ -186,7 +177,7 @@ func (h *materiHandler) ListMateri(ctx context.Context, req *base.ListMateriRequ
 	}
 
 	return &base.ListMateriResponse{
-		Materi:     materiList,
+		Materi: materiList,
 		Pagination: &base.PaginationResponse{
 			TotalCount:  int32(pagination.TotalCount),
 			TotalPages:  int32(pagination.TotalPages),

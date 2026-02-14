@@ -23,6 +23,7 @@ import (
 	"cbt-test-mini-project/init/infra"
 	"cbt-test-mini-project/internal/dependency"
 	"cbt-test-mini-project/internal/event"
+	authRepo "cbt-test-mini-project/internal/repository/auth"
 	"cbt-test-mini-project/util/interceptor"
 )
 
@@ -34,7 +35,8 @@ func RunGRPCServer(ctx context.Context, cfg config.Main, repo infra.Repository, 
 	}
 
 	// Initialize JWT middleware
-	jwtMiddleware := interceptor.NewJWTMiddleware(&cfg)
+	authRepository := authRepo.NewAuthRepository(repo.SQLDB)
+	jwtMiddleware := interceptor.NewJWTMiddleware(&cfg, authRepository)
 
 	// Initialize repositories for middleware
 	userLimitRepo := repo.UserLimitRepo
