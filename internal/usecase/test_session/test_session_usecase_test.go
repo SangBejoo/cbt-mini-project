@@ -170,6 +170,16 @@ func (m *MockTestSessionRepo) List(tingkatan, idMataPelajaran *int, status *enti
 	return args.Get(0).([]entity.TestSession), args.Get(1).(int), args.Error(2)
 }
 
+func (m *MockTestSessionRepo) ListScheduledByUser(userID int, lmsClassID *int64, limit, offset int) ([]entity.TestSession, int, error) {
+	args := m.Called(userID, lmsClassID, limit, offset)
+	return args.Get(0).([]entity.TestSession), args.Get(1).(int), args.Error(2)
+}
+
+func (m *MockTestSessionRepo) StartScheduledSession(token string, startedAt time.Time) (bool, error) {
+	args := m.Called(token, startedAt)
+	return args.Bool(0), args.Error(1)
+}
+
 func (m *MockTestSessionRepo) GetSoalDragDropByID(id int) (*entity.SoalDragDrop, error) {
 	args := m.Called(id)
 	if args.Get(0) == nil {

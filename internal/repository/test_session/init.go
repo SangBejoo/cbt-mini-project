@@ -46,6 +46,12 @@ type TestSessionRepository interface {
 	// List sessions with filters
 	List(tingkatan, idMataPelajaran *int, status *entity.TestStatus, limit, offset int) ([]entity.TestSession, int, error)
 
+	// List scheduled sessions for a specific user
+	ListScheduledByUser(userID int, lmsClassID *int64, limit, offset int) ([]entity.TestSession, int, error)
+
+	// Start scheduled session when allowed
+	StartScheduledSession(token string, startedAt time.Time) (bool, error)
+
 	// Get questions for session
 	GetSessionQuestions(token string) ([]entity.TestSessionSoal, error)
 

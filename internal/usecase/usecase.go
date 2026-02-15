@@ -19,6 +19,7 @@ type UserLimitUsecase interface {
 	GetUserLimits(ctx context.Context, userID int) ([]*entity.UserLimit, error)
 	GetUsageHistory(ctx context.Context, userID int, limitType string, days int) ([]*entity.UserLimitUsage, error)
 	ResetLimit(ctx context.Context, userID int, limitType string) error
+	SetUserLimit(ctx context.Context, userID int, limitType string, limitValue int) (*entity.UserLimit, error)
 }
 
 // userLimitUsecase implements UserLimitUsecase
@@ -142,6 +143,40 @@ func (u *userLimitUsecase) ResetLimit(ctx context.Context, userID int, limitType
 	}
 
 	return nil
+}
+
+// SetUserLimit updates the configured quota for a user and limit type (admin function)
+func (u *userLimitUsecase) SetUserLimit(ctx context.Context, userID int, limitType string, limitValue int) (*entity.UserLimit, error) {
+	span, ctx := apm.StartSpan(ctx, "set_user_limit", "usecase")
+	if span != nil {
+		defer span.End()
+	}
+
+	if userID <= 0 {
+		return nil, fmt.Errorf("user_id must be greater than 0")
+	}
+	if limitType == "" {
+		return nil, fmt.Errorf("limit_type is required")
+	}
+	if limitValue < 0 {
+		return nil, fmt.Errorf("limit_value cannot be negative")
+	}
+
+	limit, err := u.userLimitRepo.GetOrCreateLimit(ctx, userID, limitType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get limit: %w", err)
+	}
+
+	limit.LimitValue = limitValue
+	if limit.CurrentUsed > limitValue {
+		limit.CurrentUsed = limitValue
+	}
+
+	if err := u.userLimitRepo.UpdateLimit(ctx, limit); err != nil {
+		return nil, fmt.Errorf("failed to update limit: %w", err)
+	}
+
+	return limit, nil
 }
 
 // getNextResetTime calculates the next reset time for a limit type

@@ -64,6 +64,14 @@ http:
     - selector: base.TestSessionService.GetTestResult
       get: /v1/test-sessions/{session_token}/result
 
+    # 7. Scheduled sessions (student)
+    - selector: base.TestSessionService.ListMyScheduledSessions
+      get: /v1/test-sessions/scheduled
+
+    - selector: base.TestSessionService.StartScheduledSession
+      post: /v1/test-sessions/{session_token}/start
+      body: "*"
+
     # ==================================================
     # HISTORY SERVICE
     # ==================================================
@@ -76,6 +84,23 @@ http:
 
     - selector: base.HistoryService.GetHistoryDetail
       get: /v1/history/{session_token}/detail
+
+    # ==================================================
+    # USER LIMIT SERVICE (Admin)
+    # ==================================================
+    - selector: base.UserLimitService.GetUserLimits
+      get: /v1/admin/users/{user_id}/limits
+
+    - selector: base.UserLimitService.SetUserLimit
+      put: /v1/admin/users/{user_id}/limits/{limit_type}
+      body: "*"
+
+    - selector: base.UserLimitService.ResetUserLimit
+      post: /v1/admin/users/{user_id}/limits/{limit_type}/reset
+      body: "*"
+
+    - selector: base.UserLimitService.GetUserLimitUsageHistory
+      get: /v1/admin/users/{user_id}/limits/{limit_type}/usage
 
     # ==================================================
     # MATA PELAJARAN SERVICE (Read-only)

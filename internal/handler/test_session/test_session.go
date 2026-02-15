@@ -494,6 +494,80 @@ func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTes
 	}, nil
 }
 
+// ListMyScheduledSessions lists scheduled sessions for the authenticated student.
+func (h *testSessionHandler) ListMyScheduledSessions(ctx context.Context, req *base.ListMyScheduledSessionsRequest) (*base.ListTestSessionsResponse, error) {
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+	}
+
+	if user.Role != base.UserRole_SISWA {
+		return nil, status.Error(codes.PermissionDenied, "only student can access this endpoint")
+	}
+
+	page := 1
+	pageSize := 20
+	if req.Pagination != nil {
+		if req.Pagination.Page > 0 {
+			page = int(req.Pagination.Page)
+		}
+		if req.Pagination.PageSize > 0 {
+			pageSize = int(req.Pagination.PageSize)
+		}
+	}
+
+	var lmsClassID *int64
+	if req.LmsClassId > 0 {
+		v := req.LmsClassId
+		lmsClassID = &v
+	}
+
+	sessions, pagination, err := h.usecase.ListScheduledSessions(int(user.Id), lmsClassID, page, pageSize)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	protoSessions := make([]*base.TestSession, 0, len(sessions))
+	for i := range sessions {
+		protoSessions = append(protoSessions, h.convertToProtoTestSession(&sessions[i]))
+	}
+
+	return &base.ListTestSessionsResponse{
+		TestSessions: protoSessions,
+		Pagination: &base.PaginationResponse{
+			TotalCount:  int32(pagination.TotalCount),
+			TotalPages:  int32(pagination.TotalPages),
+			CurrentPage: int32(pagination.CurrentPage),
+			PageSize:    int32(pagination.PageSize),
+		},
+	}, nil
+}
+
+// StartScheduledSession starts an LMS-scheduled session when the start time is reached.
+func (h *testSessionHandler) StartScheduledSession(ctx context.Context, req *base.StartScheduledSessionRequest) (*base.TestSessionResponse, error) {
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+	}
+
+	if user.Role != base.UserRole_SISWA {
+		return nil, status.Error(codes.PermissionDenied, "only student can access this endpoint")
+	}
+
+	session, err := h.usecase.StartScheduledSession(int(user.Id), req.SessionToken)
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "scheduled to start") {
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		}
+		if strings.Contains(strings.ToLower(err.Error()), "permission") {
+			return nil, status.Error(codes.PermissionDenied, err.Error())
+		}
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &base.TestSessionResponse{TestSession: h.convertToProtoTestSession(session)}, nil
+}
+
 // ListTestSessions lists sessions
 func (h *testSessionHandler) ListTestSessions(ctx context.Context, req *base.ListTestSessionsRequest) (*base.ListTestSessionsResponse, error) {
 	// Get user from JWT context for admin access
@@ -572,6 +646,11 @@ func (h *testSessionHandler) convertToProtoTestSession(session *entity.TestSessi
 		nilaiAkhir = *session.NilaiAkhir
 	}
 
+	var lmsClassID int64
+	if session.LMSClassID != nil {
+		lmsClassID = *session.LMSClassID
+	}
+
 	var jumlahBenar, totalSoal int32
 	if session.JumlahBenar != nil {
 		jumlahBenar = int32(*session.JumlahBenar)
@@ -597,6 +676,7 @@ func (h *testSessionHandler) convertToProtoTestSession(session *entity.TestSessi
 		JumlahBenar:   jumlahBenar,
 		TotalSoal:     totalSoal,
 		Status:        status,
+		LmsClassId:    lmsClassID,
 	}
 }
 

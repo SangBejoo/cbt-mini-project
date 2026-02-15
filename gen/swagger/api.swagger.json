@@ -31,6 +31,9 @@
     },
     {
       "name": "HistoryService"
+    },
+    {
+      "name": "UserLimitService"
     }
   ],
   "consumes": [
@@ -82,7 +85,8 @@
               "STATUS_INVALID",
               "ONGOING",
               "COMPLETED",
-              "TIMEOUT"
+              "TIMEOUT",
+              "SCHEDULED"
             ],
             "default": "STATUS_INVALID"
           },
@@ -103,6 +107,171 @@
         ],
         "tags": [
           "TestSessionService"
+        ]
+      }
+    },
+    "/v1/admin/users/{userId}/limits": {
+      "get": {
+        "operationId": "UserLimitService_GetUserLimits",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseGetUserLimitsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "UserLimitService"
+        ]
+      }
+    },
+    "/v1/admin/users/{userId}/limits/{limitType}": {
+      "put": {
+        "operationId": "UserLimitService_SetUserLimit",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseUserLimitResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "limitType",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserLimitServiceSetUserLimitBody"
+            }
+          }
+        ],
+        "tags": [
+          "UserLimitService"
+        ]
+      }
+    },
+    "/v1/admin/users/{userId}/limits/{limitType}/reset": {
+      "post": {
+        "operationId": "UserLimitService_ResetUserLimit",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseMessageStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "limitType",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserLimitServiceResetUserLimitBody"
+            }
+          }
+        ],
+        "tags": [
+          "UserLimitService"
+        ]
+      }
+    },
+    "/v1/admin/users/{userId}/limits/{limitType}/usage": {
+      "get": {
+        "operationId": "UserLimitService_GetUserLimitUsageHistory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseGetUserLimitUsageHistoryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "limitType",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "UserLimitService"
         ]
       }
     },
@@ -1349,6 +1518,52 @@
         ]
       }
     },
+    "/v1/test-sessions/scheduled": {
+      "get": {
+        "summary": "Scheduled LMS sessions (student)",
+        "operationId": "TestSessionService_ListMyScheduledSessions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseListTestSessionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pagination.page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "lmsClassId",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "TestSessionService"
+        ]
+      }
+    },
     "/v1/test-sessions/{sessionToken}": {
       "get": {
         "operationId": "TestSessionService_GetTestSession",
@@ -1601,6 +1816,44 @@
         ]
       }
     },
+    "/v1/test-sessions/{sessionToken}/start": {
+      "post": {
+        "operationId": "TestSessionService_StartScheduledSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseTestSessionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionToken",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TestSessionServiceStartScheduledSessionBody"
+            }
+          }
+        ],
+        "tags": [
+          "TestSessionService"
+        ]
+      }
+    },
     "/v1/tingkat": {
       "get": {
         "operationId": "TingkatService_ListTingkat",
@@ -1835,6 +2088,9 @@
     "TestSessionServiceCompleteSessionBody": {
       "type": "object"
     },
+    "TestSessionServiceStartScheduledSessionBody": {
+      "type": "object"
+    },
     "TestSessionServiceSubmitAnswerBody": {
       "type": "object",
       "properties": {
@@ -1861,6 +2117,18 @@
             "format": "int32"
           },
           "title": "For ORDERING: position-\u003eitemId, For MATCHING: slotId-\u003eitemId"
+        }
+      }
+    },
+    "UserLimitServiceResetUserLimitBody": {
+      "type": "object"
+    },
+    "UserLimitServiceSetUserLimitBody": {
+      "type": "object",
+      "properties": {
+        "limitValue": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -2118,6 +2386,42 @@
         }
       },
       "title": "Drop zone/slot"
+    },
+    "baseGetUserLimitUsageHistoryResponse": {
+      "type": "object",
+      "properties": {
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseUserLimitUsage"
+          }
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "baseGetUserLimitsResponse": {
+      "type": "object",
+      "properties": {
+        "limits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseUserLimit"
+          }
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
     },
     "baseHistoryDetailResponse": {
       "type": "object",
@@ -3048,7 +3352,8 @@
         "STATUS_INVALID",
         "ONGOING",
         "COMPLETED",
-        "TIMEOUT"
+        "TIMEOUT",
+        "SCHEDULED"
       ],
       "default": "STATUS_INVALID"
     },
@@ -3130,6 +3435,86 @@
         "lmsUserId": {
           "type": "string",
           "format": "int64"
+        }
+      }
+    },
+    "baseUserLimit": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "userId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "limitType": {
+          "type": "string"
+        },
+        "limitValue": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "currentUsed": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "resetAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "baseUserLimitResponse": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "$ref": "#/definitions/baseUserLimit"
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "baseUserLimitUsage": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "userId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "limitType": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "resourceId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "hasResourceId": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },

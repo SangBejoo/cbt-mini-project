@@ -371,6 +371,86 @@ func (r *testSessionRepositoryImpl) List(tingkatan, idMataPelajaran *int, status
 	return sessions, total, nil
 }
 
+func (r *testSessionRepositoryImpl) ListScheduledByUser(userID int, lmsClassID *int64, limit, offset int) ([]entity.TestSession, int, error) {
+	var sessions []entity.TestSession
+	var total int
+
+	countQuery := `SELECT COUNT(*) FROM test_session ts WHERE ts.user_id = $1 AND ts.status = 'scheduled'::test_session_status_enum`
+	countArgs := []interface{}{userID}
+	if lmsClassID != nil {
+		countQuery += " AND ts.lms_class_id = $2"
+		countArgs = append(countArgs, *lmsClassID)
+	}
+
+	if err := r.db.QueryRow(countQuery, countArgs...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	dataQuery := `
+		SELECT ts.id, ts.session_token, ts.user_id, ts.nama_peserta, ts.id_tingkat, ts.id_mata_pelajaran, ts.waktu_mulai, ts.waktu_selesai, ts.durasi_menit, ts.nilai_akhir, ts.jumlah_benar, ts.total_soal, ts.status, ts.lms_assignment_id, ts.lms_class_id,
+		       mp.id, mp.nama, mp.is_active, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
+		       t.id, t.nama, t.is_active, t.lms_level_id,
+		       u.id, u.email, u.nama, u.role, u.is_active, u.created_at, u.updated_at, u.lms_user_id
+		FROM test_session ts
+		JOIN mata_pelajaran mp ON ts.id_mata_pelajaran = mp.id
+		JOIN tingkat t ON ts.id_tingkat = t.id
+		JOIN users u ON ts.user_id = u.id
+		WHERE ts.user_id = $1 AND ts.status = 'scheduled'::test_session_status_enum`
+	dataArgs := []interface{}{userID}
+	if lmsClassID != nil {
+		dataQuery += " AND ts.lms_class_id = $2"
+		dataArgs = append(dataArgs, *lmsClassID)
+	}
+
+	dataQuery += " ORDER BY ts.waktu_mulai ASC LIMIT $" + fmt.Sprintf("%d", len(dataArgs)+1) + " OFFSET $" + fmt.Sprintf("%d", len(dataArgs)+2)
+	dataArgs = append(dataArgs, limit, offset)
+
+	rows, err := r.db.Query(dataQuery, dataArgs...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var session entity.TestSession
+		session.User = &entity.User{}
+		err := rows.Scan(
+			&session.ID, &session.SessionToken, &session.UserID, &session.NamaPeserta, &session.IDTingkat, &session.IDMataPelajaran, &session.WaktuMulai, &session.WaktuSelesai, &session.DurasiMenit, &session.NilaiAkhir, &session.JumlahBenar, &session.TotalSoal, &session.Status, &session.LMSAssignmentID, &session.LMSClassID,
+			&session.MataPelajaran.ID, &session.MataPelajaran.Nama, &session.MataPelajaran.IsActive, &session.MataPelajaran.LmsSubjectID, &session.MataPelajaran.LmsSchoolID, &session.MataPelajaran.LmsClassID,
+			&session.Tingkat.ID, &session.Tingkat.Nama, &session.Tingkat.IsActive, &session.Tingkat.LmsLevelID,
+			&session.User.ID, &session.User.Email, &session.User.Nama, &session.User.Role, &session.User.IsActive, &session.User.CreatedAt, &session.User.UpdatedAt, &session.User.LmsUserID,
+		)
+		if err != nil {
+			return nil, 0, err
+		}
+		sessions = append(sessions, session)
+	}
+
+	return sessions, total, nil
+}
+
+func (r *testSessionRepositoryImpl) StartScheduledSession(token string, startedAt time.Time) (bool, error) {
+	query := `
+		UPDATE test_session
+		SET status = 'ongoing'::test_session_status_enum,
+			waktu_mulai = $1,
+			updated_at = $2
+		WHERE session_token = $3
+			AND status = 'scheduled'::test_session_status_enum
+	`
+	result, err := r.db.Exec(query, startedAt, time.Now(), token)
+	if err != nil {
+		return false, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	return rowsAffected > 0, nil
+}
+
 // Get questions for session
 func (r *testSessionRepositoryImpl) GetSessionQuestions(token string) ([]entity.TestSessionSoal, error) {
 	query := `

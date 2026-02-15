@@ -17,4 +17,6 @@ type TestSessionUsecase interface {
 	CompleteSession(sessionToken string) (*entity.TestSession, error)
 	GetTestResult(sessionToken string) (*entity.TestSession, []entity.JawabanDetail, error)
 	ListTestSessions(tingkatan, idMataPelajaran *int, status *entity.TestStatus, page, pageSize int) ([]entity.TestSession, *entity.PaginationResponse, error)
+	ListScheduledSessions(userID int, lmsClassID *int64, page, pageSize int) ([]entity.TestSession, *entity.PaginationResponse, error)
+	StartScheduledSession(userID int, sessionToken string) (*entity.TestSession, error)
 }

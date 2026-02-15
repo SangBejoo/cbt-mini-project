@@ -1456,15 +1456,17 @@ var SoalDragDropService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	TestSessionService_CreateTestSession_FullMethodName    = "/base.TestSessionService/CreateTestSession"
-	TestSessionService_GetTestSession_FullMethodName       = "/base.TestSessionService/GetTestSession"
-	TestSessionService_GetTestQuestions_FullMethodName     = "/base.TestSessionService/GetTestQuestions"
-	TestSessionService_SubmitAnswer_FullMethodName         = "/base.TestSessionService/SubmitAnswer"
-	TestSessionService_SubmitDragDropAnswer_FullMethodName = "/base.TestSessionService/SubmitDragDropAnswer"
-	TestSessionService_ClearAnswer_FullMethodName          = "/base.TestSessionService/ClearAnswer"
-	TestSessionService_CompleteSession_FullMethodName      = "/base.TestSessionService/CompleteSession"
-	TestSessionService_GetTestResult_FullMethodName        = "/base.TestSessionService/GetTestResult"
-	TestSessionService_ListTestSessions_FullMethodName     = "/base.TestSessionService/ListTestSessions"
+	TestSessionService_CreateTestSession_FullMethodName       = "/base.TestSessionService/CreateTestSession"
+	TestSessionService_GetTestSession_FullMethodName          = "/base.TestSessionService/GetTestSession"
+	TestSessionService_GetTestQuestions_FullMethodName        = "/base.TestSessionService/GetTestQuestions"
+	TestSessionService_SubmitAnswer_FullMethodName            = "/base.TestSessionService/SubmitAnswer"
+	TestSessionService_SubmitDragDropAnswer_FullMethodName    = "/base.TestSessionService/SubmitDragDropAnswer"
+	TestSessionService_ClearAnswer_FullMethodName             = "/base.TestSessionService/ClearAnswer"
+	TestSessionService_CompleteSession_FullMethodName         = "/base.TestSessionService/CompleteSession"
+	TestSessionService_GetTestResult_FullMethodName           = "/base.TestSessionService/GetTestResult"
+	TestSessionService_ListMyScheduledSessions_FullMethodName = "/base.TestSessionService/ListMyScheduledSessions"
+	TestSessionService_StartScheduledSession_FullMethodName   = "/base.TestSessionService/StartScheduledSession"
+	TestSessionService_ListTestSessions_FullMethodName        = "/base.TestSessionService/ListTestSessions"
 )
 
 // TestSessionServiceClient is the client API for TestSessionService service.
@@ -1482,6 +1484,9 @@ type TestSessionServiceClient interface {
 	CompleteSession(ctx context.Context, in *CompleteSessionRequest, opts ...grpc.CallOption) (*TestSessionResponse, error)
 	// Results & review
 	GetTestResult(ctx context.Context, in *GetTestResultRequest, opts ...grpc.CallOption) (*TestResultResponse, error)
+	// Scheduled LMS sessions (student)
+	ListMyScheduledSessions(ctx context.Context, in *ListMyScheduledSessionsRequest, opts ...grpc.CallOption) (*ListTestSessionsResponse, error)
+	StartScheduledSession(ctx context.Context, in *StartScheduledSessionRequest, opts ...grpc.CallOption) (*TestSessionResponse, error)
 	// Admin queries
 	ListTestSessions(ctx context.Context, in *ListTestSessionsRequest, opts ...grpc.CallOption) (*ListTestSessionsResponse, error)
 }
@@ -1574,6 +1579,26 @@ func (c *testSessionServiceClient) GetTestResult(ctx context.Context, in *GetTes
 	return out, nil
 }
 
+func (c *testSessionServiceClient) ListMyScheduledSessions(ctx context.Context, in *ListMyScheduledSessionsRequest, opts ...grpc.CallOption) (*ListTestSessionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTestSessionsResponse)
+	err := c.cc.Invoke(ctx, TestSessionService_ListMyScheduledSessions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testSessionServiceClient) StartScheduledSession(ctx context.Context, in *StartScheduledSessionRequest, opts ...grpc.CallOption) (*TestSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TestSessionResponse)
+	err := c.cc.Invoke(ctx, TestSessionService_StartScheduledSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *testSessionServiceClient) ListTestSessions(ctx context.Context, in *ListTestSessionsRequest, opts ...grpc.CallOption) (*ListTestSessionsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListTestSessionsResponse)
@@ -1599,6 +1624,9 @@ type TestSessionServiceServer interface {
 	CompleteSession(context.Context, *CompleteSessionRequest) (*TestSessionResponse, error)
 	// Results & review
 	GetTestResult(context.Context, *GetTestResultRequest) (*TestResultResponse, error)
+	// Scheduled LMS sessions (student)
+	ListMyScheduledSessions(context.Context, *ListMyScheduledSessionsRequest) (*ListTestSessionsResponse, error)
+	StartScheduledSession(context.Context, *StartScheduledSessionRequest) (*TestSessionResponse, error)
 	// Admin queries
 	ListTestSessions(context.Context, *ListTestSessionsRequest) (*ListTestSessionsResponse, error)
 	mustEmbedUnimplementedTestSessionServiceServer()
@@ -1634,6 +1662,12 @@ func (UnimplementedTestSessionServiceServer) CompleteSession(context.Context, *C
 }
 func (UnimplementedTestSessionServiceServer) GetTestResult(context.Context, *GetTestResultRequest) (*TestResultResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTestResult not implemented")
+}
+func (UnimplementedTestSessionServiceServer) ListMyScheduledSessions(context.Context, *ListMyScheduledSessionsRequest) (*ListTestSessionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListMyScheduledSessions not implemented")
+}
+func (UnimplementedTestSessionServiceServer) StartScheduledSession(context.Context, *StartScheduledSessionRequest) (*TestSessionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartScheduledSession not implemented")
 }
 func (UnimplementedTestSessionServiceServer) ListTestSessions(context.Context, *ListTestSessionsRequest) (*ListTestSessionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListTestSessions not implemented")
@@ -1803,6 +1837,42 @@ func _TestSessionService_GetTestResult_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestSessionService_ListMyScheduledSessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMyScheduledSessionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestSessionServiceServer).ListMyScheduledSessions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TestSessionService_ListMyScheduledSessions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestSessionServiceServer).ListMyScheduledSessions(ctx, req.(*ListMyScheduledSessionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestSessionService_StartScheduledSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartScheduledSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestSessionServiceServer).StartScheduledSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TestSessionService_StartScheduledSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestSessionServiceServer).StartScheduledSession(ctx, req.(*StartScheduledSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TestSessionService_ListTestSessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListTestSessionsRequest)
 	if err := dec(in); err != nil {
@@ -1859,6 +1929,14 @@ var TestSessionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTestResult",
 			Handler:    _TestSessionService_GetTestResult_Handler,
+		},
+		{
+			MethodName: "ListMyScheduledSessions",
+			Handler:    _TestSessionService_ListMyScheduledSessions_Handler,
+		},
+		{
+			MethodName: "StartScheduledSession",
+			Handler:    _TestSessionService_StartScheduledSession_Handler,
 		},
 		{
 			MethodName: "ListTestSessions",
@@ -2003,6 +2081,222 @@ var HistoryService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetHistoryDetail",
 			Handler:    _HistoryService_GetHistoryDetail_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "cbt.proto",
+}
+
+const (
+	UserLimitService_GetUserLimits_FullMethodName            = "/base.UserLimitService/GetUserLimits"
+	UserLimitService_SetUserLimit_FullMethodName             = "/base.UserLimitService/SetUserLimit"
+	UserLimitService_ResetUserLimit_FullMethodName           = "/base.UserLimitService/ResetUserLimit"
+	UserLimitService_GetUserLimitUsageHistory_FullMethodName = "/base.UserLimitService/GetUserLimitUsageHistory"
+)
+
+// UserLimitServiceClient is the client API for UserLimitService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type UserLimitServiceClient interface {
+	GetUserLimits(ctx context.Context, in *GetUserLimitsRequest, opts ...grpc.CallOption) (*GetUserLimitsResponse, error)
+	SetUserLimit(ctx context.Context, in *SetUserLimitRequest, opts ...grpc.CallOption) (*UserLimitResponse, error)
+	ResetUserLimit(ctx context.Context, in *ResetUserLimitRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error)
+	GetUserLimitUsageHistory(ctx context.Context, in *GetUserLimitUsageHistoryRequest, opts ...grpc.CallOption) (*GetUserLimitUsageHistoryResponse, error)
+}
+
+type userLimitServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewUserLimitServiceClient(cc grpc.ClientConnInterface) UserLimitServiceClient {
+	return &userLimitServiceClient{cc}
+}
+
+func (c *userLimitServiceClient) GetUserLimits(ctx context.Context, in *GetUserLimitsRequest, opts ...grpc.CallOption) (*GetUserLimitsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserLimitsResponse)
+	err := c.cc.Invoke(ctx, UserLimitService_GetUserLimits_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userLimitServiceClient) SetUserLimit(ctx context.Context, in *SetUserLimitRequest, opts ...grpc.CallOption) (*UserLimitResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UserLimitResponse)
+	err := c.cc.Invoke(ctx, UserLimitService_SetUserLimit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userLimitServiceClient) ResetUserLimit(ctx context.Context, in *ResetUserLimitRequest, opts ...grpc.CallOption) (*MessageStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MessageStatusResponse)
+	err := c.cc.Invoke(ctx, UserLimitService_ResetUserLimit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userLimitServiceClient) GetUserLimitUsageHistory(ctx context.Context, in *GetUserLimitUsageHistoryRequest, opts ...grpc.CallOption) (*GetUserLimitUsageHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserLimitUsageHistoryResponse)
+	err := c.cc.Invoke(ctx, UserLimitService_GetUserLimitUsageHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// UserLimitServiceServer is the server API for UserLimitService service.
+// All implementations must embed UnimplementedUserLimitServiceServer
+// for forward compatibility.
+type UserLimitServiceServer interface {
+	GetUserLimits(context.Context, *GetUserLimitsRequest) (*GetUserLimitsResponse, error)
+	SetUserLimit(context.Context, *SetUserLimitRequest) (*UserLimitResponse, error)
+	ResetUserLimit(context.Context, *ResetUserLimitRequest) (*MessageStatusResponse, error)
+	GetUserLimitUsageHistory(context.Context, *GetUserLimitUsageHistoryRequest) (*GetUserLimitUsageHistoryResponse, error)
+	mustEmbedUnimplementedUserLimitServiceServer()
+}
+
+// UnimplementedUserLimitServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedUserLimitServiceServer struct{}
+
+func (UnimplementedUserLimitServiceServer) GetUserLimits(context.Context, *GetUserLimitsRequest) (*GetUserLimitsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserLimits not implemented")
+}
+func (UnimplementedUserLimitServiceServer) SetUserLimit(context.Context, *SetUserLimitRequest) (*UserLimitResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetUserLimit not implemented")
+}
+func (UnimplementedUserLimitServiceServer) ResetUserLimit(context.Context, *ResetUserLimitRequest) (*MessageStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResetUserLimit not implemented")
+}
+func (UnimplementedUserLimitServiceServer) GetUserLimitUsageHistory(context.Context, *GetUserLimitUsageHistoryRequest) (*GetUserLimitUsageHistoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserLimitUsageHistory not implemented")
+}
+func (UnimplementedUserLimitServiceServer) mustEmbedUnimplementedUserLimitServiceServer() {}
+func (UnimplementedUserLimitServiceServer) testEmbeddedByValue()                          {}
+
+// UnsafeUserLimitServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to UserLimitServiceServer will
+// result in compilation errors.
+type UnsafeUserLimitServiceServer interface {
+	mustEmbedUnimplementedUserLimitServiceServer()
+}
+
+func RegisterUserLimitServiceServer(s grpc.ServiceRegistrar, srv UserLimitServiceServer) {
+	// If the following call pancis, it indicates UnimplementedUserLimitServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&UserLimitService_ServiceDesc, srv)
+}
+
+func _UserLimitService_GetUserLimits_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserLimitsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserLimitServiceServer).GetUserLimits(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserLimitService_GetUserLimits_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserLimitServiceServer).GetUserLimits(ctx, req.(*GetUserLimitsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserLimitService_SetUserLimit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetUserLimitRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserLimitServiceServer).SetUserLimit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserLimitService_SetUserLimit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserLimitServiceServer).SetUserLimit(ctx, req.(*SetUserLimitRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserLimitService_ResetUserLimit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetUserLimitRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserLimitServiceServer).ResetUserLimit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserLimitService_ResetUserLimit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserLimitServiceServer).ResetUserLimit(ctx, req.(*ResetUserLimitRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserLimitService_GetUserLimitUsageHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserLimitUsageHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserLimitServiceServer).GetUserLimitUsageHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserLimitService_GetUserLimitUsageHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserLimitServiceServer).GetUserLimitUsageHistory(ctx, req.(*GetUserLimitUsageHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// UserLimitService_ServiceDesc is the grpc.ServiceDesc for UserLimitService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var UserLimitService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "base.UserLimitService",
+	HandlerType: (*UserLimitServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetUserLimits",
+			Handler:    _UserLimitService_GetUserLimits_Handler,
+		},
+		{
+			MethodName: "SetUserLimit",
+			Handler:    _UserLimitService_SetUserLimit_Handler,
+		},
+		{
+			MethodName: "ResetUserLimit",
+			Handler:    _UserLimitService_ResetUserLimit_Handler,
+		},
+		{
+			MethodName: "GetUserLimitUsageHistory",
+			Handler:    _UserLimitService_GetUserLimitUsageHistory_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

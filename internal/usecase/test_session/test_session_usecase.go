@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -37,7 +38,7 @@ func NewTestSessionUsecase(repo test_session.TestSessionRepository, userRepo aut
 
 // CompleteSession completes the session and calculates score
 func (u *testSessionUsecaseImpl) CompleteSession(sessionToken string) (*entity.TestSession, error) {
-	session, err := u.repo.GetByToken(sessionToken)
+	session, err := u.ensureSessionAttemptable(sessionToken)
 	if err != nil {
 		return nil, err
 	}
@@ -131,14 +132,14 @@ func (u *testSessionUsecaseImpl) CompleteSession(sessionToken string) (*entity.T
 			}
 		}
 	}
-    
+
 	return updatedSession, nil
 }
 
 // CreateTestSession creates a new test session with random questions
 func (u *testSessionUsecaseImpl) CreateTestSession(userID, tingkatan, idMataPelajaran, durasiMenit, jumlahSoal int) (*entity.TestSession, error) {
 	fmt.Printf("=== USECASE CreateTestSession: userID=%d, tingkatan=%d, idMataPelajaran=%d ===\n", userID, tingkatan, idMataPelajaran)
-	
+
 	if userID < 1 || tingkatan < 1 || idMataPelajaran < 1 || durasiMenit < 1 || jumlahSoal < 1 {
 		return nil, fmt.Errorf("invalid input parameters: userID=%d, tingkatan=%d, idMataPelajaran=%d, durasiMenit=%d, jumlahSoal=%d", userID, tingkatan, idMataPelajaran, durasiMenit, jumlahSoal)
 	}
@@ -222,7 +223,7 @@ func (u *testSessionUsecaseImpl) GetTestSession(sessionToken string) (*entity.Te
 
 // GetTestQuestions gets a single question for the student
 func (u *testSessionUsecaseImpl) GetTestQuestions(sessionToken string, nomorUrut int) (*entity.QuestionForStudent, error) {
-	_, err := u.GetTestSession(sessionToken)
+	_, err := u.ensureSessionAttemptable(sessionToken)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +238,7 @@ func (u *testSessionUsecaseImpl) GetTestQuestions(sessionToken string, nomorUrut
 		NomorUrut:    nomorUrut,
 		QuestionType: tss.QuestionType,
 		Materi:       tss.Soal.Materi, // Will be nil for drag-drop, need to handle this
-		IsAnswered:   false, // Will be set below
+		IsAnswered:   false,           // Will be set below
 	}
 
 	// Get existing answer if any
@@ -303,7 +304,7 @@ func (u *testSessionUsecaseImpl) GetTestQuestions(sessionToken string, nomorUrut
 
 // GetAllTestQuestions gets all questions for the session
 func (u *testSessionUsecaseImpl) GetAllTestQuestions(sessionToken string) ([]entity.QuestionForStudent, error) {
-	_, err := u.GetTestSession(sessionToken)
+	_, err := u.ensureSessionAttemptable(sessionToken)
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +353,6 @@ func (u *testSessionUsecaseImpl) GetAllTestQuestions(sessionToken string) ([]ent
 			question.MCJawabanDipilih = jawabanDipilih
 			question.MCGambar = tss.Soal.Gambar
 
-
 		} else if tss.QuestionType == entity.QuestionTypeDragDrop && tss.SoalDragDrop != nil && tss.SoalDragDrop.ID > 0 {
 			// Handle drag-drop question
 			var userAnswer map[int]int
@@ -390,7 +390,7 @@ func (u *testSessionUsecaseImpl) GetSessionAnswers(sessionToken string) ([]entit
 
 // SubmitAnswer submits or updates an answer
 func (u *testSessionUsecaseImpl) SubmitAnswer(sessionToken string, nomorUrut int, jawaban entity.JawabanOption) error {
-	_, err := u.GetTestSession(sessionToken)
+	_, err := u.ensureSessionAttemptable(sessionToken)
 	if err != nil {
 		return err
 	}
@@ -400,7 +400,7 @@ func (u *testSessionUsecaseImpl) SubmitAnswer(sessionToken string, nomorUrut int
 
 // SubmitDragDropAnswer submits a drag-drop answer with all-or-nothing scoring
 func (u *testSessionUsecaseImpl) SubmitDragDropAnswer(sessionToken string, nomorUrut int, answer map[int]int) error {
-	_, err := u.GetTestSession(sessionToken)
+	_, err := u.ensureSessionAttemptable(sessionToken)
 	if err != nil {
 		return err
 	}
@@ -444,15 +444,13 @@ func (u *testSessionUsecaseImpl) checkDragDropAnswer(correctAnswers []entity.Dra
 
 // ClearAnswer clears an answer
 func (u *testSessionUsecaseImpl) ClearAnswer(sessionToken string, nomorUrut int) error {
-	_, err := u.GetTestSession(sessionToken)
+	_, err := u.ensureSessionAttemptable(sessionToken)
 	if err != nil {
 		return err
 	}
 
 	return u.repo.ClearAnswer(sessionToken, nomorUrut)
 }
-
-
 
 // GetTestResult gets the test result
 func (u *testSessionUsecaseImpl) GetTestResult(sessionToken string) (*entity.TestSession, []entity.JawabanDetail, error) {
@@ -541,7 +539,7 @@ func (u *testSessionUsecaseImpl) GetTestResult(sessionToken string) (*entity.Tes
 		} else {
 			// MULTIPLE CHOICE Handling (Default)
 			// Use loaded Soal info directly
-			
+
 			detail.Pertanyaan = question.Soal.Pertanyaan
 			detail.OpsiA = question.Soal.OpsiA
 			detail.OpsiB = question.Soal.OpsiB
@@ -593,6 +591,111 @@ func (u *testSessionUsecaseImpl) ListTestSessions(tingkatan, idMataPelajaran *in
 	}
 
 	return sessions, pagination, nil
+}
+
+func (u *testSessionUsecaseImpl) ListScheduledSessions(userID int, lmsClassID *int64, page, pageSize int) ([]entity.TestSession, *entity.PaginationResponse, error) {
+	if userID < 1 {
+		return nil, nil, errors.New("invalid user id")
+	}
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+
+	offset := (page - 1) * pageSize
+	sessions, total, err := u.repo.ListScheduledByUser(userID, lmsClassID, pageSize, offset)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	totalPages := (total + pageSize - 1) / pageSize
+	pagination := &entity.PaginationResponse{
+		TotalCount:  total,
+		TotalPages:  totalPages,
+		CurrentPage: page,
+		PageSize:    pageSize,
+	}
+
+	return sessions, pagination, nil
+}
+
+func (u *testSessionUsecaseImpl) StartScheduledSession(userID int, sessionToken string) (*entity.TestSession, error) {
+	if userID < 1 {
+		return nil, errors.New("invalid user id")
+	}
+	if strings.TrimSpace(sessionToken) == "" {
+		return nil, errors.New("session token is required")
+	}
+
+	session, err := u.repo.GetByToken(sessionToken)
+	if err != nil {
+		return nil, err
+	}
+	if session.UserID == nil || *session.UserID != userID {
+		return nil, errors.New("you do not have permission to access this session")
+	}
+
+	now := time.Now()
+	if session.Status == entity.TestStatusScheduled {
+		if now.Before(session.WaktuMulai) {
+			return nil, fmt.Errorf("session is scheduled to start at %s", session.WaktuMulai.Format(time.RFC3339))
+		}
+
+		started, err := u.repo.StartScheduledSession(sessionToken, now)
+		if err != nil {
+			return nil, err
+		}
+		if started {
+			session, err = u.repo.GetByToken(sessionToken)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if session.Status != entity.TestStatusOngoing {
+		return nil, fmt.Errorf("session cannot be started from status %s", session.Status)
+	}
+
+	return session, nil
+}
+
+func (u *testSessionUsecaseImpl) ensureSessionAttemptable(sessionToken string) (*entity.TestSession, error) {
+	session, err := u.repo.GetByToken(sessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	if session.Status == entity.TestStatusScheduled {
+		if now.Before(session.WaktuMulai) {
+			return nil, fmt.Errorf("session is scheduled to start at %s", session.WaktuMulai.Format(time.RFC3339))
+		}
+
+		started, err := u.repo.StartScheduledSession(sessionToken, now)
+		if err != nil {
+			return nil, err
+		}
+		if started {
+			session, err = u.repo.GetByToken(sessionToken)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if session.Status == entity.TestStatusOngoing && session.DurasiMenit > 0 && time.Now().After(session.BatasWaktu()) {
+		u.repo.UpdateSessionStatus(sessionToken, entity.TestStatusTimeout)
+		session.Status = entity.TestStatusTimeout
+	}
+
+	if session.Status != entity.TestStatusOngoing && session.Status != entity.TestStatusTimeout {
+		return nil, errors.New("session is not active")
+	}
+
+	return session, nil
 }
 
 // Helper functions

@@ -24,4 +24,5 @@ func InitRestGatewayDependency(mux *runtime.ServeMux, opts []grpc.DialOption, ct
 	base.RegisterSoalDragDropServiceHandlerFromEndpoint(ctx, mux, port, opts)
 	base.RegisterTestSessionServiceHandlerFromEndpoint(ctx, mux, port, opts)
 	base.RegisterHistoryServiceHandlerFromEndpoint(ctx, mux, port, opts)
+	base.RegisterUserLimitServiceHandlerFromEndpoint(ctx, mux, port, opts)
 }

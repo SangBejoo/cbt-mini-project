@@ -17,6 +17,7 @@ import (
 	soalDragDropHandler "cbt-test-mini-project/internal/handler/soal_drag_drop"
 	testSessionHandler "cbt-test-mini-project/internal/handler/test_session"
 	tingkatHandler "cbt-test-mini-project/internal/handler/tingkat"
+	userLimitHandler "cbt-test-mini-project/internal/handler/user_limit"
 	authRepo "cbt-test-mini-project/internal/repository/auth"
 	historyRepo "cbt-test-mini-project/internal/repository/history"
 	mataPelajaranRepo "cbt-test-mini-project/internal/repository/mata_pelajaran"
@@ -68,6 +69,7 @@ func InitGrpcDependency(server *grpc.Server, repo infra.Repository, config *conf
 	testSessionServer := testSessionHandler.NewTestSessionHandler(testSessionUsecase, materiUsecase, tingkatUsecase, userLimitUsecase)
 	historyServer := historyHandler.NewHistoryHandler(historyUsecase)
 	tingkatServer := tingkatHandler.NewTingkatHandler(tingkatUsecase)
+	userLimitServer := userLimitHandler.NewUserLimitHandler(userLimitUsecase)
 
 	// Register servers
 	base.RegisterBaseServer(server, baseServer)
@@ -79,4 +81,5 @@ func InitGrpcDependency(server *grpc.Server, repo infra.Repository, config *conf
 	base.RegisterTestSessionServiceServer(server, testSessionServer)
 	base.RegisterHistoryServiceServer(server, historyServer)
 	base.RegisterTingkatServiceServer(server, tingkatServer)
+	base.RegisterUserLimitServiceServer(server, userLimitServer)
 }

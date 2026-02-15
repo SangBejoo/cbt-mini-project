@@ -23,6 +23,7 @@ enum TestStatus {
     ONGOING = 1;
     COMPLETED = 2;
     TIMEOUT = 3;
+    SCHEDULED = 4;
 }
 
 // Question type for mixed sessions
@@ -133,6 +134,10 @@ service TestSessionService {
     // Results & review
     rpc GetTestResult(GetTestResultRequest) returns (TestResultResponse) {};
 
+    // Scheduled LMS sessions (student)
+    rpc ListMyScheduledSessions(ListMyScheduledSessionsRequest) returns (ListTestSessionsResponse) {};
+    rpc StartScheduledSession(StartScheduledSessionRequest) returns (TestSessionResponse) {};
+
     // Admin queries
     rpc ListTestSessions(ListTestSessionsRequest) returns (ListTestSessionsResponse) {};
 }
@@ -144,6 +149,17 @@ service TestSessionService {
 service HistoryService {
     rpc GetStudentHistory(StudentHistoryRequest) returns (StudentHistoryResponse) {};  // For logged-in student
     rpc GetHistoryDetail(GetHistoryDetailRequest) returns (HistoryDetailResponse) {};
+}
+
+// ========================================
+// USER LIMIT SERVICE (ADMIN)
+// ========================================
+
+service UserLimitService {
+    rpc GetUserLimits(GetUserLimitsRequest) returns (GetUserLimitsResponse) {};
+    rpc SetUserLimit(SetUserLimitRequest) returns (UserLimitResponse) {};
+    rpc ResetUserLimit(ResetUserLimitRequest) returns (MessageStatusResponse) {};
+    rpc GetUserLimitUsageHistory(GetUserLimitUsageHistoryRequest) returns (GetUserLimitUsageHistoryResponse) {};
 }
 
 // ========================================
@@ -256,6 +272,66 @@ message RefreshTokenResponse {
     google.protobuf.Timestamp expires_at = 3;
     bool success = 4;
     string message = 5;
+}
+
+message UserLimit {
+    int32 id = 1;
+    int32 user_id = 2;
+    string limit_type = 3;
+    int32 limit_value = 4;
+    int32 current_used = 5;
+    google.protobuf.Timestamp reset_at = 6;
+    google.protobuf.Timestamp created_at = 7;
+    google.protobuf.Timestamp updated_at = 8;
+}
+
+message UserLimitUsage {
+    int32 id = 1;
+    int32 user_id = 2;
+    string limit_type = 3;
+    string action = 4;
+    int32 resource_id = 5;
+    bool has_resource_id = 6;
+    google.protobuf.Timestamp created_at = 7;
+}
+
+message GetUserLimitsRequest {
+    int32 user_id = 1;
+}
+
+message GetUserLimitsResponse {
+    repeated UserLimit limits = 1;
+    bool success = 2;
+    string message = 3;
+}
+
+message SetUserLimitRequest {
+    int32 user_id = 1;
+    string limit_type = 2;
+    int32 limit_value = 3;
+}
+
+message ResetUserLimitRequest {
+    int32 user_id = 1;
+    string limit_type = 2;
+}
+
+message UserLimitResponse {
+    UserLimit limit = 1;
+    bool success = 2;
+    string message = 3;
+}
+
+message GetUserLimitUsageHistoryRequest {
+    int32 user_id = 1;
+    string limit_type = 2;
+    int32 days = 3;
+}
+
+message GetUserLimitUsageHistoryResponse {
+    repeated UserLimitUsage history = 1;
+    bool success = 2;
+    string message = 3;
 }
 
 // ========================================
@@ -882,4 +958,13 @@ message QuestionCountsResponse {
 message TopicCount {
     int32 topic_id = 1;
     int32 count = 2;
+}
+
+message ListMyScheduledSessionsRequest {
+    PaginationRequest pagination = 1;
+    int64 lms_class_id = 2;
+}
+
+message StartScheduledSessionRequest {
+    string session_token = 1;
 }
