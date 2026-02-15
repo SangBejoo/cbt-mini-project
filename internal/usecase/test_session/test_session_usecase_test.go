@@ -319,3 +319,55 @@ func TestCompleteSession_Integration(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 	mockUserRepo.AssertExpectations(t)
 }
+
+func TestSubmitAnswer_RejectsTimedOutSession(t *testing.T) {
+	mockRepo := new(MockTestSessionRepo)
+	mockUserRepo := new(MockUserRepo)
+	usecase := test_session.NewTestSessionUsecase(mockRepo, mockUserRepo, nil)
+
+	token := "timeout-token"
+	userID := 1
+	start := time.Now().Add(-2 * time.Hour)
+	session := &entity.TestSession{
+		SessionToken: token,
+		UserID:       &userID,
+		Status:       entity.TestStatusOngoing,
+		WaktuMulai:   start,
+		DurasiMenit:  30,
+	}
+
+	mockRepo.On("GetByToken", token).Return(session, nil).Once()
+	mockRepo.On("UpdateSessionStatus", token, entity.TestStatusTimeout).Return(nil).Once()
+
+	err := usecase.SubmitAnswer(token, 1, entity.JawabanA)
+	assert.Error(t, err)
+	assert.Equal(t, "session has timed out", err.Error())
+
+	mockRepo.AssertExpectations(t)
+}
+
+func TestClearAnswer_RejectsTimedOutSession(t *testing.T) {
+	mockRepo := new(MockTestSessionRepo)
+	mockUserRepo := new(MockUserRepo)
+	usecase := test_session.NewTestSessionUsecase(mockRepo, mockUserRepo, nil)
+
+	token := "timeout-token-clear"
+	userID := 2
+	start := time.Now().Add(-90 * time.Minute)
+	session := &entity.TestSession{
+		SessionToken: token,
+		UserID:       &userID,
+		Status:       entity.TestStatusOngoing,
+		WaktuMulai:   start,
+		DurasiMenit:  20,
+	}
+
+	mockRepo.On("GetByToken", token).Return(session, nil).Once()
+	mockRepo.On("UpdateSessionStatus", token, entity.TestStatusTimeout).Return(nil).Once()
+
+	err := usecase.ClearAnswer(token, 3)
+	assert.Error(t, err)
+	assert.Equal(t, "session has timed out", err.Error())
+
+	mockRepo.AssertExpectations(t)
+}

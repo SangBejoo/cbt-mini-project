@@ -390,7 +390,7 @@ func (u *testSessionUsecaseImpl) GetSessionAnswers(sessionToken string) ([]entit
 
 // SubmitAnswer submits or updates an answer
 func (u *testSessionUsecaseImpl) SubmitAnswer(sessionToken string, nomorUrut int, jawaban entity.JawabanOption) error {
-	_, err := u.ensureSessionAttemptable(sessionToken)
+	_, err := u.ensureSessionWritable(sessionToken)
 	if err != nil {
 		return err
 	}
@@ -400,7 +400,7 @@ func (u *testSessionUsecaseImpl) SubmitAnswer(sessionToken string, nomorUrut int
 
 // SubmitDragDropAnswer submits a drag-drop answer with all-or-nothing scoring
 func (u *testSessionUsecaseImpl) SubmitDragDropAnswer(sessionToken string, nomorUrut int, answer map[int]int) error {
-	_, err := u.ensureSessionAttemptable(sessionToken)
+	_, err := u.ensureSessionWritable(sessionToken)
 	if err != nil {
 		return err
 	}
@@ -444,7 +444,7 @@ func (u *testSessionUsecaseImpl) checkDragDropAnswer(correctAnswers []entity.Dra
 
 // ClearAnswer clears an answer
 func (u *testSessionUsecaseImpl) ClearAnswer(sessionToken string, nomorUrut int) error {
-	_, err := u.ensureSessionAttemptable(sessionToken)
+	_, err := u.ensureSessionWritable(sessionToken)
 	if err != nil {
 		return err
 	}
@@ -693,6 +693,19 @@ func (u *testSessionUsecaseImpl) ensureSessionAttemptable(sessionToken string) (
 
 	if session.Status != entity.TestStatusOngoing && session.Status != entity.TestStatusTimeout {
 		return nil, errors.New("session is not active")
+	}
+
+	return session, nil
+}
+
+func (u *testSessionUsecaseImpl) ensureSessionWritable(sessionToken string) (*entity.TestSession, error) {
+	session, err := u.ensureSessionAttemptable(sessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	if session.Status != entity.TestStatusOngoing {
+		return nil, errors.New("session has timed out")
 	}
 
 	return session, nil

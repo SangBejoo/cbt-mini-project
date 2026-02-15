@@ -3,9 +3,11 @@ package sync
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	infraRedis "cbt-test-mini-project/init/infra/redis"
@@ -18,13 +20,18 @@ import (
 	testSessionRepo "cbt-test-mini-project/internal/repository/test_session"
 	"cbt-test-mini-project/internal/repository/tingkat"
 
-	"github.com/redis/go-redis/v9"
+	goredis "github.com/redis/go-redis/v9"
 )
 
 const (
-	lmsEventsStream    = "lms_events"
-	lmsEventsDLQStream = "lms_events_dlq"
-	maxRetryCount      = 3
+	lmsEventsStream      = "lms_events"
+	lmsEventsDLQStream   = "lms_events_dlq"
+	lmsConsumerGroup     = "cbt_lms_sync_group"
+	consumerReadBatch    = int64(25)
+	consumerReadBlock    = 2 * time.Second
+	consumerMinClaimIdle = 30 * time.Second
+	maxRetryCount        = 3
+	processedMessageTTL  = 7 * 24 * time.Hour
 )
 
 type SyncWorker struct {
@@ -59,57 +66,77 @@ func NewSyncWorker(
 
 func (w *SyncWorker) Start(ctx context.Context) {
 	slog.Info("Sync worker started, listening for LMS events...")
+	if err := w.ensureConsumerGroup(ctx); err != nil {
+		slog.Error("failed to initialize consumer group", "error", err)
+		return
+	}
 
-	// Start from beginning to process any missed events, then track position
-	lastID := "0"
+	consumerName := fmt.Sprintf("cbt-sync-consumer-%d", time.Now().UnixNano())
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			// Read from Redis Stream
-			// Using XREAD for simplicity here, but XREADGROUP is better for production
-			streams, err := infraRedis.RedisClient.XRead(ctx, &redis.XReadArgs{
-				Streams: []string{lmsEventsStream, lastID},
-				Block:   5 * time.Second, // Block for 5 seconds max, then check context
-				Count:   10,              // Process 10 messages at a time
+			w.claimStalePending(ctx, consumerName)
+			w.readOwnPending(ctx, consumerName)
+
+			streams, err := infraRedis.RedisClient.XReadGroup(ctx, &goredis.XReadGroupArgs{
+				Group:    lmsConsumerGroup,
+				Consumer: consumerName,
+				Streams:  []string{lmsEventsStream, ">"},
+				Block:    consumerReadBlock,
+				Count:    consumerReadBatch,
 			}).Result()
 
 			if err != nil {
-				// redis.Nil is returned when Block times out with no new messages
-				if err.Error() == "redis: nil" {
+				if errors.Is(err, goredis.Nil) {
 					continue
 				}
-				slog.Error("failed to read from redis stream", "error", err)
+				if strings.Contains(err.Error(), "NOGROUP") {
+					if groupErr := w.ensureConsumerGroup(ctx); groupErr != nil {
+						slog.Error("failed to recreate consumer group", "error", groupErr)
+					}
+					continue
+				}
+				slog.Error("failed to read from redis stream group", "error", err)
 				time.Sleep(2 * time.Second)
 				continue
 			}
 
-			for _, stream := range streams {
-				for _, msg := range stream.Messages {
-					if err := w.processMessage(ctx, msg.Values); err != nil {
-						slog.Error("failed to process LMS event", "message_id", msg.ID, "error", err)
-						w.handleFailedMessage(ctx, msg, err)
-					}
-					lastID = msg.ID // Track last processed message ID
-				}
+			w.processStreamMessages(ctx, streams)
+		}
+	}
+}
+
+func (w *SyncWorker) processStreamMessages(ctx context.Context, streams []goredis.XStream) {
+	for _, stream := range streams {
+		for _, msg := range stream.Messages {
+			if err := w.processMessage(ctx, msg); err != nil {
+				slog.Error("failed to process LMS event", "message_id", msg.ID, "error", err)
+				w.handleFailedMessage(ctx, msg, err)
 			}
 		}
 	}
 }
 
-func (w *SyncWorker) processMessage(_ context.Context, data map[string]interface{}) error {
-	eventType, _ := data["event"].(string)
-	if eventType == "" {
-		eventType, _ = data["type"].(string)
-	}
-	payload, _ := data["payload"].(string)
+func (w *SyncWorker) processMessage(ctx context.Context, msg goredis.XMessage) error {
+	eventType := extractEventType(msg.Values)
+	payload := extractStringValue(msg.Values["payload"])
 	if eventType == "" {
 		return fmt.Errorf("missing event type")
 	}
 	if payload == "" {
 		return fmt.Errorf("missing payload for event %s", eventType)
+	}
+
+	originalMessageID := getOriginalMessageID(msg.Values, msg.ID)
+	processed, err := w.isMessageProcessed(ctx, originalMessageID)
+	if err != nil {
+		return fmt.Errorf("failed to check dedupe key: %w", err)
+	}
+	if processed {
+		return w.ackMessage(ctx, msg.ID)
 	}
 
 	slog.Info("processing LMS event", "type", eventType)
@@ -148,31 +175,39 @@ func (w *SyncWorker) processMessage(_ context.Context, data map[string]interface
 	}
 
 	slog.Warn("unknown LMS event type, skipping", "type", eventType)
-	return nil
+
+	if err := w.markMessageProcessed(ctx, originalMessageID); err != nil {
+		return fmt.Errorf("failed to mark message as processed: %w", err)
+	}
+
+	return w.ackMessage(ctx, msg.ID)
 }
 
-func (w *SyncWorker) handleFailedMessage(ctx context.Context, msg redis.XMessage, processErr error) {
-	retryCount := parseRetryCount(msg.Values["retry_count"])
-	eventType, _ := msg.Values["event"].(string)
-	if eventType == "" {
-		eventType, _ = msg.Values["type"].(string)
-	}
-	payload, _ := msg.Values["payload"].(string)
+func (w *SyncWorker) handleFailedMessage(ctx context.Context, msg goredis.XMessage, processErr error) {
+	retryCount := parseRetryCount(msg.Values["retry_count"]) + 1
+	eventType := extractEventType(msg.Values)
+	payload := extractStringValue(msg.Values["payload"])
+	originalMessageID := getOriginalMessageID(msg.Values, msg.ID)
 
-	if retryCount < maxRetryCount {
+	if retryCount <= maxRetryCount {
 		values := map[string]interface{}{
 			"event":           eventType,
 			"type":            eventType,
 			"payload":         payload,
-			"retry_count":     retryCount + 1,
+			"retry_count":     retryCount,
 			"error":           processErr.Error(),
-			"original_msg_id": msg.ID,
+			"original_msg_id": originalMessageID,
+			"failed_at":       time.Now().UTC().Format(time.RFC3339),
 		}
-		if err := infraRedis.RedisClient.XAdd(ctx, &redis.XAddArgs{
+		if err := infraRedis.RedisClient.XAdd(ctx, &goredis.XAddArgs{
 			Stream: lmsEventsStream,
 			Values: values,
 		}).Err(); err != nil {
-			slog.Error("failed to requeue LMS event", "message_id", msg.ID, "retry_count", retryCount+1, "error", err)
+			slog.Error("failed to requeue LMS event", "message_id", msg.ID, "retry_count", retryCount, "error", err)
+			return
+		}
+		if err := w.ackMessage(ctx, msg.ID); err != nil {
+			slog.Error("failed to ack requeued LMS event", "message_id", msg.ID, "error", err)
 		}
 		return
 	}
@@ -183,11 +218,11 @@ func (w *SyncWorker) handleFailedMessage(ctx context.Context, msg redis.XMessage
 		"payload":         payload,
 		"error":           processErr.Error(),
 		"retry_count":     retryCount,
-		"original_msg_id": msg.ID,
+		"original_msg_id": originalMessageID,
 		"failed_at":       time.Now().UTC().Format(time.RFC3339),
 	}
 
-	if err := infraRedis.RedisClient.XAdd(ctx, &redis.XAddArgs{
+	if err := infraRedis.RedisClient.XAdd(ctx, &goredis.XAddArgs{
 		Stream: lmsEventsDLQStream,
 		Values: dlqValues,
 	}).Err(); err != nil {
@@ -195,7 +230,120 @@ func (w *SyncWorker) handleFailedMessage(ctx context.Context, msg redis.XMessage
 		return
 	}
 
+	if err := w.ackMessage(ctx, msg.ID); err != nil {
+		slog.Error("failed to ack DLQ event", "message_id", msg.ID, "error", err)
+	}
+
 	slog.Error("moved LMS event to DLQ", "message_id", msg.ID, "event", eventType, "retry_count", retryCount)
+}
+
+func (w *SyncWorker) ensureConsumerGroup(ctx context.Context) error {
+	err := infraRedis.RedisClient.XGroupCreateMkStream(ctx, lmsEventsStream, lmsConsumerGroup, "0").Err()
+	if err != nil && !strings.Contains(err.Error(), "BUSYGROUP") {
+		return err
+	}
+	return nil
+}
+
+func (w *SyncWorker) readOwnPending(ctx context.Context, consumerName string) {
+	streams, err := infraRedis.RedisClient.XReadGroup(ctx, &goredis.XReadGroupArgs{
+		Group:    lmsConsumerGroup,
+		Consumer: consumerName,
+		Streams:  []string{lmsEventsStream, "0"},
+		Count:    consumerReadBatch,
+	}).Result()
+	if err != nil && !errors.Is(err, goredis.Nil) {
+		slog.Warn("failed reading own pending entries", "error", err)
+		return
+	}
+	if len(streams) > 0 {
+		w.processStreamMessages(ctx, streams)
+	}
+}
+
+func (w *SyncWorker) claimStalePending(ctx context.Context, consumerName string) {
+	start := "0-0"
+	for {
+		messages, next, err := infraRedis.RedisClient.XAutoClaim(ctx, &goredis.XAutoClaimArgs{
+			Stream:   lmsEventsStream,
+			Group:    lmsConsumerGroup,
+			Consumer: consumerName,
+			MinIdle:  consumerMinClaimIdle,
+			Start:    start,
+			Count:    consumerReadBatch,
+		}).Result()
+		if err != nil && !errors.Is(err, goredis.Nil) {
+			slog.Warn("failed auto-claiming pending entries", "error", err)
+			return
+		}
+		if len(messages) == 0 {
+			return
+		}
+
+		w.processStreamMessages(ctx, []goredis.XStream{{Stream: lmsEventsStream, Messages: messages}})
+
+		if next == "0-0" || next == start {
+			return
+		}
+		start = next
+	}
+}
+
+func (w *SyncWorker) ackMessage(ctx context.Context, messageID string) error {
+	if err := infraRedis.RedisClient.XAck(ctx, lmsEventsStream, lmsConsumerGroup, messageID).Err(); err != nil {
+		return err
+	}
+	if err := infraRedis.RedisClient.XDel(ctx, lmsEventsStream, messageID).Err(); err != nil {
+		slog.Warn("failed to delete acknowledged stream message", "message_id", messageID, "error", err)
+	}
+	return nil
+}
+
+func (w *SyncWorker) processedKey(originalMessageID string) string {
+	return "lms_events:processed:" + originalMessageID
+}
+
+func (w *SyncWorker) isMessageProcessed(ctx context.Context, originalMessageID string) (bool, error) {
+	result, err := infraRedis.RedisClient.Exists(ctx, w.processedKey(originalMessageID)).Result()
+	if err != nil {
+		return false, err
+	}
+	return result > 0, nil
+}
+
+func (w *SyncWorker) markMessageProcessed(ctx context.Context, originalMessageID string) error {
+	_, err := infraRedis.RedisClient.SetNX(ctx, w.processedKey(originalMessageID), "1", processedMessageTTL).Result()
+	return err
+}
+
+func extractEventType(values map[string]interface{}) string {
+	eventType := extractStringValue(values["event"])
+	if eventType == "" {
+		eventType = extractStringValue(values["type"])
+	}
+	return eventType
+}
+
+func extractStringValue(value interface{}) string {
+	switch typed := value.(type) {
+	case string:
+		return typed
+	case []byte:
+		return string(typed)
+	default:
+		if value == nil {
+			return ""
+		}
+		return fmt.Sprint(value)
+	}
+}
+
+func getOriginalMessageID(values map[string]interface{}, fallback string) string {
+	original := extractStringValue(values["original_msg_id"])
+	if original != "" {
+		return original
+	}
+	return fallback
 }
 
 func parseRetryCount(value interface{}) int {
@@ -207,13 +355,17 @@ func parseRetryCount(value interface{}) int {
 	case float64:
 		return int(typed)
 	case string:
-		parsed, err := strconv.Atoi(typed)
+		parsed, err := strconv.Atoi(strings.TrimSpace(typed))
 		if err != nil {
 			return 0
 		}
 		return parsed
 	default:
-		return 0
+		parsed, err := strconv.Atoi(strings.TrimSpace(fmt.Sprint(value)))
+		if err != nil {
+			return 0
+		}
+		return parsed
 	}
 }
 
