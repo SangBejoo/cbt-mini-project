@@ -54,6 +54,7 @@ func (p *Publisher) Publish(ctx context.Context, eventType EventType, payload in
 	_, err = p.client.XAdd(ctx, &redis.XAddArgs{
 		Stream: p.streamName,
 		Values: map[string]interface{}{
+			"event":   string(eventType),
 			"type":    string(eventType),
 			"payload": string(data),
 		},

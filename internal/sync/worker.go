@@ -101,6 +101,9 @@ func (w *SyncWorker) Start(ctx context.Context) {
 
 func (w *SyncWorker) processMessage(_ context.Context, data map[string]interface{}) error {
 	eventType, _ := data["event"].(string)
+	if eventType == "" {
+		eventType, _ = data["type"].(string)
+	}
 	payload, _ := data["payload"].(string)
 	if eventType == "" {
 		return fmt.Errorf("missing event type")
@@ -151,11 +154,15 @@ func (w *SyncWorker) processMessage(_ context.Context, data map[string]interface
 func (w *SyncWorker) handleFailedMessage(ctx context.Context, msg redis.XMessage, processErr error) {
 	retryCount := parseRetryCount(msg.Values["retry_count"])
 	eventType, _ := msg.Values["event"].(string)
+	if eventType == "" {
+		eventType, _ = msg.Values["type"].(string)
+	}
 	payload, _ := msg.Values["payload"].(string)
 
 	if retryCount < maxRetryCount {
 		values := map[string]interface{}{
 			"event":           eventType,
+			"type":            eventType,
 			"payload":         payload,
 			"retry_count":     retryCount + 1,
 			"error":           processErr.Error(),
@@ -172,6 +179,7 @@ func (w *SyncWorker) handleFailedMessage(ctx context.Context, msg redis.XMessage
 
 	dlqValues := map[string]interface{}{
 		"event":           eventType,
+		"type":            eventType,
 		"payload":         payload,
 		"error":           processErr.Error(),
 		"retry_count":     retryCount,

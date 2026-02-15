@@ -21,7 +21,6 @@ import (
 	materiRepo "cbt-test-mini-project/internal/repository/materi"
 	testSessionRepo "cbt-test-mini-project/internal/repository/test_session"
 	tingkatRepo "cbt-test-mini-project/internal/repository/tingkat"
-	"cbt-test-mini-project/internal/sync"
 	"cbt-test-mini-project/util"
 )
 
@@ -67,9 +66,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Start Sync Worker to listen for LMS events
+	// Start CBT Event Consumer to listen for LMS events
 	if infraRedis.RedisClient != nil {
-		// Initialize repositories for sync worker
+		// Initialize repositories for event consumer
 		materiRepoImpl := materiRepo.NewMateriRepository(repo.SQLDB)
 		tingkatRepoImpl := tingkatRepo.NewTingkatRepository(repo.SQLDB)
 		subjectRepoImpl := mataPelajaranRepo.NewMataPelajaranRepository(repo.SQLDB)
@@ -78,7 +77,7 @@ func main() {
 		classRepoImpl := classRepo.NewClassRepository(repo.SQLDB)
 		classStudentRepoImpl := classStudentRepo.NewClassStudentRepository(repo.SQLDB)
 
-		syncWorker := sync.NewSyncWorker(
+		consumer := event.NewConsumer(
 			materiRepoImpl,
 			tingkatRepoImpl,
 			subjectRepoImpl,
@@ -87,7 +86,7 @@ func main() {
 			classRepoImpl,
 			classStudentRepoImpl,
 		)
-		go syncWorker.Start(ctx)
+		go consumer.Start(ctx)
 	}
 
 	// Initialize Event Publisher
@@ -139,4 +138,3 @@ func main() {
 	<-wait
 	slog.Info("application shutdown complete")
 }
-

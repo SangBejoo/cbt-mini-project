@@ -276,7 +276,7 @@ CREATE TABLE test_session (
     jumlah_benar INTEGER NULL,
     total_soal INTEGER NULL,
     status test_session_status_enum NOT NULL DEFAULT 'ongoing',
-    lms_assignment_id INTEGER NULL,
+    lms_assignment_id BIGINT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -287,9 +287,8 @@ CREATE INDEX idx_test_session_user ON test_session (user_id);
 CREATE INDEX idx_test_session_waktu_mulai ON test_session (waktu_mulai);
 CREATE INDEX idx_test_session_status ON test_session (status);
 CREATE INDEX idx_test_session_user_status ON test_session (user_id, status);
-CREATE INDEX idx_test_session_user_status ON test_session (user_id, status);
 CREATE INDEX idx_test_session_status_waktu ON test_session (status, waktu_mulai);
-CREATE INDEX idx_test_session_lms_assignment ON test_session (lms_assignment_id);
+CREATE INDEX idx_test_session_lms_assignment_id ON test_session (lms_assignment_id);
 
 -- Table: Test Session Soal (Unified)
 CREATE TABLE test_session_soal (

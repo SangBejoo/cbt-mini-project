@@ -163,6 +163,15 @@ service UserLimitService {
 }
 
 // ========================================
+// CLASS SYNC SERVICE (ADMIN)
+// ========================================
+
+service ClassSyncService {
+    rpc ListClasses(ListClassesRequest) returns (ListClassesResponse) {};
+    rpc ListClassStudents(ListClassStudentsRequest) returns (ListClassStudentsResponse) {};
+}
+
+// ========================================
 // COMMON MESSAGES
 // ========================================
 
@@ -967,4 +976,37 @@ message ListMyScheduledSessionsRequest {
 
 message StartScheduledSessionRequest {
     string session_token = 1;
+}
+
+message ClassData {
+    int32 id = 1;
+    int64 lms_class_id = 2;
+    int64 lms_school_id = 3;
+    string name = 4;
+    bool is_active = 5;
+    google.protobuf.Timestamp created_at = 6;
+    google.protobuf.Timestamp updated_at = 7;
+}
+
+message ListClassesRequest {
+    int64 lms_school_id = 1;
+}
+
+message ListClassesResponse {
+    repeated ClassData classes = 1;
+}
+
+message ClassStudentData {
+    int32 id = 1;
+    int64 lms_class_id = 2;
+    int64 lms_user_id = 3;
+    google.protobuf.Timestamp joined_at = 4;
+}
+
+message ListClassStudentsRequest {
+    int64 lms_class_id = 1;
+}
+
+message ListClassStudentsResponse {
+    repeated ClassStudentData students = 1;
 }

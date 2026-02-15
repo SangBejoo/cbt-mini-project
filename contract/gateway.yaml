@@ -103,6 +103,15 @@ http:
       get: /v1/admin/users/{user_id}/limits/{limit_type}/usage
 
     # ==================================================
+    # CLASS SYNC SERVICE (Admin)
+    # ==================================================
+    - selector: base.ClassSyncService.ListClasses
+      get: /v1/admin/classes
+
+    - selector: base.ClassSyncService.ListClassStudents
+      get: /v1/admin/classes/{lms_class_id}/students
+
+    # ==================================================
     # MATA PELAJARAN SERVICE (Read-only)
     # ==================================================
     - selector: base.MataPelajaranService.GetMataPelajaran

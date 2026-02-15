@@ -2302,3 +2302,143 @@ var UserLimitService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "cbt.proto",
 }
+
+const (
+	ClassSyncService_ListClasses_FullMethodName       = "/base.ClassSyncService/ListClasses"
+	ClassSyncService_ListClassStudents_FullMethodName = "/base.ClassSyncService/ListClassStudents"
+)
+
+// ClassSyncServiceClient is the client API for ClassSyncService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ClassSyncServiceClient interface {
+	ListClasses(ctx context.Context, in *ListClassesRequest, opts ...grpc.CallOption) (*ListClassesResponse, error)
+	ListClassStudents(ctx context.Context, in *ListClassStudentsRequest, opts ...grpc.CallOption) (*ListClassStudentsResponse, error)
+}
+
+type classSyncServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewClassSyncServiceClient(cc grpc.ClientConnInterface) ClassSyncServiceClient {
+	return &classSyncServiceClient{cc}
+}
+
+func (c *classSyncServiceClient) ListClasses(ctx context.Context, in *ListClassesRequest, opts ...grpc.CallOption) (*ListClassesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListClassesResponse)
+	err := c.cc.Invoke(ctx, ClassSyncService_ListClasses_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *classSyncServiceClient) ListClassStudents(ctx context.Context, in *ListClassStudentsRequest, opts ...grpc.CallOption) (*ListClassStudentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListClassStudentsResponse)
+	err := c.cc.Invoke(ctx, ClassSyncService_ListClassStudents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ClassSyncServiceServer is the server API for ClassSyncService service.
+// All implementations must embed UnimplementedClassSyncServiceServer
+// for forward compatibility.
+type ClassSyncServiceServer interface {
+	ListClasses(context.Context, *ListClassesRequest) (*ListClassesResponse, error)
+	ListClassStudents(context.Context, *ListClassStudentsRequest) (*ListClassStudentsResponse, error)
+	mustEmbedUnimplementedClassSyncServiceServer()
+}
+
+// UnimplementedClassSyncServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedClassSyncServiceServer struct{}
+
+func (UnimplementedClassSyncServiceServer) ListClasses(context.Context, *ListClassesRequest) (*ListClassesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListClasses not implemented")
+}
+func (UnimplementedClassSyncServiceServer) ListClassStudents(context.Context, *ListClassStudentsRequest) (*ListClassStudentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListClassStudents not implemented")
+}
+func (UnimplementedClassSyncServiceServer) mustEmbedUnimplementedClassSyncServiceServer() {}
+func (UnimplementedClassSyncServiceServer) testEmbeddedByValue()                          {}
+
+// UnsafeClassSyncServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ClassSyncServiceServer will
+// result in compilation errors.
+type UnsafeClassSyncServiceServer interface {
+	mustEmbedUnimplementedClassSyncServiceServer()
+}
+
+func RegisterClassSyncServiceServer(s grpc.ServiceRegistrar, srv ClassSyncServiceServer) {
+	// If the following call pancis, it indicates UnimplementedClassSyncServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&ClassSyncService_ServiceDesc, srv)
+}
+
+func _ClassSyncService_ListClasses_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListClassesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ClassSyncServiceServer).ListClasses(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ClassSyncService_ListClasses_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ClassSyncServiceServer).ListClasses(ctx, req.(*ListClassesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ClassSyncService_ListClassStudents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListClassStudentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ClassSyncServiceServer).ListClassStudents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ClassSyncService_ListClassStudents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ClassSyncServiceServer).ListClassStudents(ctx, req.(*ListClassStudentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// ClassSyncService_ServiceDesc is the grpc.ServiceDesc for ClassSyncService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ClassSyncService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "base.ClassSyncService",
+	HandlerType: (*ClassSyncServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListClasses",
+			Handler:    _ClassSyncService_ListClasses_Handler,
+		},
+		{
+			MethodName: "ListClassStudents",
+			Handler:    _ClassSyncService_ListClassStudents_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "cbt.proto",
+}

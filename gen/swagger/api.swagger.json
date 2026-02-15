@@ -34,6 +34,9 @@
     },
     {
       "name": "UserLimitService"
+    },
+    {
+      "name": "ClassSyncService"
     }
   ],
   "consumes": [
@@ -43,6 +46,68 @@
     "application/json"
   ],
   "paths": {
+    "/v1/admin/classes": {
+      "get": {
+        "operationId": "ClassSyncService_ListClasses",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseListClassesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "lmsSchoolId",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ClassSyncService"
+        ]
+      }
+    },
+    "/v1/admin/classes/{lmsClassId}/students": {
+      "get": {
+        "operationId": "ClassSyncService_ListClassStudents",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseListClassStudentsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "lmsClassId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ClassSyncService"
+        ]
+      }
+    },
     "/v1/admin/sessions": {
       "get": {
         "summary": "Admin queries",
@@ -2132,6 +2197,58 @@
         }
       }
     },
+    "baseClassData": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lmsClassId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "lmsSchoolId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "baseClassStudentData": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lmsClassId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "lmsUserId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "baseClearAnswerResponse": {
       "type": "object",
       "properties": {
@@ -2585,6 +2702,30 @@
         "D"
       ],
       "default": "JAWABAN_INVALID"
+    },
+    "baseListClassStudentsResponse": {
+      "type": "object",
+      "properties": {
+        "students": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseClassStudentData"
+          }
+        }
+      }
+    },
+    "baseListClassesResponse": {
+      "type": "object",
+      "properties": {
+        "classes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseClassData"
+          }
+        }
+      }
     },
     "baseListMataPelajaranResponse": {
       "type": "object",
