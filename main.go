@@ -41,18 +41,15 @@ func main() {
 	}()
 
 	// Initialize Redis for sync worker
-	redisAddr := os.Getenv("REDIS_ADDR")
-	if redisAddr == "" {
-		redisAddr = "localhost:6379"
-	}
-	redisPassword := os.Getenv("REDIS_PASSWORD")
-	redisDB := 0 // Default DB
-
-	if err := infraRedis.InitRedis(redisAddr, redisPassword, redisDB); err != nil {
-		slog.Error("failed to initialize redis", "error", err)
-		// Continue without sync - not fatal for CBT to run standalone
+	if cfg.Redis.Addr == "" {
+		slog.Warn("redis is not configured; set REDIS_ADDR or REDIS_HOST+REDIS_PORT to enable sync worker")
 	} else {
-		slog.Info("✓ Redis connected successfully")
+		if err := infraRedis.InitRedis(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB); err != nil {
+			slog.Error("failed to initialize redis", "error", err)
+			// Continue without sync - not fatal for CBT to run standalone
+		} else {
+			slog.Info("✓ Redis connected successfully", "redis_addr", cfg.Redis.Addr)
+		}
 	}
 	defer func() {
 		if err := infraRedis.CloseRedis(); err != nil {

@@ -1,6 +1,9 @@
 package config
 
 import (
+	"fmt"
+	"strings"
+
 	"cbt-test-mini-project/util"
 
 	"github.com/joho/godotenv"
@@ -8,6 +11,7 @@ import (
 
 type Main struct {
 	Database   Database
+	Redis      redis
 	Log        log
 	RestServer restServer
 	GrpcServer grpcServer
@@ -25,6 +29,14 @@ type Database struct {
 	MaxIdleConns     int
 	MinIdleConns     int // Minimum idle connections to maintain
 	ConnMaxLifetime  int // in minutes
+}
+
+type redis struct {
+	Addr     string
+	Host     string
+	Port     int
+	Password string
+	DB       int
 }
 
 type log struct {
@@ -77,6 +89,8 @@ type cloudinary struct {
 
 func Load() *Main {
 	godotenv.Load()
+	redisHost := util.GetEnv("REDIS_HOST", "")
+	redisPort := util.GetEnv("REDIS_PORT", 6379)
 	return &Main{
 		Database: Database{
 			DriverName:     util.GetEnv("DB_DRIVER", "postgres"),
@@ -85,6 +99,13 @@ func Load() *Main {
 			MaxIdleConns:   util.GetEnv("DB_MAX_IDLE_CONNS", 25),
 			MinIdleConns:   util.GetEnv("DB_MIN_IDLE_CONNS", 5),
 			ConnMaxLifetime: util.GetEnv("DB_CONN_MAX_LIFETIME_MINUTES", 5),
+		},
+		Redis: redis{
+			Addr:     resolveRedisAddr(redisHost, redisPort),
+			Host:     redisHost,
+			Port:     redisPort,
+			Password: util.GetEnv("REDIS_PASSWORD", ""),
+			DB:       util.GetEnv("REDIS_DB", 0),
 		},
 		Log: log{
 			Level:     util.GetEnv("LOG_LEVEL", -1),
@@ -127,4 +148,18 @@ func Load() *Main {
 			Secret: util.GetEnv("cloudinary_secret", ""),
 		},
 	}
+}
+
+func resolveRedisAddr(host string, port int) string {
+	addr := strings.TrimSpace(util.GetEnv("REDIS_ADDR", ""))
+	if addr != "" {
+		return addr
+	}
+
+	host = strings.TrimSpace(host)
+	if host == "" {
+		return ""
+	}
+
+	return fmt.Sprintf("%s:%d", host, port)
 }
