@@ -12,6 +12,7 @@ import (
 
 	infraRedis "cbt-test-mini-project/init/infra/redis"
 	"cbt-test-mini-project/internal/entity"
+	"cbt-test-mini-project/internal/event/contracts"
 	authRepo "cbt-test-mini-project/internal/repository/auth"
 	classRepo "cbt-test-mini-project/internal/repository/class"
 	classStudentRepo "cbt-test-mini-project/internal/repository/class_student"
@@ -150,15 +151,15 @@ func (w *SyncWorker) processMessage(ctx context.Context, msg goredis.XMessage) e
 		return w.handleModuleUpsert(payload)
 	case "user_upsert":
 		return w.handleUserUpsert(payload)
-	case "exam_assignment_created":
+	case string(contracts.ExamAssignmentCreated):
 		return w.handleExamAssignmentCreated(payload)
-	case "exam_assignment_updated":
+	case string(contracts.ExamAssignmentUpdated):
 		return w.handleExamAssignmentUpdated(payload)
-	case "exam_assignment_deleted":
+	case string(contracts.ExamAssignmentDeleted):
 		return w.handleExamAssignmentDeleted(payload)
-	case "class_upsert":
+	case string(contracts.ClassUpsert):
 		return w.handleClassUpsert(payload)
-	case "class_deleted":
+	case string(contracts.ClassDeleted):
 		return w.handleClassDeleted(payload)
 	case "level_deleted":
 		return w.handleLevelDeleted(payload)
@@ -168,9 +169,9 @@ func (w *SyncWorker) processMessage(ctx context.Context, msg goredis.XMessage) e
 		return w.handleModuleDeleted(payload)
 	case "user_deleted":
 		return w.handleUserDeleted(payload)
-	case "class_student_joined":
+	case string(contracts.ClassStudentJoined):
 		return w.handleClassStudentJoined(payload)
-	case "class_student_left":
+	case string(contracts.ClassStudentLeft):
 		return w.handleClassStudentLeft(payload)
 	}
 
@@ -457,18 +458,8 @@ func (w *SyncWorker) handleUserUpsert(payload string) error {
 	return nil
 }
 
-// ExamAssignmentPayload represents the payload for exam assignment created events
-type ExamAssignmentPayload struct {
-	LMSAssignmentID int64  `json:"lms_assignment_id"`
-	LMSClassID      int64  `json:"lms_class_id"`
-	Title           string `json:"title"`
-	MaxScore        int    `json:"max_score"`
-	ModuleID        int64  `json:"module_id"`
-	ScheduledTime   string `json:"scheduled_time"`
-}
-
 func (w *SyncWorker) handleExamAssignmentCreated(payload string) error {
-	var p ExamAssignmentPayload
+	var p contracts.ExamAssignmentPayload
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
 		return fmt.Errorf("failed to unmarshal exam assignment payload: %w", err)
 	}
@@ -527,7 +518,7 @@ func (w *SyncWorker) handleExamAssignmentCreated(payload string) error {
 }
 
 func (w *SyncWorker) handleExamAssignmentUpdated(payload string) error {
-	var p ExamAssignmentPayload
+	var p contracts.ExamAssignmentPayload
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
 		return fmt.Errorf("failed to unmarshal exam assignment updated payload: %w", err)
 	}
@@ -604,7 +595,7 @@ func (w *SyncWorker) handleExamAssignmentUpdated(payload string) error {
 }
 
 func (w *SyncWorker) handleExamAssignmentDeleted(payload string) error {
-	var p ExamAssignmentPayload
+	var p contracts.ExamAssignmentPayload
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
 		return fmt.Errorf("failed to unmarshal exam assignment deleted payload: %w", err)
 	}
@@ -632,12 +623,8 @@ func parseScheduledTime(raw string) time.Time {
 	return parsed
 }
 
-type DeletePayload struct {
-	ID int64 `json:"id"`
-}
-
 func (w *SyncWorker) handleLevelDeleted(payload string) error {
-	var p DeletePayload
+	var p contracts.DeletePayload
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
 		return fmt.Errorf("failed to unmarshal level delete payload: %w", err)
 	}
@@ -650,7 +637,7 @@ func (w *SyncWorker) handleLevelDeleted(payload string) error {
 }
 
 func (w *SyncWorker) handleSubjectDeleted(payload string) error {
-	var p DeletePayload
+	var p contracts.DeletePayload
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
 		return fmt.Errorf("failed to unmarshal subject delete payload: %w", err)
 	}
@@ -663,7 +650,7 @@ func (w *SyncWorker) handleSubjectDeleted(payload string) error {
 }
 
 func (w *SyncWorker) handleModuleDeleted(payload string) error {
-	var p DeletePayload
+	var p contracts.DeletePayload
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
 		return fmt.Errorf("failed to unmarshal module delete payload: %w", err)
 	}
@@ -676,7 +663,7 @@ func (w *SyncWorker) handleModuleDeleted(payload string) error {
 }
 
 func (w *SyncWorker) handleUserDeleted(payload string) error {
-	var p DeletePayload
+	var p contracts.DeletePayload
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
 		return fmt.Errorf("failed to unmarshal user delete payload: %w", err)
 	}
@@ -688,15 +675,8 @@ func (w *SyncWorker) handleUserDeleted(payload string) error {
 	return nil
 }
 
-type ClassPayload struct {
-	ID       int64  `json:"id"`
-	SchoolID int64  `json:"school_id"`
-	Name     string `json:"name"`
-	IsActive bool   `json:"is_active"`
-}
-
 func (w *SyncWorker) handleClassUpsert(payload string) error {
-	var p ClassPayload
+	var p contracts.ClassPayload
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
 		return fmt.Errorf("failed to unmarshal class payload: %w", err)
 	}
@@ -709,7 +689,7 @@ func (w *SyncWorker) handleClassUpsert(payload string) error {
 }
 
 func (w *SyncWorker) handleClassDeleted(payload string) error {
-	var p DeletePayload
+	var p contracts.DeletePayload
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
 		return fmt.Errorf("failed to unmarshal class delete payload: %w", err)
 	}
@@ -721,14 +701,8 @@ func (w *SyncWorker) handleClassDeleted(payload string) error {
 	return nil
 }
 
-// ClassStudentPayload represents the payload for class student events
-type ClassStudentPayload struct {
-	LMSClassID int64 `json:"lms_class_id"`
-	LMSUserID  int64 `json:"lms_user_id"`
-}
-
 func (w *SyncWorker) handleClassStudentJoined(payload string) error {
-	var p ClassStudentPayload
+	var p contracts.ClassStudentPayload
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
 		return fmt.Errorf("failed to unmarshal class_student_joined payload: %w", err)
 	}
@@ -746,7 +720,7 @@ func (w *SyncWorker) handleClassStudentJoined(payload string) error {
 }
 
 func (w *SyncWorker) handleClassStudentLeft(payload string) error {
-	var p ClassStudentPayload
+	var p contracts.ClassStudentPayload
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
 		return fmt.Errorf("failed to unmarshal class_student_left payload: %w", err)
 	}

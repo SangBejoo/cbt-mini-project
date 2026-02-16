@@ -340,38 +340,6 @@
         ]
       }
     },
-    "/v1/auth/login": {
-      "post": {
-        "operationId": "AuthService_Login",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/baseLoginResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/baseLoginRequest"
-            }
-          }
-        ],
-        "tags": [
-          "AuthService"
-        ]
-      }
-    },
     "/v1/auth/profile": {
       "get": {
         "operationId": "AuthService_GetProfile",
@@ -2808,41 +2776,6 @@
             "type": "object",
             "$ref": "#/definitions/baseTingkat"
           }
-        }
-      }
-    },
-    "baseLoginRequest": {
-      "type": "object",
-      "properties": {
-        "email": {
-          "type": "string"
-        },
-        "password": {
-          "type": "string"
-        }
-      }
-    },
-    "baseLoginResponse": {
-      "type": "object",
-      "properties": {
-        "token": {
-          "type": "string"
-        },
-        "refreshToken": {
-          "type": "string"
-        },
-        "user": {
-          "$ref": "#/definitions/baseUser"
-        },
-        "expiresAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "success": {
-          "type": "boolean"
-        },
-        "message": {
-          "type": "string"
         }
       }
     },

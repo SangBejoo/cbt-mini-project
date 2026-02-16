@@ -7,6 +7,8 @@ import (
 	"log"
 	"time"
 
+	"cbt-test-mini-project/internal/event/contracts"
+
 	"github.com/redis/go-redis/v9"
 )
 
@@ -15,20 +17,8 @@ type EventType string
 
 const (
 	// Events published by CBT
-	ExamResultCompleted EventType = "exam_result_completed"
+	ExamResultCompleted EventType = EventType(contracts.ExamResultCompleted)
 )
-
-// ExamResultPayload is sent when a student completes an exam
-type ExamResultPayload struct {
-	SessionID       int     `json:"session_id"`
-	LMSAssignmentID int64   `json:"lms_assignment_id"`
-	LMSUserID       int64   `json:"lms_user_id"`
-	LMSClassID      int64   `json:"lms_class_id"`
-	Score           float64 `json:"score"`
-	CorrectCount    int     `json:"correct_count"`
-	TotalCount      int     `json:"total_count"`
-	CompletedAt     string  `json:"completed_at"`
-}
 
 // Publisher publishes events to Redis streams
 type Publisher struct {
@@ -70,7 +60,7 @@ func (p *Publisher) Publish(ctx context.Context, eventType EventType, payload in
 
 // PublishExamResult publishes an exam result completed event
 func (p *Publisher) PublishExamResult(ctx context.Context, sessionID int, lmsAssignmentID, lmsUserID, lmsClassID int64, score float64, correctCount, totalCount int) error {
-	payload := ExamResultPayload{
+	payload := contracts.ExamResultPayload{
 		SessionID:       sessionID,
 		LMSAssignmentID: lmsAssignmentID,
 		LMSUserID:       lmsUserID,

@@ -69,9 +69,6 @@ func (m *JWTMiddleware) UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 func (m *JWTMiddleware) shouldSkipAuth(method string) bool {
 	skipMethods := []string{
 		"/base.Base/HealthCheck",
-		"/base.AuthService/Login",
-		"/base.AuthService/RefreshToken",
-		"/base.AuthService/CreateUser",
 	}
 
 	for _, skip := range skipMethods {
@@ -105,70 +102,39 @@ func ExtractTokenFromContext(ctx context.Context) (string, error) {
 
 func (m *JWTMiddleware) validateAndResolveUser(ctx context.Context, tokenString string) (*base.User, error) {
 	claims, err := m.validateLMSToken(tokenString)
-	if err == nil {
-		lmsUserID := claims.LMSUserID
-		if lmsUserID == 0 {
-			lmsUserID = int64(claims.UserID)
-		}
-		if lmsUserID == 0 {
-			return nil, errors.New("token missing lms_user_id/user_id")
-		}
-
-		name := strings.TrimSpace(claims.FullName)
-		if name == "" {
-			name = strings.TrimSpace(claims.Nama)
-		}
-		if name == "" {
-			name = "LMS User"
-		}
-
-		role := base.UserRole_SISWA
-		normalizedRole := strings.ToLower(strings.TrimSpace(claims.RoleName))
-		if normalizedRole == "admin" || normalizedRole == "school_admin" || normalizedRole == "superadmin" {
-			role = base.UserRole_ADMIN
-		}
-
-		user, syncErr := m.authRepo.FindOrCreateByLMSID(ctx, lmsUserID, claims.Email, name, int32(role))
-		if syncErr != nil {
-			return nil, errors.New("failed to provision local user from token")
-		}
-		if !user.IsActive {
-			return nil, errors.New("user is inactive")
-		}
-		return user, nil
-	}
-
-	// fallback for locally-issued CBT tokens (admin fallback)
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("unexpected signing method")
-		}
-		return []byte(m.config.JWT.Secret), nil
-	})
 	if err != nil {
-		return nil, errors.New("invalid token")
-	}
-	mapClaims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || !token.Valid {
-		return nil, errors.New("invalid token")
-	}
-	tokenType, _ := mapClaims["type"].(string)
-	if tokenType != "access" {
-		return nil, errors.New("invalid token type")
-	}
-	userIDFloat, ok := mapClaims["user_id"].(float64)
-	if !ok {
-		return nil, errors.New("invalid user_id in token")
+		return nil, errors.New("invalid LMS access token")
 	}
 
-	user, err := m.authRepo.GetUserByID(ctx, int32(userIDFloat))
-	if err != nil {
-		return nil, errors.New("user not found")
+	lmsUserID := claims.LMSUserID
+	if lmsUserID == 0 {
+		lmsUserID = int64(claims.UserID)
+	}
+	if lmsUserID == 0 {
+		return nil, errors.New("token missing lms_user_id/user_id")
+	}
+
+	name := strings.TrimSpace(claims.FullName)
+	if name == "" {
+		name = strings.TrimSpace(claims.Nama)
+	}
+	if name == "" {
+		name = "LMS User"
+	}
+
+	role := base.UserRole_SISWA
+	normalizedRole := strings.ToLower(strings.TrimSpace(claims.RoleName))
+	if normalizedRole == "admin" || normalizedRole == "school_admin" || normalizedRole == "superadmin" {
+		role = base.UserRole_ADMIN
+	}
+
+	user, syncErr := m.authRepo.FindOrCreateByLMSID(ctx, lmsUserID, claims.Email, name, int32(role))
+	if syncErr != nil {
+		return nil, errors.New("failed to provision local user from token")
 	}
 	if !user.IsActive {
 		return nil, errors.New("user is inactive")
 	}
-
 	return user, nil
 }
 

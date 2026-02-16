@@ -10,11 +10,8 @@ http:
       get: /v1/health
 
     # ==================================================
-    # AUTH SERVICE (Added for JWT Authentication)
+    # AUTH SERVICE
     # ==================================================
-    - selector: base.AuthService.Login
-      post: /v1/auth/login
-      body: "*"
     - selector: base.AuthService.GetProfile
       get: /v1/auth/profile
 

@@ -49,11 +49,10 @@ service Base {
 }
 
 // ========================================
-// AUTH SERVICE (Added for JWT Authentication)
+// AUTH SERVICE
 // ========================================
 
 service AuthService {
-    rpc Login(LoginRequest) returns (LoginResponse) {};
     rpc GetProfile(google.protobuf.Empty) returns (UserResponse) {};
 }
 
