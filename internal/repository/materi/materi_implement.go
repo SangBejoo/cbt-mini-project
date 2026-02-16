@@ -190,18 +190,19 @@ func (r *materiRepositoryImpl) GetByMataPelajaranID(idMataPelajaran int) ([]enti
 }
 
 // UpsertByLMSID inserts or updates based on LMS ID
-func (r *materiRepositoryImpl) UpsertByLMSID(lmsID int64, subjectID int64, levelID int64, name string) error {
+func (r *materiRepositoryImpl) UpsertByLMSID(lmsID int64, subjectID int64, levelID int64, classID int64, name string) error {
 	query := `
-		INSERT INTO materi (lms_module_id, nama, id_mata_pelajaran, id_tingkat, is_active)
-		VALUES ($1, $2, $3, $4, true)
+		INSERT INTO materi (lms_module_id, nama, id_mata_pelajaran, id_tingkat, lms_class_id, is_active)
+		VALUES ($1, $2, $3, $4, $5, true)
 		ON CONFLICT (lms_module_id)
 		DO UPDATE SET
 			nama = EXCLUDED.nama,
 			id_mata_pelajaran = EXCLUDED.id_mata_pelajaran,
 			id_tingkat = EXCLUDED.id_tingkat,
+			lms_class_id = EXCLUDED.lms_class_id,
 			is_active = true
 	`
-	_, err := r.db.Exec(query, lmsID, name, subjectID, levelID)
+	_, err := r.db.Exec(query, lmsID, name, subjectID, levelID, classID)
 	return err
 }
 

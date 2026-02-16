@@ -140,42 +140,47 @@ func (w *SyncWorker) processMessage(ctx context.Context, msg goredis.XMessage) e
 		return w.ackMessage(ctx, msg.ID)
 	}
 
-	slog.Info("processing LMS event", "type", eventType)
+	slog.Debug("processing LMS event", "type", eventType)
 
+	var processErr error
 	switch eventType {
 	case "level_upsert":
-		return w.handleLevelUpsert(payload)
+		processErr = w.handleLevelUpsert(payload)
 	case "subject_upsert":
-		return w.handleSubjectUpsert(payload)
-	case "module_upsert":
-		return w.handleModuleUpsert(payload)
+		processErr = w.handleSubjectUpsert(payload)
+	case string(contracts.ModuleUpsert):
+		processErr = w.handleModuleUpsert(payload)
 	case "user_upsert":
-		return w.handleUserUpsert(payload)
+		processErr = w.handleUserUpsert(payload)
 	case string(contracts.ExamAssignmentCreated):
-		return w.handleExamAssignmentCreated(payload)
+		processErr = w.handleExamAssignmentCreated(payload)
 	case string(contracts.ExamAssignmentUpdated):
-		return w.handleExamAssignmentUpdated(payload)
+		processErr = w.handleExamAssignmentUpdated(payload)
 	case string(contracts.ExamAssignmentDeleted):
-		return w.handleExamAssignmentDeleted(payload)
+		processErr = w.handleExamAssignmentDeleted(payload)
 	case string(contracts.ClassUpsert):
-		return w.handleClassUpsert(payload)
+		processErr = w.handleClassUpsert(payload)
 	case string(contracts.ClassDeleted):
-		return w.handleClassDeleted(payload)
+		processErr = w.handleClassDeleted(payload)
 	case "level_deleted":
-		return w.handleLevelDeleted(payload)
+		processErr = w.handleLevelDeleted(payload)
 	case "subject_deleted":
-		return w.handleSubjectDeleted(payload)
-	case "module_deleted":
-		return w.handleModuleDeleted(payload)
+		processErr = w.handleSubjectDeleted(payload)
+	case string(contracts.ModuleDeleted):
+		processErr = w.handleModuleDeleted(payload)
 	case "user_deleted":
-		return w.handleUserDeleted(payload)
+		processErr = w.handleUserDeleted(payload)
 	case string(contracts.ClassStudentJoined):
-		return w.handleClassStudentJoined(payload)
+		processErr = w.handleClassStudentJoined(payload)
 	case string(contracts.ClassStudentLeft):
-		return w.handleClassStudentLeft(payload)
+		processErr = w.handleClassStudentLeft(payload)
+	default:
+		slog.Warn("unknown LMS event type, skipping", "type", eventType)
 	}
 
-	slog.Warn("unknown LMS event type, skipping", "type", eventType)
+	if processErr != nil {
+		return processErr
+	}
 
 	if err := w.markMessageProcessed(ctx, originalMessageID); err != nil {
 		return fmt.Errorf("failed to mark message as processed: %w", err)
@@ -377,13 +382,13 @@ type LevelPayload struct {
 }
 
 func (w *SyncWorker) handleLevelUpsert(payload string) error {
-	slog.Info("Processing level upsert event", "payload", payload)
+	slog.Debug("processing level upsert event", "payload", payload)
 	var p LevelPayload
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
 		return fmt.Errorf("failed to unmarshal level payload: %w", err)
 	}
 
-	slog.Info("Parsed level payload", "id", p.ID, "name", p.Name, "school_id", p.SchoolID)
+	slog.Debug("parsed level payload", "id", p.ID, "name", p.Name, "school_id", p.SchoolID)
 
 	if err := w.tingkatRepo.UpsertByLMSID(p.ID, p.Name); err != nil {
 		return fmt.Errorf("failed to sync level id=%d: %w", p.ID, err)
@@ -411,20 +416,13 @@ func (w *SyncWorker) handleSubjectUpsert(payload string) error {
 	return nil
 }
 
-type ModulePayload struct {
-	ID        int64  `json:"id"`
-	SubjectID int64  `json:"subject_id"`
-	LevelID   int64  `json:"level_id"`
-	Name      string `json:"name"`
-}
-
 func (w *SyncWorker) handleModuleUpsert(payload string) error {
-	var p ModulePayload
+	var p contracts.ModuleUpsertPayload
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
 		return fmt.Errorf("failed to unmarshal module payload: %w", err)
 	}
 
-	if err := w.materiRepo.UpsertByLMSID(p.ID, p.SubjectID, p.LevelID, p.Name); err != nil {
+	if err := w.materiRepo.UpsertByLMSID(p.ID, p.SubjectID, p.LevelID, p.ClassID, p.Name); err != nil {
 		return fmt.Errorf("failed to sync module id=%d: %w", p.ID, err)
 	}
 	slog.Info("Synced Module from LMS", "id", p.ID, "name", p.Name)
@@ -468,10 +466,10 @@ func (w *SyncWorker) handleExamAssignmentCreated(payload string) error {
 		return fmt.Errorf("invalid module_id for assignment_id=%d", p.LMSAssignmentID)
 	}
 
-	// 1. Get module (materi) details to get duration and question count
-	materi, err := w.materiRepo.GetByLMSID(p.ModuleID)
+	// 1. Resolve module reference to materi details
+	materi, err := w.resolveMateriByModuleReference(p.ModuleID)
 	if err != nil {
-		return fmt.Errorf("failed to get materi details for module_id=%d: %w", p.ModuleID, err)
+		return fmt.Errorf("failed to resolve materi details for module_id=%d: %w", p.ModuleID, err)
 	}
 
 	// 2. Get all students in the class
@@ -536,9 +534,9 @@ func (w *SyncWorker) handleExamAssignmentUpdated(payload string) error {
 		return nil
 	}
 
-	materiData, err := w.materiRepo.GetByLMSID(p.ModuleID)
+	materiData, err := w.resolveMateriByModuleReference(p.ModuleID)
 	if err != nil {
-		return fmt.Errorf("failed to resolve module for assignment update module_id=%d: %w", p.ModuleID, err)
+		return fmt.Errorf("failed to resolve materi for assignment update module_id=%d: %w", p.ModuleID, err)
 	}
 
 	scheduledTime := parseScheduledTime(p.ScheduledTime)
@@ -621,6 +619,23 @@ func parseScheduledTime(raw string) time.Time {
 		return time.Now()
 	}
 	return parsed
+}
+
+func (w *SyncWorker) resolveMateriByModuleReference(moduleID int64) (*entity.Materi, error) {
+	if moduleID == 0 {
+		return nil, fmt.Errorf("module_id is required")
+	}
+
+	if materiData, err := w.materiRepo.GetByLMSID(moduleID); err == nil {
+		return materiData, nil
+	}
+
+	materiData, err := w.materiRepo.GetByID(int(moduleID))
+	if err != nil {
+		return nil, err
+	}
+
+	return materiData, nil
 }
 
 func (w *SyncWorker) handleLevelDeleted(payload string) error {
