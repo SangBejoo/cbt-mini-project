@@ -2,7 +2,9 @@ package test_session
 
 import (
 	"cbt-test-mini-project/internal/entity"
+	"cbt-test-mini-project/internal/event/contracts"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -70,12 +72,16 @@ func (r *testSessionRepositoryImpl) Update(session *entity.TestSession) error {
 func (r *testSessionRepositoryImpl) CreateSessionForLMSUserIfMissing(lmsAssignmentID, lmsClassID, lmsUserID int64, idMataPelajaran, idTingkat, durasiMenit int, totalSoal *int, scheduledTime time.Time, status entity.TestStatus) (bool, error) {
 	var userID int
 	var namaPeserta string
+	var isActive bool
 
-	if err := r.db.QueryRow(`SELECT id, nama FROM users WHERE lms_user_id = $1`, lmsUserID).Scan(&userID, &namaPeserta); err != nil {
+	if err := r.db.QueryRow(`SELECT id, nama, is_active FROM users WHERE lms_user_id = $1`, lmsUserID).Scan(&userID, &namaPeserta, &isActive); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return false, fmt.Errorf("local user not found for lms_user_id=%d", lmsUserID)
+			return false, fmt.Errorf("active membership resolution failed: local user not found for lms_user_id=%d", lmsUserID)
 		}
 		return false, err
+	}
+	if !isActive {
+		return false, fmt.Errorf("active membership resolution failed: local user is inactive for lms_user_id=%d", lmsUserID)
 	}
 
 	var existingID int
@@ -137,7 +143,7 @@ func (r *testSessionRepositoryImpl) BackfillSessionsForJoinedStudent(lmsClassID,
 			CURRENT_TIMESTAMP,
 			CURRENT_TIMESTAMP
 		FROM active_assignments aa
-		JOIN users u ON u.lms_user_id = $2
+		JOIN users u ON u.lms_user_id = $2 AND u.is_active = true
 		WHERE NOT EXISTS (
 			SELECT 1
 			FROM test_session existing
@@ -205,7 +211,7 @@ func (r *testSessionRepositoryImpl) BackfillMissingSessions(lmsClassID *int64, l
 			CURRENT_TIMESTAMP
 		FROM active_assignments aa
 		JOIN class_students cs ON cs.lms_class_id = aa.lms_class_id
-		JOIN users u ON u.lms_user_id = cs.lms_user_id
+		JOIN users u ON u.lms_user_id = cs.lms_user_id AND u.is_active = true
 		WHERE NOT EXISTS (
 			SELECT 1
 			FROM test_session existing
@@ -266,12 +272,86 @@ func (r *testSessionRepositoryImpl) Delete(id int) error {
 
 // Complete session
 func (r *testSessionRepositoryImpl) CompleteSession(token string, waktuSelesai time.Time, nilaiAkhir *float64, jumlahBenar, totalSoal *int) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
+
 	query := `
 		UPDATE test_session
 		SET waktu_selesai = $1, nilai_akhir = $2, jumlah_benar = $3, total_soal = $4, status = $5, updated_at = $6
-		WHERE session_token = $7`
-	_, err := r.db.Exec(query, waktuSelesai, nilaiAkhir, jumlahBenar, totalSoal, string(entity.TestStatusCompleted), time.Now(), token)
-	return err
+		WHERE session_token = $7
+		  AND status IN ('ongoing'::test_session_status_enum, 'timeout'::test_session_status_enum)
+		RETURNING id, lms_assignment_id, lms_class_id, user_id`
+
+	var sessionID int
+	var lmsAssignmentID sql.NullInt64
+	var lmsClassID sql.NullInt64
+	var userID sql.NullInt64
+
+	err = tx.QueryRow(
+		query,
+		waktuSelesai,
+		nilaiAkhir,
+		jumlahBenar,
+		totalSoal,
+		string(entity.TestStatusCompleted),
+		time.Now(),
+		token,
+	).Scan(&sessionID, &lmsAssignmentID, &lmsClassID, &userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("session is already completed")
+		}
+		return err
+	}
+
+	if lmsAssignmentID.Valid && lmsClassID.Valid && userID.Valid && nilaiAkhir != nil && jumlahBenar != nil && totalSoal != nil {
+		var lmsUserID sql.NullInt64
+		userQuery := `SELECT lms_user_id FROM users WHERE id = $1 AND is_active = true`
+		if err := tx.QueryRow(userQuery, userID.Int64).Scan(&lmsUserID); err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				return err
+			}
+		} else if lmsUserID.Valid {
+			payload := contracts.ExamResultPayload{
+				SessionID:       sessionID,
+				LMSAssignmentID: lmsAssignmentID.Int64,
+				LMSUserID:       lmsUserID.Int64,
+				LMSClassID:      lmsClassID.Int64,
+				Score:           *nilaiAkhir,
+				CorrectCount:    *jumlahBenar,
+				TotalCount:      *totalSoal,
+				CompletedAt:     waktuSelesai.UTC().Format(time.RFC3339),
+			}
+
+			payloadJSON, marshalErr := json.Marshal(payload)
+			if marshalErr != nil {
+				return marshalErr
+			}
+
+			outboxQuery := `
+				INSERT INTO cbt_outbox (event_type, aggregate_type, aggregate_id, payload, status, retry_count, created_at, updated_at)
+				VALUES ($1, $2, $3, $4::jsonb, 'pending', 0, NOW(), NOW())`
+			if _, err := tx.Exec(outboxQuery, string(contracts.ExamResultCompleted), "test_session", sessionID, string(payloadJSON)); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	committed = true
+
+	return nil
 }
 
 // UpdateSessionStatus updates only the status of a session

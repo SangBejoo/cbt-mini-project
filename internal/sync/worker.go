@@ -28,13 +28,13 @@ const (
 	lmsEventsCriticalStream = "lms_events_critical"
 	lmsEventsGeneralStream  = "lms_events_general"
 	lmsEventsLegacyStream   = "lms_events"
-	lmsEventsDLQStream   = "lms_events_dlq"
-	lmsConsumerGroup     = "cbt_lms_sync_group"
-	consumerReadBatch    = int64(25)
-	consumerReadBlock    = 2 * time.Second
-	consumerMinClaimIdle = 30 * time.Second
-	maxRetryCount        = 3
-	processedMessageTTL  = 7 * 24 * time.Hour
+	lmsEventsDLQStream      = "lms_events_dlq"
+	lmsConsumerGroup        = "cbt_lms_sync_group"
+	consumerReadBatch       = int64(25)
+	consumerReadBlock       = 2 * time.Second
+	consumerMinClaimIdle    = 30 * time.Second
+	maxRetryCount           = 3
+	processedMessageTTL     = 7 * 24 * time.Hour
 )
 
 var lmsInputStreams = []string{
@@ -450,11 +450,10 @@ func (w *SyncWorker) handleModuleUpsert(payload string) error {
 }
 
 type UserPayload struct {
-	ID           int64  `json:"id"`
-	Email        string `json:"email"`
-	Name         string `json:"name"`
-	Role         string `json:"role"`
-	PasswordHash string `json:"password_hash"`
+	ID    int64  `json:"id"`
+	Email string `json:"email"`
+	Name  string `json:"name"`
+	Role  string `json:"role"`
 }
 
 func (w *SyncWorker) handleUserUpsert(payload string) error {
@@ -472,6 +471,23 @@ func (w *SyncWorker) handleUserUpsert(payload string) error {
 	if err != nil {
 		return fmt.Errorf("failed to sync user id=%d: %w", p.ID, err)
 	}
+
+	classIDs, classErr := w.classStudentRepo.GetStudentClasses(p.ID)
+	if classErr != nil {
+		slog.Warn("failed to list class memberships after user upsert", "lms_user_id", p.ID, "error", classErr)
+	} else {
+		for _, classID := range classIDs {
+			created, backfillErr := w.testSessionRepo.BackfillSessionsForJoinedStudent(classID, p.ID)
+			if backfillErr != nil {
+				slog.Warn("failed to backfill sessions after user upsert", "lms_user_id", p.ID, "lms_class_id", classID, "error", backfillErr)
+				continue
+			}
+			if created > 0 {
+				slog.Info("Backfilled sessions after user upsert", "lms_user_id", p.ID, "lms_class_id", classID, "sessions_backfilled", created)
+			}
+		}
+	}
+
 	slog.Info("Synced User from LMS", "id", p.ID, "email", p.Email)
 	return nil
 }

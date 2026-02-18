@@ -59,7 +59,7 @@ func (r *authRepositoryImpl) Login(ctx context.Context, email, password string) 
 		Nama:         userEntity.Nama,
 		Role:         role,
 		IsActive:     userEntity.IsActive,
-		PasswordHash: userEntity.PasswordHash,
+		
 	}
 
 	return user, nil
@@ -90,7 +90,7 @@ func (r *authRepositoryImpl) GetUserByID(ctx context.Context, id int32) (*base.U
 		Nama:         userEntity.Nama,
 		Role:         role,
 		IsActive:     userEntity.IsActive,
-		PasswordHash: userEntity.PasswordHash,
+		
 	}
 
 	return user, nil
@@ -121,7 +121,7 @@ func (r *authRepositoryImpl) GetUserByEmail(ctx context.Context, email string) (
 		Nama:         userEntity.Nama,
 		Role:         role,
 		IsActive:     userEntity.IsActive,
-		PasswordHash: userEntity.PasswordHash,
+		
 	}
 
 	return user, nil
@@ -164,7 +164,7 @@ func (r *authRepositoryImpl) CreateUser(ctx context.Context, user *base.User) (*
 
 	// Convert back to proto
 	user.Id = int32(userEntity.ID)
-	user.PasswordHash = userEntity.PasswordHash
+	
 
 	return user, nil
 }
@@ -217,7 +217,7 @@ func (r *authRepositoryImpl) UpdateUser(ctx context.Context, id int32, updates m
 		Nama:         userEntity.Nama,
 		Role:         role,
 		IsActive:     userEntity.IsActive,
-		PasswordHash: userEntity.PasswordHash,
+		
 	}
 
 	return user, nil
@@ -322,7 +322,7 @@ func (r *authRepositoryImpl) ListUsers(ctx context.Context, role int32, statusFi
 			IsActive:     userEntity.IsActive,
 			CreatedAt:    timestamppb.New(userEntity.CreatedAt),
 			UpdatedAt:    timestamppb.New(userEntity.UpdatedAt),
-			PasswordHash: userEntity.PasswordHash,
+			
 		}
 	}
 
@@ -335,6 +335,36 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 	var userEntity entity.User
 	findQuery := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE lms_user_id = $1`
 	err := r.db.QueryRowContext(ctx, findQuery, lmsID).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
+
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	if err == sql.ErrNoRows {
+		// Fallback: try to find existing user by email (may have been created without lms_user_id)
+		fallbackQuery := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at, COALESCE(lms_user_id, 0) FROM users WHERE email = $1`
+		var existingLmsID int64
+		scanErr := r.db.QueryRowContext(ctx, fallbackQuery, email).Scan(
+			&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash,
+			&userEntity.Nama, &userEntity.Role, &userEntity.IsActive,
+			&userEntity.CreatedAt, &userEntity.UpdatedAt, &existingLmsID,
+		)
+		if scanErr == nil {
+			// Found by email — adopt this user by setting lms_user_id
+			if existingLmsID == 0 {
+				_, adoptErr := r.db.ExecContext(ctx,
+					`UPDATE users SET lms_user_id = $1, updated_at = $2 WHERE id = $3`,
+					lmsID, time.Now(), userEntity.ID,
+				)
+				if adoptErr != nil {
+					return nil, fmt.Errorf("failed to link existing user to LMS ID: %w", adoptErr)
+				}
+			}
+			lmsIDVal := lmsID
+			userEntity.LmsUserID = &lmsIDVal
+			err = nil // clear the ErrNoRows so we fall through to the JIT-update block below
+		}
+	}
 
 	if err == nil {
 		// User found, JIT-update stale fields from claims.
@@ -389,15 +419,11 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 			IsActive:     userEntity.IsActive,
 			CreatedAt:    timestamppb.New(userEntity.CreatedAt),
 			UpdatedAt:    timestamppb.New(userEntity.UpdatedAt),
-			PasswordHash: userEntity.PasswordHash,
+			
 		}, nil
 	}
 
-	if err != sql.ErrNoRows {
-		return nil, err
-	}
-
-	// User not found, create new one
+	// User not found by lms_user_id or email, create new one
 	var roleStr string
 	switch role {
 	case int32(base.UserRole_ADMIN):
@@ -416,6 +442,7 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 	createQuery := `
 		INSERT INTO users (email, password_hash, nama, role, is_active, lms_user_id, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT (email) DO UPDATE SET lms_user_id = EXCLUDED.lms_user_id, nama = EXCLUDED.nama, updated_at = EXCLUDED.updated_at
 		RETURNING id`
 	now := time.Now()
 	err = r.db.QueryRowContext(ctx, createQuery, email, string(hashedPassword), name, roleStr, true, lmsID, now, now).Scan(&userEntity.ID)
@@ -448,7 +475,7 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 		IsActive:     true,
 		CreatedAt:    timestamppb.New(now),
 		UpdatedAt:    timestamppb.New(now),
-		PasswordHash: string(hashedPassword),
+		
 	}, nil
 }
 

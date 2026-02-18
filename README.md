@@ -91,10 +91,11 @@ npm run dev
 
 ## 📌 API (Student)
 
-**Autentikasi**
+**Autentikasi (SSO LMS)**
 
-- `POST /v1/auth/login` — Login (body: `{email, password}`) → Response: `{token}`
-- `POST /v1/auth/logout` — Logout (butuh Authorization)
+- CBT tidak lagi menyediakan endpoint login lokal.
+- Gunakan access token dari LMS (`/v1/auth/login` di LMS), lalu kirim ke CBT via header `Authorization: Bearer <lms_access_token>`.
+- Endpoint profil CBT: `GET /v1/auth/profile`.
 
 **Student** (Header: `Authorization: Bearer <token>`)
 

@@ -257,7 +257,6 @@ func TestCompleteSession_Integration(t *testing.T) {
 	userID := int(123)
 	lmsAssignmentID := int64(1001)
 	lmsClassID := int64(2002)
-	lmsUserID := int64(9999)
 
 	session := &entity.TestSession{
 		ID:              1,
@@ -301,13 +300,6 @@ func TestCompleteSession_Integration(t *testing.T) {
 	completedSession.Status = entity.TestStatusCompleted
 	mockRepo.On("GetByToken", token).Return(&completedSession, nil).Once()
 
-	// 8. GetUserByID (for publishing)
-	user := &base.User{Id: int32(userID), LmsUserId: lmsUserID}
-	mockUserRepo.On("GetUserByID", mock.Anything, int32(userID)).Return(user, nil)
-
-	// 9. PublishExamResult
-	mockPublisher.On("PublishExamResult", mock.Anything, 1, lmsAssignmentID, lmsUserID, lmsClassID, 100.0, 1, 1).Return(nil)
-
 	// Execute
 	res, err := usecase.CompleteSession(token)
 
@@ -315,9 +307,7 @@ func TestCompleteSession_Integration(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	assert.Equal(t, entity.TestStatusCompleted, res.Status)
-	mockPublisher.AssertExpectations(t)
 	mockRepo.AssertExpectations(t)
-	mockUserRepo.AssertExpectations(t)
 }
 
 func TestSubmitAnswer_RejectsTimedOutSession(t *testing.T) {

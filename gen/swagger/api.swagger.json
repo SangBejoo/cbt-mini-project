@@ -3503,9 +3503,6 @@
           "type": "string",
           "format": "date-time"
         },
-        "passwordHash": {
-          "type": "string"
-        },
         "lmsUserId": {
           "type": "string",
           "format": "int64"

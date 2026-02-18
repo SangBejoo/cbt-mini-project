@@ -6,6 +6,7 @@ import (
 	authRepo "cbt-test-mini-project/internal/repository/auth"
 	"context"
 	"errors"
+	"os"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -103,7 +104,7 @@ func ExtractTokenFromContext(ctx context.Context) (string, error) {
 func (m *JWTMiddleware) validateAndResolveUser(ctx context.Context, tokenString string) (*base.User, error) {
 	claims, err := m.validateLMSToken(tokenString)
 	if err != nil {
-		return nil, errors.New("invalid LMS access token")
+		return nil, errors.New("invalid LMS access token: " + err.Error())
 	}
 
 	lmsUserID := claims.LMSUserID
@@ -139,19 +140,46 @@ func (m *JWTMiddleware) validateAndResolveUser(ctx context.Context, tokenString 
 }
 
 func (m *JWTMiddleware) validateLMSToken(tokenString string) (*JWTClaims, error) {
-	secret := m.config.JWT.LMSTokenSecret
-	if secret == "" {
-		secret = m.config.JWT.Secret
+	secrets := make([]string, 0, 4)
+	seen := map[string]struct{}{}
+	appendSecret := func(secret string) {
+		secret = strings.TrimSpace(secret)
+		if secret == "" {
+			return
+		}
+		if _, ok := seen[secret]; ok {
+			return
+		}
+		seen[secret] = struct{}{}
+		secrets = append(secrets, secret)
 	}
 
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("unexpected signing method")
+	appendSecret(m.config.JWT.LMSTokenSecret)
+	appendSecret(os.Getenv("LMS_JWT_SECRET"))
+	appendSecret(os.Getenv("JWT_ACCESS_SECRET"))
+	appendSecret(m.config.JWT.Secret)
+	if len(secrets) == 0 {
+		return nil, errors.New("missing JWT secret configuration")
+	}
+
+	var token *jwt.Token
+	var err error
+	for _, secret := range secrets {
+		token, err = jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, errors.New("unexpected signing method")
+			}
+			return []byte(secret), nil
+		})
+		if err == nil && token != nil && token.Valid {
+			break
 		}
-		return []byte(secret), nil
-	})
-	if err != nil {
-		return nil, err
+	}
+	if token == nil || !token.Valid {
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.New("invalid token")
 	}
 
 	mapClaims, ok := token.Claims.(jwt.MapClaims)

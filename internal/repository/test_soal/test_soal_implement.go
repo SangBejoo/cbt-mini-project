@@ -15,25 +15,28 @@ func NewSoalRepository(db *sql.DB) SoalRepository {
 	return &soalRepositoryImpl{db: db}
 }
 
-
 // Create a new soal
 func (r *soalRepositoryImpl) Create(soal *entity.Soal) error {
 	query := `
-		INSERT INTO soal (id_materi, id_tingkat, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, jawaban_benar, pembahasan, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO soal (id_materi, lms_asset_id, id_tingkat, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, jawaban_benar, pembahasan, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id`
 	var pembahasan *string
 	if soal.Pembahasan != nil {
 		pembahasan = soal.Pembahasan
 	}
-	return r.db.QueryRow(query, soal.IDMateri, soal.IDTingkat, soal.Pertanyaan, soal.OpsiA, soal.OpsiB, soal.OpsiC, soal.OpsiD, string(soal.JawabanBenar), pembahasan, soal.IsActive).Scan(&soal.ID)
+	var lmsAssetID interface{}
+	if soal.LMSAssetID != nil && *soal.LMSAssetID > 0 {
+		lmsAssetID = *soal.LMSAssetID
+	}
+	return r.db.QueryRow(query, soal.IDMateri, lmsAssetID, soal.IDTingkat, soal.Pertanyaan, soal.OpsiA, soal.OpsiB, soal.OpsiC, soal.OpsiD, string(soal.JawabanBenar), pembahasan, soal.IsActive).Scan(&soal.ID)
 }
 
 // Get soal by ID with all relations
 func (r *soalRepositoryImpl) GetByID(id int) (*entity.Soal, error) {
 	// Get soal with materi, mata_pelajaran, and tingkat
 	soalQuery := `
-		SELECT s.id, s.id_materi, s.id_tingkat, s.pertanyaan, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.pembahasan, s.is_active,
+		SELECT s.id, s.id_materi, s.lms_asset_id, s.id_tingkat, s.pertanyaan, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.pembahasan, s.is_active,
 		       m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id,
 		       mp.id, mp.nama, mp.is_active, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.is_active, t.lms_level_id
@@ -45,8 +48,9 @@ func (r *soalRepositoryImpl) GetByID(id int) (*entity.Soal, error) {
 
 	var soal entity.Soal
 	var pembahasan *string
+	var lmsAssetID sql.NullInt64
 	err := r.db.QueryRow(soalQuery, id).Scan(
-		&soal.ID, &soal.IDMateri, &soal.IDTingkat, &soal.Pertanyaan, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &pembahasan, &soal.IsActive,
+		&soal.ID, &soal.IDMateri, &lmsAssetID, &soal.IDTingkat, &soal.Pertanyaan, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &pembahasan, &soal.IsActive,
 		&soal.Materi.ID, &soal.Materi.IDMataPelajaran, &soal.Materi.IDTingkat, &soal.Materi.Nama, &soal.Materi.IsActive, &soal.Materi.DefaultDurasiMenit, &soal.Materi.DefaultJumlahSoal, &soal.Materi.LmsModuleID, &soal.Materi.LmsClassID,
 		&soal.Materi.MataPelajaran.ID, &soal.Materi.MataPelajaran.Nama, &soal.Materi.MataPelajaran.IsActive, &soal.Materi.MataPelajaran.LmsSubjectID, &soal.Materi.MataPelajaran.LmsSchoolID, &soal.Materi.MataPelajaran.LmsClassID,
 		&soal.Materi.Tingkat.ID, &soal.Materi.Tingkat.Nama, &soal.Materi.Tingkat.IsActive, &soal.Materi.Tingkat.LmsLevelID,
@@ -55,6 +59,10 @@ func (r *soalRepositoryImpl) GetByID(id int) (*entity.Soal, error) {
 		return nil, err
 	}
 	soal.Pembahasan = pembahasan
+	if lmsAssetID.Valid {
+		id := lmsAssetID.Int64
+		soal.LMSAssetID = &id
+	}
 
 	// Get gambar
 	gambarQuery := `
@@ -88,9 +96,13 @@ func (r *soalRepositoryImpl) GetByID(id int) (*entity.Soal, error) {
 func (r *soalRepositoryImpl) Update(soal *entity.Soal) error {
 	query := `
 		UPDATE soal
-		SET id_materi = $1, id_tingkat = $2, pertanyaan = $3, opsi_a = $4, opsi_b = $5, opsi_c = $6, opsi_d = $7, jawaban_benar = $8, pembahasan = $9, is_active = $10
-		WHERE id = $11`
-	_, err := r.db.Exec(query, soal.IDMateri, soal.IDTingkat, soal.Pertanyaan, soal.OpsiA, soal.OpsiB, soal.OpsiC, soal.OpsiD, string(soal.JawabanBenar), soal.Pembahasan, soal.IsActive, soal.ID)
+		SET id_materi = $1, lms_asset_id = $2, id_tingkat = $3, pertanyaan = $4, opsi_a = $5, opsi_b = $6, opsi_c = $7, opsi_d = $8, jawaban_benar = $9, pembahasan = $10, is_active = $11
+		WHERE id = $12`
+	var lmsAssetID interface{}
+	if soal.LMSAssetID != nil && *soal.LMSAssetID > 0 {
+		lmsAssetID = *soal.LMSAssetID
+	}
+	_, err := r.db.Exec(query, soal.IDMateri, lmsAssetID, soal.IDTingkat, soal.Pertanyaan, soal.OpsiA, soal.OpsiB, soal.OpsiC, soal.OpsiD, string(soal.JawabanBenar), soal.Pembahasan, soal.IsActive, soal.ID)
 	return err
 }
 
@@ -143,7 +155,7 @@ func (r *soalRepositoryImpl) List(idMateri, tingkatan, idMataPelajaran *int, lim
 
 	// Get paginated results with all relations
 	listQuery := `
-		SELECT s.id, s.id_materi, s.id_tingkat, s.pertanyaan, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.pembahasan, s.is_active,
+		SELECT s.id, s.id_materi, s.lms_asset_id, s.id_tingkat, s.pertanyaan, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.pembahasan, s.is_active,
 		       m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id,
 		       mp.id, mp.nama, mp.is_active, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.is_active, t.lms_level_id
@@ -165,8 +177,9 @@ func (r *soalRepositoryImpl) List(idMateri, tingkatan, idMataPelajaran *int, lim
 	for rows.Next() {
 		var soal entity.Soal
 		var pembahasan *string
+		var lmsAssetID sql.NullInt64
 		err := rows.Scan(
-			&soal.ID, &soal.IDMateri, &soal.IDTingkat, &soal.Pertanyaan, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &pembahasan, &soal.IsActive,
+			&soal.ID, &soal.IDMateri, &lmsAssetID, &soal.IDTingkat, &soal.Pertanyaan, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &pembahasan, &soal.IsActive,
 			&soal.Materi.ID, &soal.Materi.IDMataPelajaran, &soal.Materi.IDTingkat, &soal.Materi.Nama, &soal.Materi.IsActive, &soal.Materi.DefaultDurasiMenit, &soal.Materi.DefaultJumlahSoal, &soal.Materi.LmsModuleID, &soal.Materi.LmsClassID,
 			&soal.Materi.MataPelajaran.ID, &soal.Materi.MataPelajaran.Nama, &soal.Materi.MataPelajaran.IsActive, &soal.Materi.MataPelajaran.LmsSubjectID, &soal.Materi.MataPelajaran.LmsSchoolID, &soal.Materi.MataPelajaran.LmsClassID,
 			&soal.Materi.Tingkat.ID, &soal.Materi.Tingkat.Nama, &soal.Materi.Tingkat.IsActive, &soal.Materi.Tingkat.LmsLevelID,
@@ -175,6 +188,10 @@ func (r *soalRepositoryImpl) List(idMateri, tingkatan, idMataPelajaran *int, lim
 			return nil, 0, err
 		}
 		soal.Pembahasan = pembahasan
+		if lmsAssetID.Valid {
+			id := lmsAssetID.Int64
+			soal.LMSAssetID = &id
+		}
 
 		// Get gambar for this soal
 		gambarQuery := `
@@ -213,7 +230,7 @@ func (r *soalRepositoryImpl) GetByMateriID(idMateri int) ([]entity.Soal, error) 
 	var soals []entity.Soal
 
 	query := `
-		SELECT s.id, s.id_materi, s.id_tingkat, s.pertanyaan, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.pembahasan, s.is_active,
+		SELECT s.id, s.id_materi, s.lms_asset_id, s.id_tingkat, s.pertanyaan, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.pembahasan, s.is_active,
 		       m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id,
 		       mp.id, mp.nama, mp.is_active, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.is_active, t.lms_level_id
@@ -233,8 +250,9 @@ func (r *soalRepositoryImpl) GetByMateriID(idMateri int) ([]entity.Soal, error) 
 	for rows.Next() {
 		var soal entity.Soal
 		var pembahasan *string
+		var lmsAssetID sql.NullInt64
 		err := rows.Scan(
-			&soal.ID, &soal.IDMateri, &soal.IDTingkat, &soal.Pertanyaan, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &pembahasan, &soal.IsActive,
+			&soal.ID, &soal.IDMateri, &lmsAssetID, &soal.IDTingkat, &soal.Pertanyaan, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &pembahasan, &soal.IsActive,
 			&soal.Materi.ID, &soal.Materi.IDMataPelajaran, &soal.Materi.IDTingkat, &soal.Materi.Nama, &soal.Materi.IsActive, &soal.Materi.DefaultDurasiMenit, &soal.Materi.DefaultJumlahSoal, &soal.Materi.LmsModuleID, &soal.Materi.LmsClassID,
 			&soal.Materi.MataPelajaran.ID, &soal.Materi.MataPelajaran.Nama, &soal.Materi.MataPelajaran.IsActive, &soal.Materi.MataPelajaran.LmsSubjectID, &soal.Materi.MataPelajaran.LmsSchoolID, &soal.Materi.MataPelajaran.LmsClassID,
 			&soal.Materi.Tingkat.ID, &soal.Materi.Tingkat.Nama, &soal.Materi.Tingkat.IsActive, &soal.Materi.Tingkat.LmsLevelID,
@@ -243,6 +261,10 @@ func (r *soalRepositoryImpl) GetByMateriID(idMateri int) ([]entity.Soal, error) 
 			return nil, err
 		}
 		soal.Pembahasan = pembahasan
+		if lmsAssetID.Valid {
+			id := lmsAssetID.Int64
+			soal.LMSAssetID = &id
+		}
 
 		// Get gambar for this soal
 		gambarQuery := `

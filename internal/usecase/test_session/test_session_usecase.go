@@ -102,35 +102,9 @@ func (u *testSessionUsecaseImpl) CompleteSession(sessionToken string) (*entity.T
 		return nil, err
 	}
 
-	// Publish logic
 	updatedSession, err := u.repo.GetByToken(sessionToken)
 	if err != nil {
 		return nil, err
-	}
-
-	// Publish event if publisher is available and session has LMS linkage
-	if u.publisher != nil && session.LMSAssignmentID != nil && session.LMSClassID != nil && session.UserID != nil {
-		// Get User to retrieve LMS User ID
-		user, err := u.userRepo.GetUserByID(context.Background(), int32(*session.UserID))
-		if err != nil {
-			// Log error but assume we can't publish
-			fmt.Printf("Error getting user for publishing result: %v\n", err)
-		} else if user != nil && user.LmsUserId != 0 {
-			// Use correct LMS User ID (Note: Proto generated field is LmsUserId)
-			err = u.publisher.PublishExamResult(
-				context.Background(),
-				session.ID,
-				*session.LMSAssignmentID,
-				user.LmsUserId,
-				*session.LMSClassID,
-				nilaiAkhir,
-				jumlahBenar,
-				totalSoal,
-			)
-			if err != nil {
-				fmt.Printf("Error publishing exam result: %v\n", err)
-			}
-		}
 	}
 
 	return updatedSession, nil

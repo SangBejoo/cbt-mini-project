@@ -17,6 +17,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 
 	// Update this import path
 	"cbt-test-mini-project/init/config"
@@ -440,13 +441,20 @@ func customErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler ru
 		"remote_addr", req.RemoteAddr,
 	)
 
+	httpStatus := http.StatusInternalServerError
+	errMessage := "Something went wrong"
+	if st, ok := status.FromError(err); ok {
+		httpStatus = runtime.HTTPStatusFromCode(st.Code())
+		errMessage = st.Message()
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusInternalServerError)
+	w.WriteHeader(httpStatus)
 
 	response := map[string]interface{}{
-		"error":   "Internal Server Error",
-		"message": "Something went wrong",
-		"code":    500,
+		"error":   http.StatusText(httpStatus),
+		"message": errMessage,
+		"code":    httpStatus,
 		"details": err.Error(), // Add actual error message for debugging
 	}
 

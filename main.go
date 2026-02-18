@@ -88,6 +88,10 @@ func main() {
 
 	// Initialize Event Publisher
 	publisher := event.NewPublisher(infraRedis.RedisClient)
+	if infraRedis.RedisClient != nil {
+		outboxWorker := event.NewOutboxWorker(repo.SQLDB, infraRedis.RedisClient)
+		go outboxWorker.Start(ctx)
+	}
 
 	grpcServer, err := server.RunGRPCServer(ctx, *cfg, *repo, publisher)
 	if err != nil {

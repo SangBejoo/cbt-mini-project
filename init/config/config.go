@@ -23,12 +23,12 @@ type Main struct {
 }
 
 type Database struct {
-	DriverName       string
-	DSN              string
-	MaxOpenConns     int
-	MaxIdleConns     int
-	MinIdleConns     int // Minimum idle connections to maintain
-	ConnMaxLifetime  int // in minutes
+	DriverName      string
+	DSN             string
+	MaxOpenConns    int
+	MaxIdleConns    int
+	MinIdleConns    int // Minimum idle connections to maintain
+	ConnMaxLifetime int // in minutes
 }
 
 type redis struct {
@@ -53,12 +53,12 @@ type grpcServer struct {
 }
 
 type jwt struct {
-	Secret           string
-	AccessTokenTTL   int // in minutes
-	RefreshTokenTTL  int // in days
-	LMSTokenSecret   string
-	LMSIssuer        string
-	LMSAudience      string
+	Secret          string
+	AccessTokenTTL  int // in minutes
+	RefreshTokenTTL int // in days
+	LMSTokenSecret  string
+	LMSIssuer       string
+	LMSAudience     string
 }
 
 type apm struct {
@@ -70,11 +70,11 @@ type apm struct {
 }
 
 type rateLimit struct {
-	APIRequestsPerHour    int
-	APIRequestsPerDay     int
-	TestSessionsPerDay    int
-	TestSessionsPerWeek   int
-	QuestionsPerDay       int
+	APIRequestsPerHour  int
+	APIRequestsPerDay   int
+	TestSessionsPerDay  int
+	TestSessionsPerWeek int
+	QuestionsPerDay     int
 }
 
 type cors struct {
@@ -93,11 +93,11 @@ func Load() *Main {
 	redisPort := util.GetEnv("REDIS_PORT", 6379)
 	return &Main{
 		Database: Database{
-			DriverName:     util.GetEnv("DB_DRIVER", "postgres"),
-			DSN:            util.GetEnv("DB_DSN", "postgres://postgres:root@localhost:5432/cbt?sslmode=disable"),
-			MaxOpenConns:   util.GetEnv("DB_MAX_OPEN_CONNS", 25),
-			MaxIdleConns:   util.GetEnv("DB_MAX_IDLE_CONNS", 25),
-			MinIdleConns:   util.GetEnv("DB_MIN_IDLE_CONNS", 5),
+			DriverName:      util.GetEnv("DB_DRIVER", "postgres"),
+			DSN:             util.GetEnv("DB_DSN", "postgres://postgres:root@localhost:5432/cbt?sslmode=disable"),
+			MaxOpenConns:    util.GetEnv("DB_MAX_OPEN_CONNS", 25),
+			MaxIdleConns:    util.GetEnv("DB_MAX_IDLE_CONNS", 25),
+			MinIdleConns:    util.GetEnv("DB_MIN_IDLE_CONNS", 5),
 			ConnMaxLifetime: util.GetEnv("DB_CONN_MAX_LIFETIME_MINUTES", 5),
 		},
 		Redis: redis{
@@ -119,9 +119,9 @@ func Load() *Main {
 		},
 		JWT: jwt{
 			Secret:          util.GetEnv("JWT_SECRET", "your-super-secret-jwt-key-change-this-in-production"),
-			AccessTokenTTL:  util.GetEnv("JWT_ACCESS_TTL_MINUTES", 120), // 2 hours default
-			RefreshTokenTTL: util.GetEnv("JWT_REFRESH_TTL_MINUTES", 240),     // 4 hours default
-			LMSTokenSecret:  util.GetEnv("LMS_JWT_SECRET", ""),
+			AccessTokenTTL:  util.GetEnv("JWT_ACCESS_TTL_MINUTES", 120),  // 2 hours default
+			RefreshTokenTTL: util.GetEnv("JWT_REFRESH_TTL_MINUTES", 240), // 4 hours default
+			LMSTokenSecret:  util.GetEnv("LMS_JWT_SECRET", util.GetEnv("JWT_ACCESS_SECRET", "your-access-secret-key")),
 			LMSIssuer:       util.GetEnv("LMS_JWT_ISSUER", "lms-erlangga"),
 			LMSAudience:     util.GetEnv("LMS_JWT_AUDIENCE", ""),
 		},
@@ -133,11 +133,11 @@ func Load() *Main {
 			Enabled:        util.GetEnv("ELASTIC_APM_ENABLED", true),
 		},
 		RateLimit: rateLimit{
-			APIRequestsPerHour:    util.GetEnv("RATE_LIMIT_API_REQUESTS_PER_HOUR", 1000),
-			APIRequestsPerDay:     util.GetEnv("RATE_LIMIT_API_REQUESTS_PER_DAY", 10000),
-			TestSessionsPerDay:    util.GetEnv("RATE_LIMIT_TEST_SESSIONS_PER_DAY", 10),
-			TestSessionsPerWeek:   util.GetEnv("RATE_LIMIT_TEST_SESSIONS_PER_WEEK", 50),
-			QuestionsPerDay:       util.GetEnv("RATE_LIMIT_QUESTIONS_PER_DAY", 100),
+			APIRequestsPerHour:  util.GetEnv("RATE_LIMIT_API_REQUESTS_PER_HOUR", 1000),
+			APIRequestsPerDay:   util.GetEnv("RATE_LIMIT_API_REQUESTS_PER_DAY", 10000),
+			TestSessionsPerDay:  util.GetEnv("RATE_LIMIT_TEST_SESSIONS_PER_DAY", 10),
+			TestSessionsPerWeek: util.GetEnv("RATE_LIMIT_TEST_SESSIONS_PER_WEEK", 50),
+			QuestionsPerDay:     util.GetEnv("RATE_LIMIT_QUESTIONS_PER_DAY", 100),
 		},
 		CORS: cors{
 			AllowOrigin: util.GetEnv("CORS_ALLOW_ORIGIN", "*"),
