@@ -19,6 +19,13 @@ type authRepositoryImpl struct {
 	db *sql.DB
 }
 
+func lmsUserIDValue(id *int64) int64 {
+	if id == nil {
+		return 0
+	}
+	return *id
+}
+
 // NewAuthRepository creates a new auth repository
 func NewAuthRepository(db *sql.DB) AuthRepository {
 	return &authRepositoryImpl{db: db}
@@ -28,8 +35,8 @@ func NewAuthRepository(db *sql.DB) AuthRepository {
 func (r *authRepositoryImpl) Login(ctx context.Context, email, password string) (*base.User, error) {
 	var userEntity entity.User
 
-	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at FROM users WHERE email = $1 AND is_active = $2 AND role = 'admin'`
-	err := r.db.QueryRowContext(ctx, query, email, true).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt)
+	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE email = $1 AND is_active = $2 AND role = 'admin'`
+	err := r.db.QueryRowContext(ctx, query, email, true).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("invalid credentials")
@@ -59,6 +66,7 @@ func (r *authRepositoryImpl) Login(ctx context.Context, email, password string) 
 		Nama:         userEntity.Nama,
 		Role:         role,
 		IsActive:     userEntity.IsActive,
+		LmsUserId:    lmsUserIDValue(userEntity.LmsUserID),
 		
 	}
 
@@ -68,8 +76,8 @@ func (r *authRepositoryImpl) Login(ctx context.Context, email, password string) 
 // GetUserByID retrieves a user by ID
 func (r *authRepositoryImpl) GetUserByID(ctx context.Context, id int32) (*base.User, error) {
 	var userEntity entity.User
-	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at FROM users WHERE id = $1`
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt)
+	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE id = $1`
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +98,7 @@ func (r *authRepositoryImpl) GetUserByID(ctx context.Context, id int32) (*base.U
 		Nama:         userEntity.Nama,
 		Role:         role,
 		IsActive:     userEntity.IsActive,
+		LmsUserId:    lmsUserIDValue(userEntity.LmsUserID),
 		
 	}
 
@@ -99,8 +108,8 @@ func (r *authRepositoryImpl) GetUserByID(ctx context.Context, id int32) (*base.U
 // GetUserByEmail retrieves a user by email
 func (r *authRepositoryImpl) GetUserByEmail(ctx context.Context, email string) (*base.User, error) {
 	var userEntity entity.User
-	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at FROM users WHERE email = $1`
-	err := r.db.QueryRowContext(ctx, query, email).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt)
+	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE email = $1`
+	err := r.db.QueryRowContext(ctx, query, email).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -121,6 +130,7 @@ func (r *authRepositoryImpl) GetUserByEmail(ctx context.Context, email string) (
 		Nama:         userEntity.Nama,
 		Role:         role,
 		IsActive:     userEntity.IsActive,
+		LmsUserId:    lmsUserIDValue(userEntity.LmsUserID),
 		
 	}
 
@@ -173,8 +183,8 @@ func (r *authRepositoryImpl) CreateUser(ctx context.Context, user *base.User) (*
 func (r *authRepositoryImpl) UpdateUser(ctx context.Context, id int32, updates map[string]interface{}) (*base.User, error) {
 	// First get current user
 	var userEntity entity.User
-	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at FROM users WHERE id = $1`
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt)
+	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE id = $1`
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -217,6 +227,7 @@ func (r *authRepositoryImpl) UpdateUser(ctx context.Context, id int32, updates m
 		Nama:         userEntity.Nama,
 		Role:         role,
 		IsActive:     userEntity.IsActive,
+		LmsUserId:    lmsUserIDValue(userEntity.LmsUserID),
 		
 	}
 
@@ -280,7 +291,7 @@ func (r *authRepositoryImpl) ListUsers(ctx context.Context, role int32, statusFi
 	}
 
 	// Get paginated results
-	selectQuery := "SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at FROM users " + whereClause + " ORDER BY created_at DESC LIMIT $" + fmt.Sprintf("%d", len(args)+1) + " OFFSET $" + fmt.Sprintf("%d", len(args)+2)
+	selectQuery := "SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at, lms_user_id FROM users " + whereClause + " ORDER BY created_at DESC LIMIT $" + fmt.Sprintf("%d", len(args)+1) + " OFFSET $" + fmt.Sprintf("%d", len(args)+2)
 	args = append(args, limit, offset)
 	rows, err := r.db.QueryContext(ctx, selectQuery, args...)
 	if err != nil {
@@ -291,7 +302,7 @@ func (r *authRepositoryImpl) ListUsers(ctx context.Context, role int32, statusFi
 	var userEntities []entity.User
 	for rows.Next() {
 		var userEntity entity.User
-		err := rows.Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt)
+		err := rows.Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -322,6 +333,7 @@ func (r *authRepositoryImpl) ListUsers(ctx context.Context, role int32, statusFi
 			IsActive:     userEntity.IsActive,
 			CreatedAt:    timestamppb.New(userEntity.CreatedAt),
 			UpdatedAt:    timestamppb.New(userEntity.UpdatedAt),
+			LmsUserId:    lmsUserIDValue(userEntity.LmsUserID),
 			
 		}
 	}
@@ -419,6 +431,7 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 			IsActive:     userEntity.IsActive,
 			CreatedAt:    timestamppb.New(userEntity.CreatedAt),
 			UpdatedAt:    timestamppb.New(userEntity.UpdatedAt),
+			LmsUserId:    lmsUserIDValue(userEntity.LmsUserID),
 			
 		}, nil
 	}
@@ -475,6 +488,7 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 		IsActive:     true,
 		CreatedAt:    timestamppb.New(now),
 		UpdatedAt:    timestamppb.New(now),
+		LmsUserId:    lmsID,
 		
 	}, nil
 }

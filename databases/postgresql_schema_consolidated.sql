@@ -1,8 +1,8 @@
 -- =============================================
--- COMPLETE CONSOLIDATED POSTGRESQL SCHEMA
--- CBT Mini Project - Computer Based Test System
--- Date: February 6, 2026
--- Converted from MySQL Schema (Optimized + Drag Drop Features)
+-- COMPLETE CONSOLIDATED POSTGRESQL SCHEMA (ENGLISH)
+-- CBT Microservice - Computer Based Test System
+-- Date: February 18, 2026
+-- Refactored: English Naming + Essay Support + LMS Integration
 -- =============================================
 
 -- Settings
@@ -17,22 +17,22 @@ SET default_tablespace = '';
 -- ENUM TYPES
 -- =============================================
 
-CREATE TYPE user_role_enum AS ENUM ('siswa', 'admin');
-CREATE TYPE test_session_status_enum AS ENUM ('scheduled', 'ongoing', 'completed', 'timeout');
+CREATE TYPE user_role_enum AS ENUM ('student', 'admin', 'teacher', 'superadmin');
+CREATE TYPE exam_session_status_enum AS ENUM ('scheduled', 'ongoing', 'completed', 'timeout', 'grading_in_progress', 'graded');
 CREATE TYPE drag_type_enum AS ENUM ('ordering', 'matching');
-CREATE TYPE question_type_enum AS ENUM ('multiple_choice', 'drag_drop');
+CREATE TYPE question_type_enum AS ENUM ('multiple_choice', 'drag_drop', 'essay');
 
 -- =============================================
 -- MASTER TABLES
 -- =============================================
 
--- Table: Users
+-- Table: Users (Cached from LMS)
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(100) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
-    nama VARCHAR(100) NOT NULL,
-    role user_role_enum NOT NULL DEFAULT 'siswa',
+    full_name VARCHAR(100) NOT NULL,
+    role user_role_enum NOT NULL DEFAULT 'student',
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     lms_user_id BIGINT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -41,14 +41,12 @@ CREATE TABLE users (
 
 CREATE INDEX idx_users_role ON users (role);
 CREATE INDEX idx_users_is_active ON users (is_active);
-CREATE INDEX idx_users_active_role ON users (is_active, role);
-CREATE INDEX idx_users_created_at ON users (created_at);
 CREATE INDEX idx_users_lms_id ON users (lms_user_id);
 
--- Table: Mata Pelajaran
-CREATE TABLE mata_pelajaran (
+-- Table: Subjects (Mata Pelajaran)
+CREATE TABLE subjects (
     id SERIAL PRIMARY KEY,
-    nama VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(50) NOT NULL UNIQUE,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     lms_subject_id BIGINT NULL,
     lms_school_id BIGINT NULL,
@@ -57,15 +55,13 @@ CREATE TABLE mata_pelajaran (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_mata_pelajaran_is_active ON mata_pelajaran (is_active);
-CREATE UNIQUE INDEX uq_mata_pelajaran_lms_subject_id ON mata_pelajaran (lms_subject_id) WHERE lms_subject_id IS NOT NULL;
-CREATE INDEX idx_mp_school ON mata_pelajaran (lms_school_id);
-CREATE INDEX idx_mp_class ON mata_pelajaran (lms_class_id);
+CREATE UNIQUE INDEX uq_subjects_lms_subject_id ON subjects (lms_subject_id) WHERE lms_subject_id IS NOT NULL;
+CREATE INDEX idx_subjects_school ON subjects (lms_school_id);
 
--- Table: Tingkat
-CREATE TABLE tingkat (
+-- Table: Grade Levels (Tingkat)
+CREATE TABLE grade_levels (
     id SERIAL PRIMARY KEY,
-    nama VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(50) NOT NULL UNIQUE,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     lms_level_id BIGINT NULL,
     lms_school_id BIGINT NULL,
@@ -73,9 +69,7 @@ CREATE TABLE tingkat (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_tingkat_is_active ON tingkat (is_active);
-CREATE UNIQUE INDEX uq_tingkat_lms_level_id ON tingkat (lms_level_id) WHERE lms_level_id IS NOT NULL;
-CREATE INDEX idx_tingkat_school ON tingkat (lms_school_id);
+CREATE UNIQUE INDEX uq_grade_levels_lms_level_id ON grade_levels (lms_level_id) WHERE lms_level_id IS NOT NULL;
 
 -- Table: Classes
 CREATE TABLE classes (
@@ -89,9 +83,8 @@ CREATE TABLE classes (
 );
 
 CREATE INDEX idx_classes_school ON classes (lms_school_id);
-CREATE INDEX idx_classes_is_active ON classes (is_active);
 
--- Table: Class Students
+-- Table: Class Students (Enrollment)
 CREATE TABLE class_students (
     id SERIAL PRIMARY KEY,
     lms_class_id BIGINT NOT NULL,
@@ -100,10 +93,7 @@ CREATE TABLE class_students (
     UNIQUE (lms_class_id, lms_user_id)
 );
 
-CREATE INDEX idx_class_students_lms_class ON class_students (lms_class_id);
-CREATE INDEX idx_class_students_lms_user ON class_students (lms_user_id);
-
--- Table: CBT Outbox (transactional event outbox)
+-- Table: CBT Outbox
 CREATE TABLE cbt_outbox (
     id BIGSERIAL PRIMARY KEY,
     event_type VARCHAR(100) NOT NULL,
@@ -120,234 +110,208 @@ CREATE TABLE cbt_outbox (
 );
 
 CREATE INDEX idx_cbt_outbox_status_next_attempt ON cbt_outbox (status, next_attempt_at, id);
-CREATE INDEX idx_cbt_outbox_event_type ON cbt_outbox (event_type);
 
 -- =============================================
 -- CONTENT TABLES
 -- =============================================
 
--- Table: Materi
-CREATE TABLE materi (
+-- Table: Materials (Materi)
+-- Central content unit for an Exam/Test
+CREATE TABLE materials (
     id SERIAL PRIMARY KEY,
-    id_mata_pelajaran INTEGER NOT NULL REFERENCES mata_pelajaran(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    id_tingkat INTEGER NOT NULL REFERENCES tingkat(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    nama VARCHAR(100) NOT NULL,
+    subject_id INTEGER NOT NULL REFERENCES subjects(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    grade_level_id INTEGER NOT NULL REFERENCES grade_levels(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    title VARCHAR(100) NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    default_durasi_menit INTEGER NOT NULL DEFAULT 60,
-    default_jumlah_soal INTEGER NOT NULL DEFAULT 20,
-    lms_module_id BIGINT NULL,
-    lms_class_id BIGINT NULL,
-    owner_user_id INTEGER NULL,
+    default_duration_minutes INTEGER NOT NULL DEFAULT 60,
+    default_question_count INTEGER NOT NULL DEFAULT 20,
+    
+    -- Integration References
+    lms_module_id BIGINT NULL,          -- If linked to an LMS Module
+    lms_book_id BIGINT NULL,            -- [NEW] If linked to an LMS Book (Publisher Content)
+    lms_teacher_material_id BIGINT NULL,-- [NEW] If derived from a Teacher's Material Collection
+    lms_class_id BIGINT NULL,           -- Specific class assignment context
+    
+    owner_user_id INTEGER NULL,         -- ID of the creator (Teacher or Sync/Admin)
     school_id BIGINT NULL,
     labels JSONB NOT NULL DEFAULT '[]'::jsonb,
+    
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (id_mata_pelajaran, id_tingkat, nama)
+    UNIQUE (subject_id, grade_level_id, title) -- Constraint might be too strict, consider removing UNIQUE on title later
 );
 
-CREATE INDEX idx_materi_mata_pelajaran ON materi (id_mata_pelajaran);
-CREATE INDEX idx_materi_tingkat ON materi (id_tingkat);
-CREATE INDEX idx_materi_is_active ON materi (is_active);
-CREATE INDEX idx_materi_active_tingkat ON materi (is_active, id_tingkat);
-CREATE INDEX idx_materi_active_mata_pelajaran ON materi (is_active, id_mata_pelajaran);
-CREATE INDEX idx_materi_composite ON materi (id_mata_pelajaran, id_tingkat, is_active);
-CREATE UNIQUE INDEX uq_materi_lms_module_id ON materi (lms_module_id) WHERE lms_module_id IS NOT NULL;
-CREATE INDEX idx_materi_class ON materi (lms_class_id);
-CREATE INDEX idx_materi_school ON materi (school_id);
+CREATE INDEX idx_materials_subject ON materials (subject_id);
+CREATE INDEX idx_materials_level ON materials (grade_level_id);
+CREATE UNIQUE INDEX uq_materials_lms_module_id ON materials (lms_module_id) WHERE lms_module_id IS NOT NULL;
+CREATE INDEX idx_materials_lms_book ON materials (lms_book_id);
 
--- Table: Soal (Multiple Choice)
-CREATE TABLE soal (
+-- Table: Questions (Soal)
+-- Supports Multiple Choice and Essay. DragDrop is separated due to complexity.
+CREATE TABLE questions (
     id SERIAL PRIMARY KEY,
-    id_materi INTEGER NOT NULL REFERENCES materi(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    material_id INTEGER NOT NULL REFERENCES materials(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     lms_asset_id BIGINT,
-    id_tingkat INTEGER NOT NULL REFERENCES tingkat(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    pertanyaan TEXT NOT NULL,
-    opsi_a VARCHAR(500) NOT NULL,
-    opsi_b VARCHAR(500) NOT NULL,
-    opsi_c VARCHAR(500) NOT NULL,
-    opsi_d VARCHAR(500) NOT NULL,
-    jawaban_benar CHAR(1) NOT NULL,
-    pembahasan TEXT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    grade_level_id INTEGER NOT NULL REFERENCES grade_levels(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    
+    question_text TEXT NOT NULL,
+    question_type question_type_enum NOT NULL DEFAULT 'multiple_choice',
+    
+    -- Multiple Choice Fields
+    option_a VARCHAR(500) NULL,
+    option_b VARCHAR(500) NULL,
+    option_c VARCHAR(500) NULL,
+    option_d VARCHAR(500) NULL,
+    correct_answer CHAR(1) NULL, -- 'A', 'B', 'C', 'D'
+    
+    -- Essay Fields [NEW]
+    essay_answer_key TEXT NULL, -- Optional keywords or model answer for teacher reference
+    
+    explanation TEXT NULL, -- Pembahasan
     image_path VARCHAR(255) NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_soal_materi ON soal (id_materi);
-CREATE INDEX idx_soal_lms_asset_id ON soal (lms_asset_id);
-CREATE INDEX idx_soal_tingkat ON soal (id_tingkat);
-CREATE INDEX idx_soal_is_active ON soal (is_active);
-CREATE INDEX idx_soal_active_materi ON soal (is_active, id_materi);
-CREATE INDEX idx_soal_active_tingkat ON soal (is_active, id_tingkat);
-CREATE INDEX idx_soal_materi_active ON soal (id_materi, is_active);
-CREATE INDEX idx_soal_created_at ON soal (created_at);
+CREATE INDEX idx_questions_material ON questions (material_id);
 
--- Table: Soal Gambar (Multiple Choice Images)
-CREATE TABLE soal_gambar (
+-- Table: Question Images (Soal Gambar)
+CREATE TABLE question_images (
     id SERIAL PRIMARY KEY,
-    id_soal INTEGER NOT NULL REFERENCES soal(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    nama_file VARCHAR(255) NOT NULL,
+    question_id INTEGER NOT NULL REFERENCES questions(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
     file_path VARCHAR(500) NOT NULL,
     file_size INTEGER NOT NULL,
     mime_type VARCHAR(50) NOT NULL,
-    urutan SMALLINT NOT NULL DEFAULT 1,
-    keterangan VARCHAR(255) NULL,
+    order_no SMALLINT NOT NULL DEFAULT 1,
+    caption VARCHAR(255) NULL,
     cloud_id VARCHAR(255) NULL,
-    public_id VARCHAR(500) NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_soal_gambar_soal ON soal_gambar (id_soal);
-CREATE INDEX idx_soal_gambar_soal_urutan ON soal_gambar (id_soal, urutan);
-CREATE INDEX idx_soal_gambar_cloud_id ON soal_gambar (cloud_id);
-
--- Table: Soal Drag Drop
-CREATE TABLE soal_drag_drop (
+-- Table: Drag & Drop Questions (Soal Drag Drop)
+CREATE TABLE drag_drop_questions (
     id SERIAL PRIMARY KEY,
-    id_materi INTEGER NOT NULL REFERENCES materi(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    id_tingkat INTEGER NOT NULL REFERENCES tingkat(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    pertanyaan TEXT NOT NULL,
+    material_id INTEGER NOT NULL REFERENCES materials(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    grade_level_id INTEGER NOT NULL REFERENCES grade_levels(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    question_text TEXT NOT NULL,
     drag_type drag_type_enum NOT NULL,
-    pembahasan TEXT NULL,
+    explanation TEXT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_soal_drag_drop_materi ON soal_drag_drop (id_materi);
-CREATE INDEX idx_soal_drag_drop_tingkat ON soal_drag_drop (id_tingkat);
-CREATE INDEX idx_soal_drag_drop_is_active ON soal_drag_drop (is_active);
-CREATE INDEX idx_soal_drag_drop_type ON soal_drag_drop (drag_type);
-CREATE INDEX idx_soal_drag_drop_active_materi ON soal_drag_drop (is_active, id_materi);
-CREATE INDEX idx_soal_drag_drop_active_tingkat ON soal_drag_drop (is_active, id_tingkat);
-
--- Table: Soal Drag Drop Gambar
-CREATE TABLE soal_drag_drop_gambar (
+-- Table: Drag Drop Images
+CREATE TABLE drag_drop_images (
     id SERIAL PRIMARY KEY,
-    id_soal_drag_drop INTEGER NOT NULL REFERENCES soal_drag_drop(id) ON DELETE CASCADE,
-    nama_file VARCHAR(255) NOT NULL,
+    drag_drop_question_id INTEGER NOT NULL REFERENCES drag_drop_questions(id) ON DELETE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
     file_path VARCHAR(500) NOT NULL,
-    file_size INTEGER NOT NULL,
-    mime_type VARCHAR(50) NOT NULL,
-    urutan SMALLINT NOT NULL DEFAULT 1,
-    keterangan VARCHAR(255) NULL,
-    cloud_id VARCHAR(255) NULL,
-    public_id VARCHAR(500) NULL,
+    order_no SMALLINT NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_soal_drag_drop_gambar_soal ON soal_drag_drop_gambar (id_soal_drag_drop);
-
--- Table: Drag Item
-CREATE TABLE drag_item (
+-- Table: Drag Items
+CREATE TABLE drag_items (
     id SERIAL PRIMARY KEY,
-    id_soal_drag_drop INTEGER NOT NULL REFERENCES soal_drag_drop(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    drag_drop_question_id INTEGER NOT NULL REFERENCES drag_drop_questions(id) ON DELETE CASCADE ON UPDATE CASCADE,
     label VARCHAR(255) NOT NULL,
     image_url VARCHAR(500) NULL,
-    urutan SMALLINT NOT NULL DEFAULT 1,
+    order_no SMALLINT NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_drag_item_soal ON drag_item (id_soal_drag_drop);
-CREATE INDEX idx_drag_item_urutan ON drag_item (id_soal_drag_drop, urutan);
-
--- Table: Drag Slot
-CREATE TABLE drag_slot (
+-- Table: Drag Slots
+CREATE TABLE drag_slots (
     id SERIAL PRIMARY KEY,
-    id_soal_drag_drop INTEGER NOT NULL REFERENCES soal_drag_drop(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    drag_drop_question_id INTEGER NOT NULL REFERENCES drag_drop_questions(id) ON DELETE CASCADE ON UPDATE CASCADE,
     label VARCHAR(255) NOT NULL,
     image_url VARCHAR(500) NULL,
-    urutan SMALLINT NOT NULL DEFAULT 1,
+    order_no SMALLINT NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_drag_slot_soal ON drag_slot (id_soal_drag_drop);
-CREATE INDEX idx_drag_slot_urutan ON drag_slot (id_soal_drag_drop, urutan);
-
--- Table: Drag Correct Answer
-CREATE TABLE drag_correct_answer (
+-- Table: Drag Correct Answers
+CREATE TABLE drag_correct_answers (
     id SERIAL PRIMARY KEY,
-    id_drag_item INTEGER NOT NULL REFERENCES drag_item(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    id_drag_slot INTEGER NOT NULL REFERENCES drag_slot(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    drag_item_id INTEGER NOT NULL REFERENCES drag_items(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    drag_slot_id INTEGER NOT NULL REFERENCES drag_slots(id) ON DELETE CASCADE ON UPDATE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (id_drag_item, id_drag_slot)
+    UNIQUE (drag_item_id, drag_slot_id)
 );
 
-CREATE INDEX idx_drag_correct_item ON drag_correct_answer (id_drag_item);
-CREATE INDEX idx_drag_correct_slot ON drag_correct_answer (id_drag_slot);
-CREATE INDEX idx_drag_correct_answer_item_slot ON drag_correct_answer (id_drag_item, id_drag_slot);
-
 -- =============================================
--- TEST SESSION TABLES
+-- EXAM SESSION TABLES
 -- =============================================
 
--- Table: Test Session
-CREATE TABLE test_session (
+-- Table: Exam Sessions (Test Session)
+CREATE TABLE exam_sessions (
     id SERIAL PRIMARY KEY,
     session_token VARCHAR(64) NOT NULL UNIQUE,
-    nama_peserta VARCHAR(100) NOT NULL,
-    id_tingkat INTEGER NOT NULL REFERENCES tingkat(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    id_mata_pelajaran INTEGER NOT NULL REFERENCES mata_pelajaran(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    student_name VARCHAR(100) NOT NULL,
+    grade_level_id INTEGER NOT NULL REFERENCES grade_levels(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    subject_id INTEGER NOT NULL REFERENCES subjects(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     user_id INTEGER NULL REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    waktu_mulai TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    waktu_selesai TIMESTAMPTZ NULL,
-    durasi_menit INTEGER NOT NULL,
-    nilai_akhir DECIMAL(5,2) NULL,
-    jumlah_benar INTEGER NULL,
-    total_soal INTEGER NULL,
-    status test_session_status_enum NOT NULL DEFAULT 'ongoing',
+    
+    started_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    finished_at TIMESTAMPTZ NULL,
+    duration_minutes INTEGER NOT NULL,
+    
+    final_score DECIMAL(5,2) NULL, -- nilai_akhir
+    total_correct INTEGER NULL,
+    total_questions INTEGER NULL,
+    
+    status exam_session_status_enum NOT NULL DEFAULT 'ongoing',
     lms_assignment_id BIGINT NULL,
+    
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_test_session_tingkat ON test_session (id_tingkat);
-CREATE INDEX idx_test_session_mata_pelajaran ON test_session (id_mata_pelajaran);
-CREATE INDEX idx_test_session_user ON test_session (user_id);
-CREATE INDEX idx_test_session_waktu_mulai ON test_session (waktu_mulai);
-CREATE INDEX idx_test_session_status ON test_session (status);
-CREATE INDEX idx_test_session_user_status ON test_session (user_id, status);
-CREATE INDEX idx_test_session_status_waktu ON test_session (status, waktu_mulai);
-CREATE INDEX idx_test_session_lms_assignment_id ON test_session (lms_assignment_id);
+CREATE INDEX idx_exam_sessions_user ON exam_sessions (user_id);
+CREATE INDEX idx_exam_sessions_status ON exam_sessions (status);
 
--- Table: Test Session Soal (Unified)
-CREATE TABLE test_session_soal (
+-- Table: Exam Session Questions (Unified Link)
+CREATE TABLE exam_session_questions (
     id SERIAL PRIMARY KEY,
-    id_test_session INTEGER NOT NULL REFERENCES test_session(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    id_soal INTEGER NULL REFERENCES soal(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    id_soal_drag_drop INTEGER NULL REFERENCES soal_drag_drop(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    exam_session_id INTEGER NOT NULL REFERENCES exam_sessions(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    question_id INTEGER NULL REFERENCES questions(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    drag_drop_question_id INTEGER NULL REFERENCES drag_drop_questions(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     question_type question_type_enum NOT NULL DEFAULT 'multiple_choice',
-    nomor_urut SMALLINT NOT NULL,
-    UNIQUE (id_test_session, nomor_urut)
+    order_no SMALLINT NOT NULL,
+    UNIQUE (exam_session_id, order_no)
 );
 
-CREATE INDEX idx_test_session_soal_session ON test_session_soal (id_test_session);
-CREATE INDEX idx_test_session_soal_soal ON test_session_soal (id_soal);
-CREATE INDEX idx_test_session_soal_drag_drop ON test_session_soal (id_soal_drag_drop);
-CREATE INDEX idx_test_session_soal_type ON test_session_soal (question_type);
-
--- Table: Jawaban Siswa (Unified)
-CREATE TABLE jawaban_siswa (
+-- Table: Student Answers (Jawaban Siswa)
+CREATE TABLE student_answers (
     id SERIAL PRIMARY KEY,
-    id_test_session_soal INTEGER NOT NULL REFERENCES test_session_soal(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    jawaban_dipilih CHAR(1) NULL,
+    exam_session_question_id INTEGER NOT NULL REFERENCES exam_session_questions(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    
     question_type question_type_enum NOT NULL DEFAULT 'multiple_choice',
-    jawaban_drag_drop JSONB NULL,
-    is_correct BOOLEAN NOT NULL DEFAULT FALSE,
-    dijawab_pada TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (id_test_session_soal)
+    
+    -- Multiple Choice Answer
+    selected_option CHAR(1) NULL,
+    
+    -- Drag Drop Answer
+    drag_drop_answer JSONB NULL,
+    
+    -- Essay Answer [NEW]
+    essay_answer_text TEXT NULL,
+    essay_score DECIMAL(5,2) DEFAULT 0, -- Score for this specific essay
+    teacher_feedback TEXT NULL,
+    
+    is_correct BOOLEAN NOT NULL DEFAULT FALSE, -- For auto-grading (MC/Drag)
+    answered_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (exam_session_question_id)
 );
 
-CREATE INDEX idx_jawaban_siswa_is_correct ON jawaban_siswa (is_correct);
-CREATE INDEX idx_jawaban_siswa_dijawab_pada ON jawaban_siswa (dijawab_pada);
-CREATE INDEX idx_jawaban_siswa_type ON jawaban_siswa (question_type);
-
 -- =============================================
--- USER LIMITS & USAGE TRACKING
+-- USER LIMITS
 -- =============================================
 
--- Table: User Limits
 CREATE TABLE user_limits (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -360,12 +324,6 @@ CREATE TABLE user_limits (
     UNIQUE (user_id, limit_type)
 );
 
-CREATE INDEX idx_user_limits_user ON user_limits (user_id);
-CREATE INDEX idx_user_limits_reset_at ON user_limits (reset_at);
-CREATE INDEX idx_user_limits_user_type ON user_limits (user_id, limit_type);
-CREATE INDEX idx_user_limits_type_reset ON user_limits (limit_type, reset_at);
-
--- Table: User Limit Usage
 CREATE TABLE user_limit_usage (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -375,15 +333,8 @@ CREATE TABLE user_limit_usage (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_user_limit_usage_user ON user_limit_usage (user_id);
-CREATE INDEX idx_user_limit_usage_type ON user_limit_usage (limit_type);
-CREATE INDEX idx_user_limit_usage_created_at ON user_limit_usage (created_at);
-CREATE INDEX idx_user_limit_usage_resource_id ON user_limit_usage (resource_id);
-CREATE INDEX idx_user_limit_usage_user_created ON user_limit_usage (user_id, created_at);
-CREATE INDEX idx_user_limit_usage_user_type_created ON user_limit_usage (user_id, limit_type, created_at);
-
 -- =============================================
--- TRIGGER FUNCTION FOR UPDATED_AT
+-- TRIGGER FUNCTION
 -- =============================================
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -395,11 +346,9 @@ END;
 $$ language 'plpgsql';
 
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_mata_pelajaran_updated_at BEFORE UPDATE ON mata_pelajaran FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_tingkat_updated_at BEFORE UPDATE ON tingkat FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_subjects_updated_at BEFORE UPDATE ON subjects FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_grade_levels_updated_at BEFORE UPDATE ON grade_levels FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_classes_updated_at BEFORE UPDATE ON classes FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_materi_updated_at BEFORE UPDATE ON materi FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_soal_updated_at BEFORE UPDATE ON soal FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_soal_drag_drop_updated_at BEFORE UPDATE ON soal_drag_drop FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_test_session_updated_at BEFORE UPDATE ON test_session FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_user_limits_updated_at BEFORE UPDATE ON user_limits FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_materials_updated_at BEFORE UPDATE ON materials FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_questions_updated_at BEFORE UPDATE ON questions FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_exam_sessions_updated_at BEFORE UPDATE ON exam_sessions FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
