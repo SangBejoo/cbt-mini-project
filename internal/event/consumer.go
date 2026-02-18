@@ -55,6 +55,6 @@ func (c *Consumer) Start(ctx context.Context) {
 		return
 	}
 
-	slog.Info("CBT event consumer started", "stream", "lms_events")
+	slog.Info("CBT event consumer started", "streams", "lms_events_critical,lms_events_general,lms_events")
 	c.worker.Start(ctx)
 }

@@ -25,7 +25,9 @@ import (
 )
 
 const (
-	lmsEventsStream      = "lms_events"
+	lmsEventsCriticalStream = "lms_events_critical"
+	lmsEventsGeneralStream  = "lms_events_general"
+	lmsEventsLegacyStream   = "lms_events"
 	lmsEventsDLQStream   = "lms_events_dlq"
 	lmsConsumerGroup     = "cbt_lms_sync_group"
 	consumerReadBatch    = int64(25)
@@ -34,6 +36,12 @@ const (
 	maxRetryCount        = 3
 	processedMessageTTL  = 7 * 24 * time.Hour
 )
+
+var lmsInputStreams = []string{
+	lmsEventsCriticalStream,
+	lmsEventsGeneralStream,
+	lmsEventsLegacyStream,
+}
 
 type SyncWorker struct {
 	materiRepo       materi.MateriRepository
@@ -82,30 +90,32 @@ func (w *SyncWorker) Start(ctx context.Context) {
 			w.claimStalePending(ctx, consumerName)
 			w.readOwnPending(ctx, consumerName)
 
-			streams, err := infraRedis.RedisClient.XReadGroup(ctx, &goredis.XReadGroupArgs{
-				Group:    lmsConsumerGroup,
-				Consumer: consumerName,
-				Streams:  []string{lmsEventsStream, ">"},
-				Block:    consumerReadBlock,
-				Count:    consumerReadBatch,
-			}).Result()
+			for _, streamName := range lmsInputStreams {
+				streams, err := infraRedis.RedisClient.XReadGroup(ctx, &goredis.XReadGroupArgs{
+					Group:    lmsConsumerGroup,
+					Consumer: consumerName,
+					Streams:  []string{streamName, ">"},
+					Block:    consumerReadBlock,
+					Count:    consumerReadBatch,
+				}).Result()
 
-			if err != nil {
-				if errors.Is(err, goredis.Nil) {
-					continue
-				}
-				if strings.Contains(err.Error(), "NOGROUP") {
-					if groupErr := w.ensureConsumerGroup(ctx); groupErr != nil {
-						slog.Error("failed to recreate consumer group", "error", groupErr)
+				if err != nil {
+					if errors.Is(err, goredis.Nil) {
+						continue
 					}
+					if strings.Contains(err.Error(), "NOGROUP") {
+						if groupErr := w.ensureConsumerGroup(ctx); groupErr != nil {
+							slog.Error("failed to recreate consumer group", "error", groupErr)
+						}
+						continue
+					}
+					slog.Error("failed to read from redis stream group", "stream", streamName, "error", err)
+					time.Sleep(2 * time.Second)
 					continue
 				}
-				slog.Error("failed to read from redis stream group", "error", err)
-				time.Sleep(2 * time.Second)
-				continue
-			}
 
-			w.processStreamMessages(ctx, streams)
+				w.processStreamMessages(ctx, streams)
+			}
 		}
 	}
 }
@@ -113,15 +123,15 @@ func (w *SyncWorker) Start(ctx context.Context) {
 func (w *SyncWorker) processStreamMessages(ctx context.Context, streams []goredis.XStream) {
 	for _, stream := range streams {
 		for _, msg := range stream.Messages {
-			if err := w.processMessage(ctx, msg); err != nil {
+			if err := w.processMessage(ctx, stream.Stream, msg); err != nil {
 				slog.Error("failed to process LMS event", "message_id", msg.ID, "error", err)
-				w.handleFailedMessage(ctx, msg, err)
+				w.handleFailedMessage(ctx, stream.Stream, msg, err)
 			}
 		}
 	}
 }
 
-func (w *SyncWorker) processMessage(ctx context.Context, msg goredis.XMessage) error {
+func (w *SyncWorker) processMessage(ctx context.Context, streamName string, msg goredis.XMessage) error {
 	eventType := extractEventType(msg.Values)
 	payload := extractStringValue(msg.Values["payload"])
 	if eventType == "" {
@@ -137,7 +147,7 @@ func (w *SyncWorker) processMessage(ctx context.Context, msg goredis.XMessage) e
 		return fmt.Errorf("failed to check dedupe key: %w", err)
 	}
 	if processed {
-		return w.ackMessage(ctx, msg.ID)
+		return w.ackMessage(ctx, streamName, msg.ID)
 	}
 
 	slog.Debug("processing LMS event", "type", eventType)
@@ -186,10 +196,10 @@ func (w *SyncWorker) processMessage(ctx context.Context, msg goredis.XMessage) e
 		return fmt.Errorf("failed to mark message as processed: %w", err)
 	}
 
-	return w.ackMessage(ctx, msg.ID)
+	return w.ackMessage(ctx, streamName, msg.ID)
 }
 
-func (w *SyncWorker) handleFailedMessage(ctx context.Context, msg goredis.XMessage, processErr error) {
+func (w *SyncWorker) handleFailedMessage(ctx context.Context, streamName string, msg goredis.XMessage, processErr error) {
 	retryCount := parseRetryCount(msg.Values["retry_count"]) + 1
 	eventType := extractEventType(msg.Values)
 	payload := extractStringValue(msg.Values["payload"])
@@ -206,13 +216,13 @@ func (w *SyncWorker) handleFailedMessage(ctx context.Context, msg goredis.XMessa
 			"failed_at":       time.Now().UTC().Format(time.RFC3339),
 		}
 		if err := infraRedis.RedisClient.XAdd(ctx, &goredis.XAddArgs{
-			Stream: lmsEventsStream,
+			Stream: streamName,
 			Values: values,
 		}).Err(); err != nil {
 			slog.Error("failed to requeue LMS event", "message_id", msg.ID, "retry_count", retryCount, "error", err)
 			return
 		}
-		if err := w.ackMessage(ctx, msg.ID); err != nil {
+		if err := w.ackMessage(ctx, streamName, msg.ID); err != nil {
 			slog.Error("failed to ack requeued LMS event", "message_id", msg.ID, "error", err)
 		}
 		return
@@ -236,7 +246,7 @@ func (w *SyncWorker) handleFailedMessage(ctx context.Context, msg goredis.XMessa
 		return
 	}
 
-	if err := w.ackMessage(ctx, msg.ID); err != nil {
+	if err := w.ackMessage(ctx, streamName, msg.ID); err != nil {
 		slog.Error("failed to ack DLQ event", "message_id", msg.ID, "error", err)
 	}
 
@@ -244,34 +254,44 @@ func (w *SyncWorker) handleFailedMessage(ctx context.Context, msg goredis.XMessa
 }
 
 func (w *SyncWorker) ensureConsumerGroup(ctx context.Context) error {
-	err := infraRedis.RedisClient.XGroupCreateMkStream(ctx, lmsEventsStream, lmsConsumerGroup, "0").Err()
-	if err != nil && !strings.Contains(err.Error(), "BUSYGROUP") {
-		return err
+	for _, streamName := range lmsInputStreams {
+		err := infraRedis.RedisClient.XGroupCreateMkStream(ctx, streamName, lmsConsumerGroup, "0").Err()
+		if err != nil && !strings.Contains(err.Error(), "BUSYGROUP") {
+			return err
+		}
 	}
 	return nil
 }
 
 func (w *SyncWorker) readOwnPending(ctx context.Context, consumerName string) {
-	streams, err := infraRedis.RedisClient.XReadGroup(ctx, &goredis.XReadGroupArgs{
-		Group:    lmsConsumerGroup,
-		Consumer: consumerName,
-		Streams:  []string{lmsEventsStream, "0"},
-		Count:    consumerReadBatch,
-	}).Result()
-	if err != nil && !errors.Is(err, goredis.Nil) {
-		slog.Warn("failed reading own pending entries", "error", err)
-		return
-	}
-	if len(streams) > 0 {
-		w.processStreamMessages(ctx, streams)
+	for _, streamName := range lmsInputStreams {
+		streams, err := infraRedis.RedisClient.XReadGroup(ctx, &goredis.XReadGroupArgs{
+			Group:    lmsConsumerGroup,
+			Consumer: consumerName,
+			Streams:  []string{streamName, "0"},
+			Count:    consumerReadBatch,
+		}).Result()
+		if err != nil && !errors.Is(err, goredis.Nil) {
+			slog.Warn("failed reading own pending entries", "stream", streamName, "error", err)
+			continue
+		}
+		if len(streams) > 0 {
+			w.processStreamMessages(ctx, streams)
+		}
 	}
 }
 
 func (w *SyncWorker) claimStalePending(ctx context.Context, consumerName string) {
+	for _, streamName := range lmsInputStreams {
+		w.claimStalePendingFromStream(ctx, consumerName, streamName)
+	}
+}
+
+func (w *SyncWorker) claimStalePendingFromStream(ctx context.Context, consumerName, streamName string) {
 	start := "0-0"
 	for {
 		messages, next, err := infraRedis.RedisClient.XAutoClaim(ctx, &goredis.XAutoClaimArgs{
-			Stream:   lmsEventsStream,
+			Stream:   streamName,
 			Group:    lmsConsumerGroup,
 			Consumer: consumerName,
 			MinIdle:  consumerMinClaimIdle,
@@ -279,14 +299,14 @@ func (w *SyncWorker) claimStalePending(ctx context.Context, consumerName string)
 			Count:    consumerReadBatch,
 		}).Result()
 		if err != nil && !errors.Is(err, goredis.Nil) {
-			slog.Warn("failed auto-claiming pending entries", "error", err)
+			slog.Warn("failed auto-claiming pending entries", "stream", streamName, "error", err)
 			return
 		}
 		if len(messages) == 0 {
 			return
 		}
 
-		w.processStreamMessages(ctx, []goredis.XStream{{Stream: lmsEventsStream, Messages: messages}})
+		w.processStreamMessages(ctx, []goredis.XStream{{Stream: streamName, Messages: messages}})
 
 		if next == "0-0" || next == start {
 			return
@@ -295,11 +315,11 @@ func (w *SyncWorker) claimStalePending(ctx context.Context, consumerName string)
 	}
 }
 
-func (w *SyncWorker) ackMessage(ctx context.Context, messageID string) error {
-	if err := infraRedis.RedisClient.XAck(ctx, lmsEventsStream, lmsConsumerGroup, messageID).Err(); err != nil {
+func (w *SyncWorker) ackMessage(ctx context.Context, streamName, messageID string) error {
+	if err := infraRedis.RedisClient.XAck(ctx, streamName, lmsConsumerGroup, messageID).Err(); err != nil {
 		return err
 	}
-	if err := infraRedis.RedisClient.XDel(ctx, lmsEventsStream, messageID).Err(); err != nil {
+	if err := infraRedis.RedisClient.XDel(ctx, streamName, messageID).Err(); err != nil {
 		slog.Warn("failed to delete acknowledged stream message", "message_id", messageID, "error", err)
 	}
 	return nil
@@ -467,7 +487,7 @@ func (w *SyncWorker) handleExamAssignmentCreated(payload string) error {
 	}
 
 	// 1. Resolve module reference to materi details
-	materi, err := w.resolveMateriByModuleReference(p.ModuleID)
+	materi, err := w.resolveMateriByModuleReference(p.ModuleID, p.ModuleRefType)
 	if err != nil {
 		return fmt.Errorf("failed to resolve materi details for module_id=%d: %w", p.ModuleID, err)
 	}
@@ -534,7 +554,7 @@ func (w *SyncWorker) handleExamAssignmentUpdated(payload string) error {
 		return nil
 	}
 
-	materiData, err := w.resolveMateriByModuleReference(p.ModuleID)
+	materiData, err := w.resolveMateriByModuleReference(p.ModuleID, p.ModuleRefType)
 	if err != nil {
 		return fmt.Errorf("failed to resolve materi for assignment update module_id=%d: %w", p.ModuleID, err)
 	}
@@ -621,9 +641,18 @@ func parseScheduledTime(raw string) time.Time {
 	return parsed
 }
 
-func (w *SyncWorker) resolveMateriByModuleReference(moduleID int64) (*entity.Materi, error) {
+func (w *SyncWorker) resolveMateriByModuleReference(moduleID int64, moduleRefType string) (*entity.Materi, error) {
 	if moduleID == 0 {
 		return nil, fmt.Errorf("module_id is required")
+	}
+
+	normalizedRefType := strings.ToLower(strings.TrimSpace(moduleRefType))
+
+	switch normalizedRefType {
+	case "lms_module_id", "teacher_material_id":
+		return w.materiRepo.GetByLMSID(moduleID)
+	case "cbt_materi_id":
+		return w.materiRepo.GetByID(int(moduleID))
 	}
 
 	if materiData, err := w.materiRepo.GetByLMSID(moduleID); err == nil {

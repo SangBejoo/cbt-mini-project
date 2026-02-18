@@ -4,6 +4,8 @@ import (
 	"cbt-test-mini-project/internal/entity"
 	"database/sql"
 	"errors"
+	"math/rand"
+	"time"
 )
 
 // Create creates a new drag-drop question with items, slots, and correct answers
@@ -427,12 +429,23 @@ func (r *repository) GetActiveByMateri(idMateri int, limit int) ([]entity.SoalDr
 		       m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id
 		FROM soal_drag_drop sdd
 		JOIN materi m ON sdd.id_materi = m.id
-		WHERE sdd.is_active = true AND sdd.id_materi = $1
-		ORDER BY RANDOM()`
+		WHERE sdd.is_active = true AND sdd.id_materi = $1`
 
 	if limit > 0 {
-		query += ` LIMIT $2`
-		rows, err := r.db.Query(query, idMateri, limit)
+		var total int
+		countQuery := `SELECT COUNT(*) FROM soal_drag_drop WHERE is_active = true AND id_materi = $1`
+		if err := r.db.QueryRow(countQuery, idMateri).Scan(&total); err != nil {
+			return nil, err
+		}
+
+		offset := 0
+		if total > limit {
+			randSource := rand.New(rand.NewSource(time.Now().UnixNano()))
+			offset = randSource.Intn(total - limit + 1)
+		}
+
+		query += ` ORDER BY sdd.id ASC LIMIT $2 OFFSET $3`
+		rows, err := r.db.Query(query, idMateri, limit, offset)
 		if err != nil {
 			return nil, err
 		}
@@ -455,6 +468,7 @@ func (r *repository) GetActiveByMateri(idMateri int, limit int) ([]entity.SoalDr
 			soals = append(soals, soal)
 		}
 	} else {
+		query += ` ORDER BY sdd.id ASC`
 		rows, err := r.db.Query(query, idMateri)
 		if err != nil {
 			return nil, err
