@@ -79,6 +79,15 @@ type TestSessionRepository interface {
 	// NEW: Submit drag-drop answer
 	SubmitDragDropAnswer(token string, nomorUrut int, answer map[int]int, isCorrect bool) error
 
+	// Submit essay answer
+	SubmitEssayAnswer(token string, nomorUrut int, jawabanEssay string) error
+
+	// Grade essay answer and recalculate affected session
+	GradeEssayAnswer(answerID int, score float64, feedback string) (string, error)
+
+	// Check if session has essay questions
+	HasEssayQuestions(token string) (bool, error)
+
 	// NEW: Get correct answers for a drag-drop question
 	GetDragDropCorrectAnswers(soalDragDropID int) ([]entity.DragCorrectAnswer, error)
 

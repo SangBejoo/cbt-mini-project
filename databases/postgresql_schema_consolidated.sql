@@ -3,6 +3,7 @@
 -- CBT Microservice - Computer Based Test System
 -- Date: February 18, 2026
 -- Refactored: English Naming + Essay Support + LMS Integration
+-- Scope: Final merged schema from base + migrations up to 27-Feb-2026
 -- =============================================
 
 -- Settings
@@ -57,6 +58,7 @@ CREATE TABLE subjects (
 
 CREATE UNIQUE INDEX uq_subjects_lms_subject_id ON subjects (lms_subject_id) WHERE lms_subject_id IS NOT NULL;
 CREATE INDEX idx_subjects_school ON subjects (lms_school_id);
+CREATE INDEX idx_subjects_class ON subjects (lms_class_id);
 
 -- Table: Grade Levels (Tingkat)
 CREATE TABLE grade_levels (
@@ -70,6 +72,7 @@ CREATE TABLE grade_levels (
 );
 
 CREATE UNIQUE INDEX uq_grade_levels_lms_level_id ON grade_levels (lms_level_id) WHERE lms_level_id IS NOT NULL;
+CREATE INDEX idx_grade_levels_school ON grade_levels (lms_school_id);
 
 -- Table: Classes
 CREATE TABLE classes (
@@ -83,6 +86,7 @@ CREATE TABLE classes (
 );
 
 CREATE INDEX idx_classes_school ON classes (lms_school_id);
+CREATE INDEX idx_classes_active ON classes (is_active);
 
 -- Table: Class Students (Enrollment)
 CREATE TABLE class_students (
@@ -92,6 +96,9 @@ CREATE TABLE class_students (
     joined_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (lms_class_id, lms_user_id)
 );
+
+CREATE INDEX idx_class_students_lms_class ON class_students (lms_class_id);
+CREATE INDEX idx_class_students_lms_user ON class_students (lms_user_id);
 
 -- Table: CBT Outbox
 CREATE TABLE cbt_outbox (
@@ -110,6 +117,7 @@ CREATE TABLE cbt_outbox (
 );
 
 CREATE INDEX idx_cbt_outbox_status_next_attempt ON cbt_outbox (status, next_attempt_at, id);
+CREATE INDEX idx_cbt_outbox_event_type ON cbt_outbox (event_type);
 
 -- =============================================
 -- CONTENT TABLES
@@ -145,6 +153,9 @@ CREATE INDEX idx_materials_subject ON materials (subject_id);
 CREATE INDEX idx_materials_level ON materials (grade_level_id);
 CREATE UNIQUE INDEX uq_materials_lms_module_id ON materials (lms_module_id) WHERE lms_module_id IS NOT NULL;
 CREATE INDEX idx_materials_lms_book ON materials (lms_book_id);
+CREATE INDEX idx_materials_lms_teacher_material ON materials (lms_teacher_material_id);
+CREATE INDEX idx_materials_class ON materials (lms_class_id);
+CREATE INDEX idx_materials_school ON materials (school_id);
 
 -- Table: Questions (Soal)
 -- Supports Multiple Choice and Essay. DragDrop is separated due to complexity.
@@ -152,6 +163,7 @@ CREATE TABLE questions (
     id SERIAL PRIMARY KEY,
     material_id INTEGER NOT NULL REFERENCES materials(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     lms_asset_id BIGINT,
+    lms_class_id BIGINT,
     grade_level_id INTEGER NOT NULL REFERENCES grade_levels(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     
     question_text TEXT NOT NULL,
@@ -176,6 +188,11 @@ CREATE TABLE questions (
 );
 
 CREATE INDEX idx_questions_material ON questions (material_id);
+CREATE INDEX idx_questions_grade_level ON questions (grade_level_id);
+CREATE INDEX idx_questions_is_active ON questions (is_active);
+CREATE INDEX idx_questions_question_type ON questions (question_type);
+CREATE INDEX idx_questions_lms_asset_id ON questions (lms_asset_id);
+CREATE INDEX idx_questions_lms_class_id ON questions (lms_class_id);
 
 -- Table: Question Images (Soal Gambar)
 CREATE TABLE question_images (
@@ -188,8 +205,14 @@ CREATE TABLE question_images (
     order_no SMALLINT NOT NULL DEFAULT 1,
     caption VARCHAR(255) NULL,
     cloud_id VARCHAR(255) NULL,
+    public_id VARCHAR(500) NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_question_images_question ON question_images (question_id);
+CREATE INDEX idx_question_images_question_order ON question_images (question_id, order_no);
+CREATE INDEX idx_question_images_cloud_id ON question_images (cloud_id);
+CREATE INDEX idx_question_images_public_id ON question_images (public_id);
 
 -- Table: Drag & Drop Questions (Soal Drag Drop)
 CREATE TABLE drag_drop_questions (
@@ -200,9 +223,18 @@ CREATE TABLE drag_drop_questions (
     drag_type drag_type_enum NOT NULL,
     explanation TEXT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    lms_class_id BIGINT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_dd_questions_material ON drag_drop_questions (material_id);
+CREATE INDEX idx_dd_questions_level ON drag_drop_questions (grade_level_id);
+CREATE INDEX idx_dd_questions_is_active ON drag_drop_questions (is_active);
+CREATE INDEX idx_dd_questions_type ON drag_drop_questions (drag_type);
+CREATE INDEX idx_dd_questions_class ON drag_drop_questions (lms_class_id);
+CREATE INDEX idx_dd_questions_active_material ON drag_drop_questions (is_active, material_id);
+CREATE INDEX idx_dd_questions_active_level ON drag_drop_questions (is_active, grade_level_id);
 
 -- Table: Drag Drop Images
 CREATE TABLE drag_drop_images (
@@ -210,9 +242,19 @@ CREATE TABLE drag_drop_images (
     drag_drop_question_id INTEGER NOT NULL REFERENCES drag_drop_questions(id) ON DELETE CASCADE,
     file_name VARCHAR(255) NOT NULL,
     file_path VARCHAR(500) NOT NULL,
+    file_size INTEGER NOT NULL,
+    mime_type VARCHAR(50) NOT NULL,
     order_no SMALLINT NOT NULL DEFAULT 1,
+    caption VARCHAR(255) NULL,
+    cloud_id VARCHAR(255) NULL,
+    public_id VARCHAR(500) NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_drag_drop_images_question ON drag_drop_images (drag_drop_question_id);
+CREATE INDEX idx_drag_drop_images_question_order ON drag_drop_images (drag_drop_question_id, order_no);
+CREATE INDEX idx_drag_drop_images_cloud_id ON drag_drop_images (cloud_id);
+CREATE INDEX idx_drag_drop_images_public_id ON drag_drop_images (public_id);
 
 -- Table: Drag Items
 CREATE TABLE drag_items (
@@ -224,6 +266,9 @@ CREATE TABLE drag_items (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX idx_drag_items_question ON drag_items (drag_drop_question_id);
+CREATE INDEX idx_drag_items_question_order ON drag_items (drag_drop_question_id, order_no);
+
 -- Table: Drag Slots
 CREATE TABLE drag_slots (
     id SERIAL PRIMARY KEY,
@@ -234,6 +279,9 @@ CREATE TABLE drag_slots (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX idx_drag_slots_question ON drag_slots (drag_drop_question_id);
+CREATE INDEX idx_drag_slots_question_order ON drag_slots (drag_drop_question_id, order_no);
+
 -- Table: Drag Correct Answers
 CREATE TABLE drag_correct_answers (
     id SERIAL PRIMARY KEY,
@@ -242,6 +290,9 @@ CREATE TABLE drag_correct_answers (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (drag_item_id, drag_slot_id)
 );
+
+CREATE INDEX idx_drag_correct_answers_item ON drag_correct_answers (drag_item_id);
+CREATE INDEX idx_drag_correct_answers_slot ON drag_correct_answers (drag_slot_id);
 
 -- =============================================
 -- EXAM SESSION TABLES
@@ -266,6 +317,7 @@ CREATE TABLE exam_sessions (
     
     status exam_session_status_enum NOT NULL DEFAULT 'ongoing',
     lms_assignment_id BIGINT NULL,
+    lms_class_id BIGINT NULL,
     
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -273,6 +325,9 @@ CREATE TABLE exam_sessions (
 
 CREATE INDEX idx_exam_sessions_user ON exam_sessions (user_id);
 CREATE INDEX idx_exam_sessions_status ON exam_sessions (status);
+CREATE INDEX idx_exam_sessions_lms_assignment_id ON exam_sessions (lms_assignment_id);
+CREATE INDEX idx_exam_sessions_lms_class_id ON exam_sessions (lms_class_id);
+CREATE INDEX idx_exam_sessions_started_at ON exam_sessions (started_at);
 
 -- Table: Exam Session Questions (Unified Link)
 CREATE TABLE exam_session_questions (
@@ -284,6 +339,11 @@ CREATE TABLE exam_session_questions (
     order_no SMALLINT NOT NULL,
     UNIQUE (exam_session_id, order_no)
 );
+
+CREATE INDEX idx_exam_session_questions_session ON exam_session_questions (exam_session_id);
+CREATE INDEX idx_exam_session_questions_question ON exam_session_questions (question_id);
+CREATE INDEX idx_exam_session_questions_drag_question ON exam_session_questions (drag_drop_question_id);
+CREATE INDEX idx_exam_session_questions_type ON exam_session_questions (question_type);
 
 -- Table: Student Answers (Jawaban Siswa)
 CREATE TABLE student_answers (
@@ -300,13 +360,17 @@ CREATE TABLE student_answers (
     
     -- Essay Answer [NEW]
     essay_answer_text TEXT NULL,
-    essay_score DECIMAL(5,2) DEFAULT 0, -- Score for this specific essay
+    essay_score DECIMAL(5,2) NULL, -- NULL means not graded yet
     teacher_feedback TEXT NULL,
     
     is_correct BOOLEAN NOT NULL DEFAULT FALSE, -- For auto-grading (MC/Drag)
     answered_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (exam_session_question_id)
 );
+
+CREATE INDEX idx_student_answers_question_type ON student_answers (question_type);
+CREATE INDEX idx_student_answers_answered_at ON student_answers (answered_at);
+CREATE INDEX idx_student_answers_essay_score ON student_answers (essay_score);
 
 -- =============================================
 -- USER LIMITS
@@ -324,6 +388,10 @@ CREATE TABLE user_limits (
     UNIQUE (user_id, limit_type)
 );
 
+CREATE INDEX idx_user_limits_user ON user_limits (user_id);
+CREATE INDEX idx_user_limits_reset_at ON user_limits (reset_at);
+CREATE INDEX idx_user_limits_user_type ON user_limits (user_id, limit_type);
+
 CREATE TABLE user_limit_usage (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -332,6 +400,12 @@ CREATE TABLE user_limit_usage (
     resource_id INTEGER NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_user_limit_usage_user ON user_limit_usage (user_id);
+CREATE INDEX idx_user_limit_usage_type ON user_limit_usage (limit_type);
+CREATE INDEX idx_user_limit_usage_created_at ON user_limit_usage (created_at);
+CREATE INDEX idx_user_limit_usage_resource_id ON user_limit_usage (resource_id);
+CREATE INDEX idx_user_limit_usage_user_created ON user_limit_usage (user_id, created_at);
 
 -- =============================================
 -- TRIGGER FUNCTION
@@ -351,4 +425,7 @@ CREATE TRIGGER update_grade_levels_updated_at BEFORE UPDATE ON grade_levels FOR 
 CREATE TRIGGER update_classes_updated_at BEFORE UPDATE ON classes FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_materials_updated_at BEFORE UPDATE ON materials FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_questions_updated_at BEFORE UPDATE ON questions FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_drag_drop_questions_updated_at BEFORE UPDATE ON drag_drop_questions FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_exam_sessions_updated_at BEFORE UPDATE ON exam_sessions FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_cbt_outbox_updated_at BEFORE UPDATE ON cbt_outbox FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_user_limits_updated_at BEFORE UPDATE ON user_limits FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();

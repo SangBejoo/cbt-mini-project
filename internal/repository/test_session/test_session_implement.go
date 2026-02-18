@@ -41,7 +41,7 @@ func (r *testSessionRepositoryImpl) GetByToken(token string) (*entity.TestSessio
 		SELECT ts.id, ts.session_token, ts.user_id, ts.nama_peserta, ts.id_tingkat, ts.id_mata_pelajaran, ts.waktu_mulai, ts.waktu_selesai, ts.durasi_menit, ts.nilai_akhir, ts.jumlah_benar, ts.total_soal, ts.status, ts.lms_assignment_id,
 		       mp.id, mp.nama, mp.is_active, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.is_active, t.lms_level_id,
-		       u.id, u.email, u.nama, u.role, u.is_active, u.created_at, u.updated_at, u.lms_user_id
+		       u.id, u.email, u.full_name, u.role, u.is_active, u.created_at, u.updated_at, u.lms_user_id
 		FROM test_session ts
 		JOIN mata_pelajaran mp ON ts.id_mata_pelajaran = mp.id
 		JOIN tingkat t ON ts.id_tingkat = t.id
@@ -74,7 +74,7 @@ func (r *testSessionRepositoryImpl) CreateSessionForLMSUserIfMissing(lmsAssignme
 	var namaPeserta string
 	var isActive bool
 
-	if err := r.db.QueryRow(`SELECT id, nama, is_active FROM users WHERE lms_user_id = $1`, lmsUserID).Scan(&userID, &namaPeserta, &isActive); err != nil {
+	if err := r.db.QueryRow(`SELECT id, full_name, is_active FROM users WHERE lms_user_id = $1`, lmsUserID).Scan(&userID, &namaPeserta, &isActive); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return false, fmt.Errorf("active membership resolution failed: local user not found for lms_user_id=%d", lmsUserID)
 		}
@@ -100,7 +100,7 @@ func (r *testSessionRepositoryImpl) CreateSessionForLMSUserIfMissing(lmsAssignme
 			waktu_mulai, durasi_menit, total_soal, status, lms_assignment_id, lms_class_id,
 			created_at, updated_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::test_session_status_enum, $10, $11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	_, err = r.db.Exec(query, sessionToken, namaPeserta, idTingkat, idMataPelajaran, userID, scheduledTime, durasiMenit, totalSoal, string(status), lmsAssignmentID, lmsClassID)
 	if err != nil {
@@ -115,13 +115,13 @@ func (r *testSessionRepositoryImpl) BackfillSessionsForJoinedStudent(lmsClassID,
 		WITH active_assignments AS (
 			SELECT DISTINCT lms_assignment_id, lms_class_id, id_tingkat, id_mata_pelajaran, waktu_mulai, durasi_menit, total_soal,
 				CASE
-					WHEN status = 'ongoing'::test_session_status_enum THEN 'scheduled'::test_session_status_enum
+					WHEN status = 'ongoing' THEN 'scheduled'
 					ELSE status
 				END AS status
 			FROM test_session
 			WHERE lms_class_id = $1
 				AND lms_assignment_id IS NOT NULL
-				AND status IN ('scheduled'::test_session_status_enum, 'ongoing'::test_session_status_enum)
+				AND status IN ('scheduled', 'ongoing')
 		)
 		INSERT INTO test_session (
 			session_token, nama_peserta, id_tingkat, id_mata_pelajaran, user_id,
@@ -130,7 +130,7 @@ func (r *testSessionRepositoryImpl) BackfillSessionsForJoinedStudent(lmsClassID,
 		)
 		SELECT
 			md5(random()::text || clock_timestamp()::text || aa.lms_assignment_id::text || u.id::text),
-			COALESCE(NULLIF(u.nama, ''), 'Siswa ' || u.id::text),
+			COALESCE(NULLIF(u.full_name, ''), 'Siswa ' || u.id::text),
 			aa.id_tingkat,
 			aa.id_mata_pelajaran,
 			u.id,
@@ -167,7 +167,7 @@ func (r *testSessionRepositoryImpl) BackfillSessionsForJoinedStudent(lmsClassID,
 func (r *testSessionRepositoryImpl) BackfillMissingSessions(lmsClassID *int64, lmsAssignmentID *int64) (int, error) {
 	where := []string{
 		"ts.lms_assignment_id IS NOT NULL",
-		"ts.status IN ('scheduled'::test_session_status_enum, 'ongoing'::test_session_status_enum)",
+		"ts.status IN ('scheduled', 'ongoing')",
 	}
 	args := make([]interface{}, 0)
 
@@ -184,7 +184,7 @@ func (r *testSessionRepositoryImpl) BackfillMissingSessions(lmsClassID *int64, l
 		WITH active_assignments AS (
 			SELECT DISTINCT ts.lms_assignment_id, ts.lms_class_id, ts.id_tingkat, ts.id_mata_pelajaran, ts.waktu_mulai, ts.durasi_menit, ts.total_soal,
 				CASE
-					WHEN ts.status = 'ongoing'::test_session_status_enum THEN 'scheduled'::test_session_status_enum
+					WHEN ts.status = 'ongoing' THEN 'scheduled'
 					ELSE ts.status
 				END AS status
 			FROM test_session ts
@@ -197,7 +197,7 @@ func (r *testSessionRepositoryImpl) BackfillMissingSessions(lmsClassID *int64, l
 		)
 		SELECT
 			md5(random()::text || clock_timestamp()::text || aa.lms_assignment_id::text || u.id::text || cs.lms_class_id::text),
-			COALESCE(NULLIF(u.nama, ''), 'Siswa ' || u.id::text),
+			COALESCE(NULLIF(u.full_name, ''), 'Siswa ' || u.id::text),
 			aa.id_tingkat,
 			aa.id_mata_pelajaran,
 			u.id,
@@ -244,7 +244,7 @@ func (r *testSessionRepositoryImpl) UpdateScheduledSessionsByAssignment(lmsAssig
 			lms_class_id = $6,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE lms_assignment_id = $7
-			AND status = 'scheduled'::test_session_status_enum
+			AND status = 'scheduled'
 	`
 	result, err := r.db.Exec(query, idMataPelajaran, idTingkat, durasiMenit, totalSoal, scheduledTime, lmsClassID, lmsAssignmentID)
 	if err != nil {
@@ -288,7 +288,7 @@ func (r *testSessionRepositoryImpl) CompleteSession(token string, waktuSelesai t
 		UPDATE test_session
 		SET waktu_selesai = $1, nilai_akhir = $2, jumlah_benar = $3, total_soal = $4, status = $5, updated_at = $6
 		WHERE session_token = $7
-		  AND status IN ('ongoing'::test_session_status_enum, 'timeout'::test_session_status_enum)
+		  AND status IN ('ongoing', 'timeout')
 		RETURNING id, lms_assignment_id, lms_class_id, user_id`
 
 	var sessionID int
@@ -398,7 +398,7 @@ func (r *testSessionRepositoryImpl) List(tingkatan, idMataPelajaran *int, status
 		SELECT ts.id, ts.session_token, ts.user_id, ts.nama_peserta, ts.id_tingkat, ts.id_mata_pelajaran, ts.waktu_mulai, ts.waktu_selesai, ts.durasi_menit, ts.nilai_akhir, ts.jumlah_benar, ts.total_soal, ts.status, ts.lms_assignment_id,
 		       mp.id, mp.nama, mp.is_active, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.is_active, t.lms_level_id,
-		       u.id, u.email, u.nama, u.role, u.is_active, u.created_at, u.updated_at, u.lms_user_id
+		       u.id, u.email, u.full_name, u.role, u.is_active, u.created_at, u.updated_at, u.lms_user_id
 		FROM test_session ts
 		JOIN mata_pelajaran mp ON ts.id_mata_pelajaran = mp.id
 		JOIN tingkat t ON ts.id_tingkat = t.id
@@ -470,7 +470,7 @@ func (r *testSessionRepositoryImpl) ListScheduledByUser(userID int, lmsClassID *
 		SELECT ts.id, ts.session_token, ts.user_id, ts.nama_peserta, ts.id_tingkat, ts.id_mata_pelajaran, ts.waktu_mulai, ts.waktu_selesai, ts.durasi_menit, ts.nilai_akhir, ts.jumlah_benar, ts.total_soal, ts.status, ts.lms_assignment_id, ts.lms_class_id,
 		       mp.id, mp.nama, mp.is_active, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.is_active, t.lms_level_id,
-		       u.id, u.email, u.nama, u.role, u.is_active, u.created_at, u.updated_at, u.lms_user_id
+		       u.id, u.email, u.full_name, u.role, u.is_active, u.created_at, u.updated_at, u.lms_user_id
 		FROM test_session ts
 		JOIN mata_pelajaran mp ON ts.id_mata_pelajaran = mp.id
 		JOIN tingkat t ON ts.id_tingkat = t.id
@@ -535,7 +535,7 @@ func (r *testSessionRepositoryImpl) StartScheduledSession(token string, startedA
 func (r *testSessionRepositoryImpl) GetSessionQuestions(token string) ([]entity.TestSessionSoal, error) {
 	query := `
 		SELECT tss.id, tss.id_test_session, tss.question_type, tss.id_soal, tss.id_soal_drag_drop, tss.nomor_urut,
-		       s.id, s.pertanyaan, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.id_materi,
+		       s.id, s.pertanyaan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_essay_key, s.id_materi,
 		       m.id, m.nama, m.id_mata_pelajaran, m.id_tingkat
 		FROM test_session_soal tss
 		JOIN test_session ts ON tss.id_test_session = ts.id
@@ -557,13 +557,13 @@ func (r *testSessionRepositoryImpl) GetSessionQuestions(token string) ([]entity.
 
 		// Use nullable types for LEFT JOIN columns
 		var soalID, soalIDMateri sql.NullInt64
-		var soalPertanyaan, soalOpsiA, soalOpsiB, soalOpsiC, soalOpsiD, soalJawabanBenar sql.NullString
+		var soalPertanyaan, soalQuestionType, soalOpsiA, soalOpsiB, soalOpsiC, soalOpsiD, soalJawabanBenar, soalJawabanEssayKey sql.NullString
 		var materiID, materiIDMataPelajaran, materiIDTingkat sql.NullInt64
 		var materiNama sql.NullString
 
 		err := rows.Scan(
 			&tss.ID, &tss.IDTestSession, &tss.QuestionType, &tss.IDSoal, &tss.IDSoalDragDrop, &tss.NomorUrut,
-			&soalID, &soalPertanyaan, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalIDMateri,
+			&soalID, &soalPertanyaan, &soalQuestionType, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalJawabanEssayKey, &soalIDMateri,
 			&materiID, &materiNama, &materiIDMataPelajaran, &materiIDTingkat,
 		)
 		if err != nil {
@@ -578,7 +578,11 @@ func (r *testSessionRepositoryImpl) GetSessionQuestions(token string) ([]entity.
 			soal.OpsiB = soalOpsiB.String
 			soal.OpsiC = soalOpsiC.String
 			soal.OpsiD = soalOpsiD.String
+			soal.QuestionType = entity.QuestionType(soalQuestionType.String)
 			soal.JawabanBenar = entity.JawabanOption(soalJawabanBenar.String)
+			if soalJawabanEssayKey.Valid {
+				soal.JawabanEssayKey = &soalJawabanEssayKey.String
+			}
 			if soalIDMateri.Valid {
 				soal.IDMateri = int(soalIDMateri.Int64)
 			}
@@ -605,7 +609,7 @@ func (r *testSessionRepositoryImpl) GetSessionQuestions(token string) ([]entity.
 func (r *testSessionRepositoryImpl) GetAllQuestionsForSession(token string) ([]entity.TestSessionSoal, error) {
 	query := `
 		SELECT tss.id, tss.id_test_session, tss.question_type, tss.id_soal, tss.id_soal_drag_drop, tss.nomor_urut,
-		       s.id, s.pertanyaan, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.id_materi,
+		       s.id, s.pertanyaan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_essay_key, s.id_materi,
 		       m.id, m.nama, m.id_mata_pelajaran, m.id_tingkat, mp.id, mp.nama, mp.is_active, t.id, t.nama, t.is_active,
 		       sdd.id, sdd.pertanyaan, sdd.id_materi
 		FROM test_session_soal tss
@@ -634,7 +638,7 @@ func (r *testSessionRepositoryImpl) GetAllQuestionsForSession(token string) ([]e
 
 		// Use nullable types for LEFT JOIN columns
 		var soalID, soalIDMateri sql.NullInt64
-		var soalPertanyaan, soalOpsiA, soalOpsiB, soalOpsiC, soalOpsiD, soalJawabanBenar sql.NullString
+		var soalPertanyaan, soalQuestionType, soalOpsiA, soalOpsiB, soalOpsiC, soalOpsiD, soalJawabanBenar, soalJawabanEssayKey sql.NullString
 		var materiID, materiIDMataPelajaran, materiIDTingkat sql.NullInt64
 		var materiNama sql.NullString
 		var mataPelajaranID sql.NullInt64
@@ -648,7 +652,7 @@ func (r *testSessionRepositoryImpl) GetAllQuestionsForSession(token string) ([]e
 
 		err := rows.Scan(
 			&tss.ID, &tss.IDTestSession, &tss.QuestionType, &tss.IDSoal, &tss.IDSoalDragDrop, &tss.NomorUrut,
-			&soalID, &soalPertanyaan, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalIDMateri,
+			&soalID, &soalPertanyaan, &soalQuestionType, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalJawabanEssayKey, &soalIDMateri,
 			&materiID, &materiNama, &materiIDMataPelajaran, &materiIDTingkat, &mataPelajaranID, &mataPelajaranNama, &mataPelajaranIsActive, &tingkatID, &tingkatNama, &tingkatIsActive,
 			&sddID, &sddPertanyaan, &sddIDMateri,
 		)
@@ -664,7 +668,11 @@ func (r *testSessionRepositoryImpl) GetAllQuestionsForSession(token string) ([]e
 			soal.OpsiB = soalOpsiB.String
 			soal.OpsiC = soalOpsiC.String
 			soal.OpsiD = soalOpsiD.String
+			soal.QuestionType = entity.QuestionType(soalQuestionType.String)
 			soal.JawabanBenar = entity.JawabanOption(soalJawabanBenar.String)
+			if soalJawabanEssayKey.Valid {
+				soal.JawabanEssayKey = &soalJawabanEssayKey.String
+			}
 			if soalIDMateri.Valid {
 				soal.IDMateri = int(soalIDMateri.Int64)
 			}
@@ -712,7 +720,7 @@ func (r *testSessionRepositoryImpl) GetAllQuestionsForSession(token string) ([]e
 // Get single question by order
 func (r *testSessionRepositoryImpl) GetQuestionByOrder(token string, nomorUrut int) (*entity.Soal, error) {
 	query := `
-		SELECT s.id, s.pertanyaan, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.id_materi,
+		SELECT s.id, s.pertanyaan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_essay_key, s.id_materi,
 		       m.id, m.nama, m.id_mata_pelajaran, m.id_tingkat,
 		       mp.id, mp.nama, mp.is_active, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.is_active, t.lms_level_id
@@ -727,8 +735,10 @@ func (r *testSessionRepositoryImpl) GetQuestionByOrder(token string, nomorUrut i
 	var materi entity.Materi
 	var mataPelajaran entity.MataPelajaran
 	var tingkat entity.Tingkat
+	var soalQuestionType sql.NullString
+	var jawabanEssayKey sql.NullString
 	err := r.db.QueryRow(query, token, nomorUrut).Scan(
-		&soal.ID, &soal.Pertanyaan, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &soal.IDMateri,
+		&soal.ID, &soal.Pertanyaan, &soalQuestionType, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &jawabanEssayKey, &soal.IDMateri,
 		&materi.ID, &materi.Nama, &materi.IDMataPelajaran, &materi.IDTingkat,
 		&mataPelajaran.ID, &mataPelajaran.Nama, &mataPelajaran.IsActive, &mataPelajaran.LmsSubjectID, &mataPelajaran.LmsSchoolID, &mataPelajaran.LmsClassID,
 		&tingkat.ID, &tingkat.Nama, &tingkat.IsActive, &tingkat.LmsLevelID,
@@ -739,6 +749,12 @@ func (r *testSessionRepositoryImpl) GetQuestionByOrder(token string, nomorUrut i
 	materi.MataPelajaran = mataPelajaran
 	materi.Tingkat = tingkat
 	soal.Materi = materi
+	if soalQuestionType.Valid {
+		soal.QuestionType = entity.QuestionType(soalQuestionType.String)
+	}
+	if jawabanEssayKey.Valid {
+		soal.JawabanEssayKey = &jawabanEssayKey.String
+	}
 	return &soal, nil
 }
 
@@ -764,6 +780,9 @@ func (r *testSessionRepositoryImpl) SubmitAnswer(token string, nomorUrut int, ja
 	tss.Soal = &soal
 
 	// Prepare the answer object
+	if tss.QuestionType != entity.QuestionTypeMultipleChoice {
+		return errors.New("this is not a multiple-choice question")
+	}
 	isCorrect := (jawaban == tss.Soal.JawabanBenar)
 	newAnswer := entity.JawabanSiswa{
 		IDTestSessionSoal: tss.ID,
@@ -805,9 +824,9 @@ func (r *testSessionRepositoryImpl) ClearAnswer(token string, nomorUrut int) err
 // Get answers for session
 func (r *testSessionRepositoryImpl) GetSessionAnswers(token string) ([]entity.JawabanSiswa, error) {
 	query := `
-		SELECT js.id, js.id_test_session_soal, js.jawaban_dipilih, js.is_correct, js.question_type, js.dijawab_pada, js.jawaban_drag_drop,
+		SELECT js.id, js.id_test_session_soal, js.jawaban_dipilih, js.is_correct, js.question_type, js.dijawab_pada, js.jawaban_drag_drop, js.jawaban_essay, js.nilai_essay, js.feedback_teacher,
 		       tss.id, tss.id_test_session, tss.question_type, tss.id_soal, tss.id_soal_drag_drop, tss.nomor_urut,
-		       s.id, s.pertanyaan, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.id_materi
+		       s.id, s.pertanyaan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_essay_key, s.id_materi
 		FROM jawaban_siswa js
 		JOIN test_session_soal tss ON js.id_test_session_soal = tss.id
 		JOIN test_session ts ON tss.id_test_session = ts.id
@@ -827,12 +846,13 @@ func (r *testSessionRepositoryImpl) GetSessionAnswers(token string) ([]entity.Ja
 
 		// Use nullable types for LEFT JOIN soal columns
 		var soalID, soalIDMateri sql.NullInt64
-		var soalPertanyaan, soalOpsiA, soalOpsiB, soalOpsiC, soalOpsiD, soalJawabanBenar sql.NullString
+		var soalPertanyaan, soalQuestionType, soalOpsiA, soalOpsiB, soalOpsiC, soalOpsiD, soalJawabanBenar, soalJawabanEssayKey sql.NullString
+		var nilaiEssay sql.NullFloat64
 
 		err := rows.Scan(
-			&js.ID, &js.IDTestSessionSoal, &js.JawabanDipilih, &js.IsCorrect, &js.QuestionType, &js.DijawabPada, &js.JawabanDragDrop,
+			&js.ID, &js.IDTestSessionSoal, &js.JawabanDipilih, &js.IsCorrect, &js.QuestionType, &js.DijawabPada, &js.JawabanDragDrop, &js.JawabanEssay, &nilaiEssay, &js.FeedbackTeacher,
 			&tss.ID, &tss.IDTestSession, &tss.QuestionType, &tss.IDSoal, &tss.IDSoalDragDrop, &tss.NomorUrut,
-			&soalID, &soalPertanyaan, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalIDMateri,
+			&soalID, &soalPertanyaan, &soalQuestionType, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalJawabanEssayKey, &soalIDMateri,
 		)
 		if err != nil {
 			return nil, err
@@ -846,11 +866,19 @@ func (r *testSessionRepositoryImpl) GetSessionAnswers(token string) ([]entity.Ja
 			soal.OpsiB = soalOpsiB.String
 			soal.OpsiC = soalOpsiC.String
 			soal.OpsiD = soalOpsiD.String
+			soal.QuestionType = entity.QuestionType(soalQuestionType.String)
 			soal.JawabanBenar = entity.JawabanOption(soalJawabanBenar.String)
+			if soalJawabanEssayKey.Valid {
+				soal.JawabanEssayKey = &soalJawabanEssayKey.String
+			}
 			if soalIDMateri.Valid {
 				soal.IDMateri = int(soalIDMateri.Int64)
 			}
 			tss.Soal = &soal
+		}
+		if nilaiEssay.Valid {
+			v := nilaiEssay.Float64
+			js.NilaiEssay = &v
 		}
 
 		js.TestSessionSoal = tss
@@ -863,7 +891,7 @@ func (r *testSessionRepositoryImpl) GetSessionAnswers(token string) ([]entity.Ja
 func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelajaran, tingkatan, jumlahSoal int) error {
 	// Get random soal IDs for the criteria - get questions for the mata_pelajaran and tingkat
 	soalQuery := `
-		SELECT s.id
+		SELECT s.id, s.question_type
 		FROM soal s
 		JOIN materi m ON s.id_materi = m.id
 		WHERE m.id_mata_pelajaran = $1 AND m.id_tingkat = $2`
@@ -873,11 +901,25 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 	}
 	defer soalRows.Close()
 
+	// Combine all question IDs
+	var allQuestionIDs []struct {
+		ID           int
+		QuestionType entity.QuestionType
+	}
+
 	var soalIDs []int
 	for soalRows.Next() {
 		var id int
-		soalRows.Scan(&id)
-		soalIDs = append(soalIDs, id)
+		var questionType sql.NullString
+		soalRows.Scan(&id, &questionType)
+		if strings.EqualFold(questionType.String, string(entity.QuestionTypeEssay)) {
+			allQuestionIDs = append(allQuestionIDs, struct {
+				ID           int
+				QuestionType entity.QuestionType
+			}{ID: id, QuestionType: entity.QuestionTypeEssay})
+		} else {
+			soalIDs = append(soalIDs, id)
+		}
 	}
 
 	// Get drag-drop question IDs for the same criteria
@@ -897,12 +939,6 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 		var id int
 		dragDropRows.Scan(&id)
 		dragDropIDs = append(dragDropIDs, id)
-	}
-
-	// Combine all question IDs
-	var allQuestionIDs []struct {
-		ID           int
-		QuestionType entity.QuestionType
 	}
 
 	// Add multiple choice questions
@@ -938,12 +974,12 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 	// Create TestSessionSoal entries
 	for i, question := range selectedQuestions {
 		switch question.QuestionType {
-		case entity.QuestionTypeMultipleChoice:
+		case entity.QuestionTypeMultipleChoice, entity.QuestionTypeEssay:
 			soalIDPtr := question.ID // Create a copy for pointer
 			insertQuery := `
 				INSERT INTO test_session_soal (id_test_session, question_type, id_soal, nomor_urut)
 				VALUES ($1, $2, $3, $4)`
-			_, err := r.db.Exec(insertQuery, sessionID, string(entity.QuestionTypeMultipleChoice), soalIDPtr, i+1)
+			_, err := r.db.Exec(insertQuery, sessionID, string(question.QuestionType), soalIDPtr, i+1)
 			if err != nil {
 				return err
 			}
@@ -964,15 +1000,12 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 
 // CreateUnansweredRecord creates a record for unanswered question with NULL jawaban_dipilih
 func (r *testSessionRepositoryImpl) CreateUnansweredRecord(sessionSoalID, testSessionID int) error {
-	newAnswer := entity.JawabanSiswa{
-		IDTestSessionSoal: sessionSoalID,
-		JawabanDipilih:    nil, // NULL - no answer provided
-		IsCorrect:         false,
-	}
 	insertQuery := `
-		INSERT INTO jawaban_siswa (id_test_session_soal, jawaban_dipilih, is_correct)
-		VALUES ($1, $2, $3)`
-	_, err := r.db.Exec(insertQuery, newAnswer.IDTestSessionSoal, newAnswer.JawabanDipilih, newAnswer.IsCorrect)
+		INSERT INTO jawaban_siswa (id_test_session_soal, jawaban_dipilih, is_correct, question_type)
+		SELECT tss.id, NULL, false, tss.question_type
+		FROM test_session_soal tss
+		WHERE tss.id = $1`
+	_, err := r.db.Exec(insertQuery, sessionSoalID)
 	return err
 }
 
@@ -980,7 +1013,7 @@ func (r *testSessionRepositoryImpl) CreateUnansweredRecord(sessionSoalID, testSe
 func (r *testSessionRepositoryImpl) GetTestSessionSoalByOrder(token string, nomorUrut int) (*entity.TestSessionSoal, error) {
 	query := `
 		SELECT tss.id, tss.id_test_session, tss.question_type, tss.id_soal, tss.id_soal_drag_drop, tss.nomor_urut,
-		       s.id, s.pertanyaan, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.id_materi,
+		       s.id, s.pertanyaan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_essay_key, s.id_materi,
 		       sdd.id, sdd.pertanyaan, sdd.id_materi
 		FROM test_session_soal tss
 		JOIN test_session ts ON tss.id_test_session = ts.id
@@ -993,13 +1026,13 @@ func (r *testSessionRepositoryImpl) GetTestSessionSoalByOrder(token string, nomo
 
 	// Use nullable types for LEFT JOIN columns
 	var soalID, soalIDMateri sql.NullInt64
-	var soalPertanyaan, soalOpsiA, soalOpsiB, soalOpsiC, soalOpsiD, soalJawabanBenar sql.NullString
+	var soalPertanyaan, soalQuestionType, soalOpsiA, soalOpsiB, soalOpsiC, soalOpsiD, soalJawabanBenar, soalJawabanEssayKey sql.NullString
 	var sddID, sddIDMateri sql.NullInt64
 	var sddPertanyaan sql.NullString
 
 	err := r.db.QueryRow(query, token, nomorUrut).Scan(
 		&tss.ID, &tss.IDTestSession, &tss.QuestionType, &tss.IDSoal, &tss.IDSoalDragDrop, &tss.NomorUrut,
-		&soalID, &soalPertanyaan, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalIDMateri,
+		&soalID, &soalPertanyaan, &soalQuestionType, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalJawabanEssayKey, &soalIDMateri,
 		&sddID, &sddPertanyaan, &sddIDMateri,
 	)
 	if err != nil {
@@ -1014,7 +1047,11 @@ func (r *testSessionRepositoryImpl) GetTestSessionSoalByOrder(token string, nomo
 		soal.OpsiB = soalOpsiB.String
 		soal.OpsiC = soalOpsiC.String
 		soal.OpsiD = soalOpsiD.String
+		soal.QuestionType = entity.QuestionType(soalQuestionType.String)
 		soal.JawabanBenar = entity.JawabanOption(soalJawabanBenar.String)
+		if soalJawabanEssayKey.Valid {
+			soal.JawabanEssayKey = &soalJawabanEssayKey.String
+		}
 		if soalIDMateri.Valid {
 			soal.IDMateri = int(soalIDMateri.Int64)
 		}
@@ -1059,6 +1096,113 @@ func (r *testSessionRepositoryImpl) SubmitDragDropAnswer(token string, nomorUrut
 		DO UPDATE SET jawaban_drag_drop = EXCLUDED.jawaban_drag_drop, question_type = EXCLUDED.question_type, is_correct = EXCLUDED.is_correct, dijawab_pada = EXCLUDED.dijawab_pada`
 	_, err = r.db.Exec(upsertQuery, newAnswer.IDTestSessionSoal, string(newAnswer.QuestionType), newAnswer.IsCorrect, newAnswer.JawabanDragDrop, time.Now())
 	return err
+}
+
+func (r *testSessionRepositoryImpl) SubmitEssayAnswer(token string, nomorUrut int, jawabanEssay string) error {
+	tss, err := r.GetTestSessionSoalByOrder(token, nomorUrut)
+	if err != nil {
+		return err
+	}
+	if tss.QuestionType != entity.QuestionTypeEssay {
+		return errors.New("this is not an essay question")
+	}
+
+	upsertQuery := `
+		INSERT INTO jawaban_siswa (id_test_session_soal, question_type, is_correct, jawaban_essay, dijawab_pada)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (id_test_session_soal)
+		DO UPDATE SET question_type = EXCLUDED.question_type, jawaban_essay = EXCLUDED.jawaban_essay, dijawab_pada = EXCLUDED.dijawab_pada`
+	_, err = r.db.Exec(upsertQuery, tss.ID, string(entity.QuestionTypeEssay), false, strings.TrimSpace(jawabanEssay), time.Now())
+	return err
+}
+
+func (r *testSessionRepositoryImpl) HasEssayQuestions(token string) (bool, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM test_session_soal tss
+		JOIN test_session ts ON tss.id_test_session = ts.id
+		WHERE ts.session_token = $1 AND tss.question_type = $2`
+	var count int
+	err := r.db.QueryRow(query, token, string(entity.QuestionTypeEssay)).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (r *testSessionRepositoryImpl) GradeEssayAnswer(answerID int, score float64, feedback string) (string, error) {
+	if score < 0 || score > 100 {
+		return "", errors.New("score must be between 0 and 100")
+	}
+
+	isCorrect := score >= 60
+	query := `
+		UPDATE jawaban_siswa
+		SET nilai_essay = $1,
+		    feedback_teacher = $2,
+		    is_correct = $3
+		WHERE id = $4 AND question_type = $5`
+	res, err := r.db.Exec(query, score, strings.TrimSpace(feedback), isCorrect, answerID, string(entity.QuestionTypeEssay))
+	if err != nil {
+		return "", err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return "", err
+	}
+	if affected == 0 {
+		return "", errors.New("essay answer not found")
+	}
+
+	var token string
+	tokenQuery := `
+		SELECT ts.session_token
+		FROM jawaban_siswa js
+		JOIN test_session_soal tss ON js.id_test_session_soal = tss.id
+		JOIN test_session ts ON tss.id_test_session = ts.id
+		WHERE js.id = $1`
+	if err := r.db.QueryRow(tokenQuery, answerID).Scan(&token); err != nil {
+		return "", err
+	}
+
+	recalcQuery := `
+		WITH score_calc AS (
+			SELECT ts.id AS session_id,
+				COUNT(tss.id)::int AS total_questions,
+				SUM(
+					CASE
+						WHEN tss.question_type = 'essay' THEN COALESCE(js.nilai_essay, 0) / 100.0
+						WHEN js.is_correct THEN 1.0
+						ELSE 0.0
+					END
+				) AS total_points,
+				SUM(
+					CASE
+						WHEN tss.question_type = 'essay' AND COALESCE(js.nilai_essay, 0) >= 60 THEN 1
+						WHEN tss.question_type <> 'essay' AND js.is_correct THEN 1
+						ELSE 0
+					END
+				)::int AS total_correct,
+				SUM(CASE WHEN tss.question_type = 'essay' AND js.nilai_essay IS NULL THEN 1 ELSE 0 END)::int AS pending_essay
+			FROM test_session ts
+			JOIN test_session_soal tss ON tss.id_test_session = ts.id
+			LEFT JOIN jawaban_siswa js ON js.id_test_session_soal = tss.id
+			WHERE ts.session_token = $1
+			GROUP BY ts.id
+		)
+		UPDATE test_session ts
+		SET nilai_akhir = CASE WHEN sc.total_questions > 0 THEN (sc.total_points / sc.total_questions) * 100 ELSE 0 END,
+		    jumlah_benar = sc.total_correct,
+		    total_soal = sc.total_questions,
+		    status = CASE WHEN sc.pending_essay > 0 THEN 'grading_in_progress' ELSE 'graded' END
+		FROM score_calc sc
+		WHERE ts.id = sc.session_id`
+	_, err = r.db.Exec(recalcQuery, token)
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
 }
 
 // GetDragDropCorrectAnswers gets correct answers for a drag-drop question

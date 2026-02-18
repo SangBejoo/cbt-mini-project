@@ -16,10 +16,13 @@ type JawabanSiswa struct {
 	JawabanDipilih *JawabanOption `json:"jawaban_dipilih" gorm:"type:char(1)"`
 
 	// Question type for routing
-	QuestionType QuestionType `json:"question_type" gorm:"type:enum('multiple_choice','drag_drop');default:'multiple_choice'"`
+	QuestionType QuestionType `json:"question_type" gorm:"type:enum('multiple_choice','drag_drop','essay');default:'multiple_choice'"`
 
 	// Drag-drop answer (for DRAG_DROP questions) - stored as JSON
-	JawabanDragDrop *string `json:"jawaban_drag_drop,omitempty" gorm:"type:json"`
+	JawabanDragDrop *string  `json:"jawaban_drag_drop,omitempty" gorm:"type:json"`
+	JawabanEssay    *string  `json:"jawaban_essay,omitempty" gorm:"column:jawaban_essay;type:text"`
+	NilaiEssay      *float64 `json:"nilai_essay,omitempty" gorm:"column:nilai_essay;type:decimal(5,2)"`
+	FeedbackTeacher *string  `json:"feedback_teacher,omitempty" gorm:"column:feedback_teacher;type:text"`
 
 	IsCorrect   bool      `json:"is_correct" gorm:"not null"`
 	DijawabPada time.Time `json:"dijawab_pada" gorm:"autoCreateTime:milli"` // Create once, don't update
@@ -69,5 +72,7 @@ type JawabanDetail struct {
 	DragSlots         []DragSlot    `json:"slots,omitempty"`
 	UserDragAnswer    map[int]int   `json:"user_drag_answer,omitempty"`
 	CorrectDragAnswer map[int]int   `json:"correct_drag_answer,omitempty"`
+	JawabanEssay      *string       `json:"jawaban_essay,omitempty"`
+	NilaiEssay        *float64      `json:"nilai_essay,omitempty"`
+	FeedbackTeacher   *string       `json:"feedback_teacher,omitempty"`
 }
-

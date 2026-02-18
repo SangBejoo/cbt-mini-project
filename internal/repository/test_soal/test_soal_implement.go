@@ -18,8 +18,8 @@ func NewSoalRepository(db *sql.DB) SoalRepository {
 // Create a new soal
 func (r *soalRepositoryImpl) Create(soal *entity.Soal) error {
 	query := `
-		INSERT INTO soal (id_materi, lms_asset_id, id_tingkat, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, jawaban_benar, pembahasan, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO soal (id_materi, lms_asset_id, id_tingkat, pertanyaan, question_type, opsi_a, opsi_b, opsi_c, opsi_d, jawaban_benar, jawaban_essay_key, pembahasan, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		RETURNING id`
 	var pembahasan *string
 	if soal.Pembahasan != nil {
@@ -29,7 +29,7 @@ func (r *soalRepositoryImpl) Create(soal *entity.Soal) error {
 	if soal.LMSAssetID != nil && *soal.LMSAssetID > 0 {
 		lmsAssetID = *soal.LMSAssetID
 	}
-	return r.db.QueryRow(query, soal.IDMateri, lmsAssetID, soal.IDTingkat, soal.Pertanyaan, soal.OpsiA, soal.OpsiB, soal.OpsiC, soal.OpsiD, string(soal.JawabanBenar), pembahasan, soal.IsActive).Scan(&soal.ID)
+	return r.db.QueryRow(query, soal.IDMateri, lmsAssetID, soal.IDTingkat, soal.Pertanyaan, soal.QuestionType, soal.OpsiA, soal.OpsiB, soal.OpsiC, soal.OpsiD, string(soal.JawabanBenar), soal.JawabanEssayKey, pembahasan, soal.IsActive).Scan(&soal.ID)
 }
 
 // Get soal by ID with all relations
@@ -96,13 +96,13 @@ func (r *soalRepositoryImpl) GetByID(id int) (*entity.Soal, error) {
 func (r *soalRepositoryImpl) Update(soal *entity.Soal) error {
 	query := `
 		UPDATE soal
-		SET id_materi = $1, lms_asset_id = $2, id_tingkat = $3, pertanyaan = $4, opsi_a = $5, opsi_b = $6, opsi_c = $7, opsi_d = $8, jawaban_benar = $9, pembahasan = $10, is_active = $11
-		WHERE id = $12`
+		SET id_materi = $1, lms_asset_id = $2, id_tingkat = $3, pertanyaan = $4, question_type = $5, opsi_a = $6, opsi_b = $7, opsi_c = $8, opsi_d = $9, jawaban_benar = $10, jawaban_essay_key = $11, pembahasan = $12, is_active = $13
+		WHERE id = $14`
 	var lmsAssetID interface{}
 	if soal.LMSAssetID != nil && *soal.LMSAssetID > 0 {
 		lmsAssetID = *soal.LMSAssetID
 	}
-	_, err := r.db.Exec(query, soal.IDMateri, lmsAssetID, soal.IDTingkat, soal.Pertanyaan, soal.OpsiA, soal.OpsiB, soal.OpsiC, soal.OpsiD, string(soal.JawabanBenar), soal.Pembahasan, soal.IsActive, soal.ID)
+	_, err := r.db.Exec(query, soal.IDMateri, lmsAssetID, soal.IDTingkat, soal.Pertanyaan, soal.QuestionType, soal.OpsiA, soal.OpsiB, soal.OpsiC, soal.OpsiD, string(soal.JawabanBenar), soal.JawabanEssayKey, soal.Pembahasan, soal.IsActive, soal.ID)
 	return err
 }
 

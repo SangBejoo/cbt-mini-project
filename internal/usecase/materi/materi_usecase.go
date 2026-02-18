@@ -17,7 +17,7 @@ func NewMateriUsecase(repo materi.MateriRepository) MateriUsecase {
 }
 
 // CreateMateri creates a new materi
-func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, idTingkat int, isActive bool, defaultDurasiMenit, defaultJumlahSoal int, ownerUserID int, schoolID int64, labels []string) (*entity.Materi, error) {
+func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, idTingkat int, isActive bool, defaultDurasiMenit, defaultJumlahSoal int, ownerUserID int, schoolID int64, labels []string, lmsModuleID, lmsBookID, lmsTeacherMaterialID *int64) (*entity.Materi, error) {
 	if nama == "" {
 		return nil, errors.New("nama cannot be empty")
 	}
@@ -37,16 +37,33 @@ func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, idTin
 		return nil, errors.New("owner_user_id is required")
 	}
 
+	primaryLinkCount := 0
+	if lmsModuleID != nil && *lmsModuleID > 0 {
+		primaryLinkCount++
+	}
+	if lmsBookID != nil && *lmsBookID > 0 {
+		primaryLinkCount++
+	}
+	if lmsTeacherMaterialID != nil && *lmsTeacherMaterialID > 0 {
+		primaryLinkCount++
+	}
+	if primaryLinkCount > 1 {
+		return nil, errors.New("only one of lms_module_id, lms_book_id, or lms_teacher_material_id can be set")
+	}
+
 	m := &entity.Materi{
-		IDMataPelajaran:    idMataPelajaran,
-		IDTingkat:          idTingkat,
-		Nama:               nama,
-		IsActive:           isActive,
-		DefaultDurasiMenit: defaultDurasiMenit,
-		DefaultJumlahSoal:  defaultJumlahSoal,
-		OwnerUserID:        &ownerUserID,
-		SchoolID:           &schoolID,
-		Labels:             labels,
+		IDMataPelajaran:      idMataPelajaran,
+		IDTingkat:            idTingkat,
+		Nama:                 nama,
+		IsActive:             isActive,
+		DefaultDurasiMenit:   defaultDurasiMenit,
+		DefaultJumlahSoal:    defaultJumlahSoal,
+		OwnerUserID:          &ownerUserID,
+		SchoolID:             &schoolID,
+		Labels:               labels,
+		LmsModuleID:          lmsModuleID,
+		LmsBookID:            lmsBookID,
+		LmsTeacherMaterialID: lmsTeacherMaterialID,
 	}
 	err := u.repo.Create(m)
 	if err != nil {
@@ -61,7 +78,7 @@ func (u *materiUsecaseImpl) GetMateri(id int) (*entity.Materi, error) {
 }
 
 // UpdateMateri updates existing
-func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, idTingkat int, isActive bool, defaultDurasiMenit, defaultJumlahSoal int) (*entity.Materi, error) {
+func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, idTingkat int, isActive bool, defaultDurasiMenit, defaultJumlahSoal int, lmsModuleID, lmsBookID, lmsTeacherMaterialID *int64) (*entity.Materi, error) {
 	if nama == "" {
 		return nil, errors.New("nama cannot be empty")
 	}
@@ -78,6 +95,20 @@ func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, i
 		defaultJumlahSoal = 20
 	}
 
+	primaryLinkCount := 0
+	if lmsModuleID != nil && *lmsModuleID > 0 {
+		primaryLinkCount++
+	}
+	if lmsBookID != nil && *lmsBookID > 0 {
+		primaryLinkCount++
+	}
+	if lmsTeacherMaterialID != nil && *lmsTeacherMaterialID > 0 {
+		primaryLinkCount++
+	}
+	if primaryLinkCount > 1 {
+		return nil, errors.New("only one of lms_module_id, lms_book_id, or lms_teacher_material_id can be set")
+	}
+
 	m, err := u.repo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -89,6 +120,9 @@ func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, i
 	m.IsActive = isActive
 	m.DefaultDurasiMenit = defaultDurasiMenit
 	m.DefaultJumlahSoal = defaultJumlahSoal
+	m.LmsModuleID = lmsModuleID
+	m.LmsBookID = lmsBookID
+	m.LmsTeacherMaterialID = lmsTeacherMaterialID
 
 	// Clear associations to prevent GORM from trying to update them with potentially conflicting IDs
 	m.MataPelajaran = entity.MataPelajaran{}

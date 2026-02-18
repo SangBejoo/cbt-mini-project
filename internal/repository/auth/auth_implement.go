@@ -26,6 +26,31 @@ func lmsUserIDValue(id *int64) int64 {
 	return *id
 }
 
+func normalizeRoleForDB(role string) string {
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case "admin":
+		return "admin"
+	case "student", "siswa", "teacher", "superadmin":
+		return "student"
+	default:
+		return "student"
+	}
+}
+
+func protoRoleToDB(role base.UserRole) string {
+	if role == base.UserRole_ADMIN {
+		return "admin"
+	}
+	return "student"
+}
+
+func dbRoleToProto(role string) base.UserRole {
+	if strings.EqualFold(role, "admin") {
+		return base.UserRole_ADMIN
+	}
+	return base.UserRole_SISWA
+}
+
 // NewAuthRepository creates a new auth repository
 func NewAuthRepository(db *sql.DB) AuthRepository {
 	return &authRepositoryImpl{db: db}
@@ -35,7 +60,7 @@ func NewAuthRepository(db *sql.DB) AuthRepository {
 func (r *authRepositoryImpl) Login(ctx context.Context, email, password string) (*base.User, error) {
 	var userEntity entity.User
 
-	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE email = $1 AND is_active = $2 AND role = 'admin'`
+	query := `SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE email = $1 AND is_active = $2 AND role = 'admin'`
 	err := r.db.QueryRowContext(ctx, query, email, true).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -50,15 +75,7 @@ func (r *authRepositoryImpl) Login(ctx context.Context, email, password string) 
 	}
 
 	// Convert entity to proto
-	var role base.UserRole
-	switch userEntity.Role {
-	case "siswa":
-		role = base.UserRole_SISWA
-	case "admin":
-		role = base.UserRole_ADMIN
-	default:
-		role = base.UserRole_ROLE_INVALID
-	}
+	role := dbRoleToProto(userEntity.Role)
 
 	user := &base.User{
 		Id:           int32(userEntity.ID),
@@ -76,21 +93,13 @@ func (r *authRepositoryImpl) Login(ctx context.Context, email, password string) 
 // GetUserByID retrieves a user by ID
 func (r *authRepositoryImpl) GetUserByID(ctx context.Context, id int32) (*base.User, error) {
 	var userEntity entity.User
-	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE id = $1`
+	query := `SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE id = $1`
 	err := r.db.QueryRowContext(ctx, query, id).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
 	if err != nil {
 		return nil, err
 	}
 
-	var role base.UserRole
-	switch userEntity.Role {
-	case "siswa":
-		role = base.UserRole_SISWA
-	case "admin":
-		role = base.UserRole_ADMIN
-	default:
-		role = base.UserRole_ROLE_INVALID
-	}
+	role := dbRoleToProto(userEntity.Role)
 
 	user := &base.User{
 		Id:           int32(userEntity.ID),
@@ -108,21 +117,13 @@ func (r *authRepositoryImpl) GetUserByID(ctx context.Context, id int32) (*base.U
 // GetUserByEmail retrieves a user by email
 func (r *authRepositoryImpl) GetUserByEmail(ctx context.Context, email string) (*base.User, error) {
 	var userEntity entity.User
-	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE email = $1`
+	query := `SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE email = $1`
 	err := r.db.QueryRowContext(ctx, query, email).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
 	if err != nil {
 		return nil, err
 	}
 
-	var role base.UserRole
-	switch userEntity.Role {
-	case "siswa":
-		role = base.UserRole_SISWA
-	case "admin":
-		role = base.UserRole_ADMIN
-	default:
-		role = base.UserRole_ROLE_INVALID
-	}
+	role := dbRoleToProto(userEntity.Role)
 
 	user := &base.User{
 		Id:           int32(userEntity.ID),
@@ -140,15 +141,7 @@ func (r *authRepositoryImpl) GetUserByEmail(ctx context.Context, email string) (
 // CreateUser creates a new user
 func (r *authRepositoryImpl) CreateUser(ctx context.Context, user *base.User) (*base.User, error) {
 	// Convert proto to entity
-	var roleStr string
-	switch user.Role {
-	case base.UserRole_SISWA:
-		roleStr = "siswa"
-	case base.UserRole_ADMIN:
-		roleStr = "admin"
-	default:
-		roleStr = "siswa"
-	}
+	roleStr := protoRoleToDB(user.Role)
 
 	userEntity := entity.User{
 		Email:    user.Email,
@@ -166,7 +159,7 @@ func (r *authRepositoryImpl) CreateUser(ctx context.Context, user *base.User) (*
 	userEntity.CreatedAt = time.Now()
 	userEntity.UpdatedAt = time.Now()
 
-	query := `INSERT INTO users (email, password_hash, nama, role, is_active, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+	query := `INSERT INTO users (email, password_hash, full_name, role, is_active, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
 	err = r.db.QueryRowContext(ctx, query, userEntity.Email, userEntity.PasswordHash, userEntity.Nama, userEntity.Role, userEntity.IsActive, userEntity.CreatedAt, userEntity.UpdatedAt).Scan(&userEntity.ID)
 	if err != nil {
 		return nil, err
@@ -183,7 +176,7 @@ func (r *authRepositoryImpl) CreateUser(ctx context.Context, user *base.User) (*
 func (r *authRepositoryImpl) UpdateUser(ctx context.Context, id int32, updates map[string]interface{}) (*base.User, error) {
 	// First get current user
 	var userEntity entity.User
-	query := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE id = $1`
+	query := `SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE id = $1`
 	err := r.db.QueryRowContext(ctx, query, id).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
 	if err != nil {
 		return nil, err
@@ -197,7 +190,7 @@ func (r *authRepositoryImpl) UpdateUser(ctx context.Context, id int32, updates m
 		userEntity.Nama = nama
 	}
 	if role, ok := updates["role"].(string); ok {
-		userEntity.Role = role
+		userEntity.Role = normalizeRoleForDB(role)
 	}
 	if isActive, ok := updates["is_active"].(bool); ok {
 		userEntity.IsActive = isActive
@@ -205,21 +198,13 @@ func (r *authRepositoryImpl) UpdateUser(ctx context.Context, id int32, updates m
 	userEntity.UpdatedAt = time.Now()
 
 	// Update
-	updateQuery := `UPDATE users SET email = $1, nama = $2, role = $3, is_active = $4, updated_at = $5 WHERE id = $6`
+	updateQuery := `UPDATE users SET email = $1, full_name = $2, role = $3, is_active = $4, updated_at = $5 WHERE id = $6`
 	_, err = r.db.ExecContext(ctx, updateQuery, userEntity.Email, userEntity.Nama, userEntity.Role, userEntity.IsActive, userEntity.UpdatedAt, userEntity.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	var role base.UserRole
-	switch userEntity.Role {
-	case "siswa":
-		role = base.UserRole_SISWA
-	case "admin":
-		role = base.UserRole_ADMIN
-	default:
-		role = base.UserRole_ROLE_INVALID
-	}
+	role := dbRoleToProto(userEntity.Role)
 
 	user := &base.User{
 		Id:           int32(userEntity.ID),
@@ -255,13 +240,7 @@ func (r *authRepositoryImpl) ListUsers(ctx context.Context, role int32, statusFi
 	var args []interface{}
 
 	if role != 0 {
-		var roleStr string
-		switch base.UserRole(role) {
-		case base.UserRole_SISWA:
-			roleStr = "siswa"
-		case base.UserRole_ADMIN:
-			roleStr = "admin"
-		}
+		roleStr := protoRoleToDB(base.UserRole(role))
 		conditions = append(conditions, "role = $"+fmt.Sprintf("%d", len(args)+1))
 		args = append(args, roleStr)
 	}
@@ -291,7 +270,7 @@ func (r *authRepositoryImpl) ListUsers(ctx context.Context, role int32, statusFi
 	}
 
 	// Get paginated results
-	selectQuery := "SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at, lms_user_id FROM users " + whereClause + " ORDER BY created_at DESC LIMIT $" + fmt.Sprintf("%d", len(args)+1) + " OFFSET $" + fmt.Sprintf("%d", len(args)+2)
+	selectQuery := "SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at, lms_user_id FROM users " + whereClause + " ORDER BY created_at DESC LIMIT $" + fmt.Sprintf("%d", len(args)+1) + " OFFSET $" + fmt.Sprintf("%d", len(args)+2)
 	args = append(args, limit, offset)
 	rows, err := r.db.QueryContext(ctx, selectQuery, args...)
 	if err != nil {
@@ -315,15 +294,7 @@ func (r *authRepositoryImpl) ListUsers(ctx context.Context, role int32, statusFi
 	// Convert to proto
 	users := make([]*base.User, len(userEntities))
 	for i, userEntity := range userEntities {
-		var role base.UserRole
-		switch userEntity.Role {
-		case "siswa":
-			role = base.UserRole_SISWA
-		case "admin":
-			role = base.UserRole_ADMIN
-		default:
-			role = base.UserRole_ROLE_INVALID
-		}
+		role := dbRoleToProto(userEntity.Role)
 
 		users[i] = &base.User{
 			Id:           int32(userEntity.ID),
@@ -345,7 +316,7 @@ func (r *authRepositoryImpl) ListUsers(ctx context.Context, role int32, statusFi
 func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int64, email, name string, role int32) (*base.User, error) {
 	// First try to find existing user by LMS ID
 	var userEntity entity.User
-	findQuery := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE lms_user_id = $1`
+	findQuery := `SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE lms_user_id = $1`
 	err := r.db.QueryRowContext(ctx, findQuery, lmsID).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
 
 	if err != nil && err != sql.ErrNoRows {
@@ -354,7 +325,7 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 
 	if err == sql.ErrNoRows {
 		// Fallback: try to find existing user by email (may have been created without lms_user_id)
-		fallbackQuery := `SELECT id, email, password_hash, nama, role, is_active, created_at, updated_at, COALESCE(lms_user_id, 0) FROM users WHERE email = $1`
+		fallbackQuery := `SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at, COALESCE(lms_user_id, 0) FROM users WHERE email = $1`
 		var existingLmsID int64
 		scanErr := r.db.QueryRowContext(ctx, fallbackQuery, email).Scan(
 			&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash,
@@ -380,13 +351,7 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 
 	if err == nil {
 		// User found, JIT-update stale fields from claims.
-		var roleStr string
-		switch role {
-		case int32(base.UserRole_ADMIN):
-			roleStr = "admin"
-		default:
-			roleStr = "siswa"
-		}
+		roleStr := protoRoleToDB(base.UserRole(role))
 
 		trimmedEmail := strings.TrimSpace(email)
 		trimmedName := strings.TrimSpace(name)
@@ -397,10 +362,10 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 			trimmedName = userEntity.Nama
 		}
 
-		if userEntity.Email != trimmedEmail || userEntity.Nama != trimmedName || userEntity.Role != roleStr {
+		if userEntity.Email != trimmedEmail || userEntity.Nama != trimmedName || normalizeRoleForDB(userEntity.Role) != roleStr {
 			_, updateErr := r.db.ExecContext(
 				ctx,
-				`UPDATE users SET email = $1, nama = $2, role = $3, updated_at = $4 WHERE id = $5`,
+				`UPDATE users SET email = $1, full_name = $2, role = $3, updated_at = $4 WHERE id = $5`,
 				trimmedEmail,
 				trimmedName,
 				roleStr,
@@ -415,13 +380,7 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 			userEntity.Role = roleStr
 		}
 
-		var protoRole base.UserRole
-		switch userEntity.Role {
-		case "admin":
-			protoRole = base.UserRole_ADMIN
-		default:
-			protoRole = base.UserRole_SISWA
-		}
+		protoRole := dbRoleToProto(userEntity.Role)
 
 		return &base.User{
 			Id:           int32(userEntity.ID),
@@ -437,13 +396,7 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 	}
 
 	// User not found by lms_user_id or email, create new one
-	var roleStr string
-	switch role {
-	case int32(base.UserRole_ADMIN):
-		roleStr = "admin"
-	default:
-		roleStr = "siswa"
-	}
+	roleStr := protoRoleToDB(base.UserRole(role))
 
 	// Generate random hash for LMS users (non-admin local password login is disabled)
 	randomPassword := fmt.Sprintf("lms_%d", lmsID)
@@ -453,9 +406,9 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 	}
 
 	createQuery := `
-		INSERT INTO users (email, password_hash, nama, role, is_active, lms_user_id, created_at, updated_at)
+		INSERT INTO users (email, password_hash, full_name, role, is_active, lms_user_id, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (email) DO UPDATE SET lms_user_id = EXCLUDED.lms_user_id, nama = EXCLUDED.nama, updated_at = EXCLUDED.updated_at
+		ON CONFLICT (email) DO UPDATE SET lms_user_id = EXCLUDED.lms_user_id, full_name = EXCLUDED.full_name, updated_at = EXCLUDED.updated_at
 		RETURNING id`
 	now := time.Now()
 	err = r.db.QueryRowContext(ctx, createQuery, email, string(hashedPassword), name, roleStr, true, lmsID, now, now).Scan(&userEntity.ID)
@@ -472,13 +425,7 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 	userEntity.UpdatedAt = now
 	userEntity.LmsUserID = &lmsID
 
-	var protoRole base.UserRole
-	switch roleStr {
-	case "admin":
-		protoRole = base.UserRole_ADMIN
-	default:
-		protoRole = base.UserRole_SISWA
-	}
+	protoRole := dbRoleToProto(roleStr)
 
 	return &base.User{
 		Id:           int32(userEntity.ID),

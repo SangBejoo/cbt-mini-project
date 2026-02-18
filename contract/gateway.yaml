@@ -47,6 +47,11 @@ http:
       post: /v1/test-sessions/{session_token}/drag-drop-answers
       body: "*"
 
+    # 4.45. Submit Essay Answer
+    - selector: base.TestSessionService.SubmitEssayAnswer
+      post: /v1/test-sessions/{session_token}/essay-answers
+      body: "*"
+
     # 4.5. Clear Answer (Batalkan Jawaban)
     - selector: base.TestSessionService.ClearAnswer
       post: /v1/test-sessions/{session_token}/clear-answer
@@ -60,6 +65,11 @@ http:
     # 6. Review Result
     - selector: base.TestSessionService.GetTestResult
       get: /v1/test-sessions/{session_token}/result
+
+    # 6.5. Grade Essay Answer (admin)
+    - selector: base.TestSessionService.GradeEssayAnswer
+      post: /v1/test-sessions/grade-essay
+      body: "*"
 
     # 7. Scheduled sessions (student)
     - selector: base.TestSessionService.ListMyScheduledSessions

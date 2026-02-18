@@ -40,18 +40,33 @@ func (h *materiHandler) convertToProtoMateri(m *entity.Materi, questionCount int
 	if m.SchoolID != nil {
 		school = *m.SchoolID
 	}
+	var lmsModuleID int64
+	if m.LmsModuleID != nil {
+		lmsModuleID = *m.LmsModuleID
+	}
+	var lmsBookID int64
+	if m.LmsBookID != nil {
+		lmsBookID = *m.LmsBookID
+	}
+	var lmsTeacherMaterialID int64
+	if m.LmsTeacherMaterialID != nil {
+		lmsTeacherMaterialID = *m.LmsTeacherMaterialID
+	}
 	return &base.Materi{
-		Id:                 int32(m.ID),
-		MataPelajaran:      &base.MataPelajaran{Id: int32(m.MataPelajaran.ID), Nama: m.MataPelajaran.Nama},
-		Tingkat:            &base.Tingkat{Id: int32(m.Tingkat.ID), Nama: m.Tingkat.Nama},
-		Nama:               m.Nama,
-		IsActive:           m.IsActive,
-		DefaultDurasiMenit: int32(m.DefaultDurasiMenit),
-		DefaultJumlahSoal:  int32(m.DefaultJumlahSoal),
-		JumlahSoalReal:     int32(questionCount),
-		OwnerUserId:        owner,
-		SchoolId:           school,
-		Labels:             labels,
+		Id:                   int32(m.ID),
+		MataPelajaran:        &base.MataPelajaran{Id: int32(m.MataPelajaran.ID), Nama: m.MataPelajaran.Nama},
+		Tingkat:              &base.Tingkat{Id: int32(m.Tingkat.ID), Nama: m.Tingkat.Nama},
+		Nama:                 m.Nama,
+		IsActive:             m.IsActive,
+		DefaultDurasiMenit:   int32(m.DefaultDurasiMenit),
+		DefaultJumlahSoal:    int32(m.DefaultJumlahSoal),
+		JumlahSoalReal:       int32(questionCount),
+		OwnerUserId:          owner,
+		SchoolId:             school,
+		Labels:               labels,
+		LmsModuleId:          lmsModuleID,
+		LmsBookId:            lmsBookID,
+		LmsTeacherMaterialId: lmsTeacherMaterialID,
 	}
 }
 
@@ -79,7 +94,23 @@ func (h *materiHandler) CreateMateri(ctx context.Context, req *base.CreateMateri
 		labels = req.Labels
 	}
 
-	m, err := h.usecase.CreateMateri(int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat), req.IsActive, int(req.DefaultDurasiMenit), int(req.DefaultJumlahSoal), ownerUserID, schoolID, labels)
+	var lmsModuleID *int64
+	if req.LmsModuleId > 0 {
+		v := req.LmsModuleId
+		lmsModuleID = &v
+	}
+	var lmsBookID *int64
+	if req.LmsBookId > 0 {
+		v := req.LmsBookId
+		lmsBookID = &v
+	}
+	var lmsTeacherMaterialID *int64
+	if req.LmsTeacherMaterialId > 0 {
+		v := req.LmsTeacherMaterialId
+		lmsTeacherMaterialID = &v
+	}
+
+	m, err := h.usecase.CreateMateri(int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat), req.IsActive, int(req.DefaultDurasiMenit), int(req.DefaultJumlahSoal), ownerUserID, schoolID, labels, lmsModuleID, lmsBookID, lmsTeacherMaterialID)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +141,23 @@ func (h *materiHandler) GetMateri(ctx context.Context, req *base.GetMateriReques
 
 // UpdateMateri updates materi
 func (h *materiHandler) UpdateMateri(ctx context.Context, req *base.UpdateMateriRequest) (*base.MateriResponse, error) {
-	m, err := h.usecase.UpdateMateri(int(req.Id), int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat), req.IsActive, int(req.DefaultDurasiMenit), int(req.DefaultJumlahSoal))
+	var lmsModuleID *int64
+	if req.LmsModuleId > 0 {
+		v := req.LmsModuleId
+		lmsModuleID = &v
+	}
+	var lmsBookID *int64
+	if req.LmsBookId > 0 {
+		v := req.LmsBookId
+		lmsBookID = &v
+	}
+	var lmsTeacherMaterialID *int64
+	if req.LmsTeacherMaterialId > 0 {
+		v := req.LmsTeacherMaterialId
+		lmsTeacherMaterialID = &v
+	}
+
+	m, err := h.usecase.UpdateMateri(int(req.Id), int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat), req.IsActive, int(req.DefaultDurasiMenit), int(req.DefaultJumlahSoal), lmsModuleID, lmsBookID, lmsTeacherMaterialID)
 	if err != nil {
 		return nil, err
 	}

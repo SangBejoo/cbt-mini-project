@@ -1423,9 +1423,11 @@ const (
 	TestSessionService_GetTestQuestions_FullMethodName        = "/base.TestSessionService/GetTestQuestions"
 	TestSessionService_SubmitAnswer_FullMethodName            = "/base.TestSessionService/SubmitAnswer"
 	TestSessionService_SubmitDragDropAnswer_FullMethodName    = "/base.TestSessionService/SubmitDragDropAnswer"
+	TestSessionService_SubmitEssayAnswer_FullMethodName       = "/base.TestSessionService/SubmitEssayAnswer"
 	TestSessionService_ClearAnswer_FullMethodName             = "/base.TestSessionService/ClearAnswer"
 	TestSessionService_CompleteSession_FullMethodName         = "/base.TestSessionService/CompleteSession"
 	TestSessionService_GetTestResult_FullMethodName           = "/base.TestSessionService/GetTestResult"
+	TestSessionService_GradeEssayAnswer_FullMethodName        = "/base.TestSessionService/GradeEssayAnswer"
 	TestSessionService_ListMyScheduledSessions_FullMethodName = "/base.TestSessionService/ListMyScheduledSessions"
 	TestSessionService_StartScheduledSession_FullMethodName   = "/base.TestSessionService/StartScheduledSession"
 	TestSessionService_ListTestSessions_FullMethodName        = "/base.TestSessionService/ListTestSessions"
@@ -1442,10 +1444,12 @@ type TestSessionServiceClient interface {
 	GetTestQuestions(ctx context.Context, in *GetTestQuestionsRequest, opts ...grpc.CallOption) (*TestQuestionsResponse, error)
 	SubmitAnswer(ctx context.Context, in *SubmitAnswerRequest, opts ...grpc.CallOption) (*SubmitAnswerResponse, error)
 	SubmitDragDropAnswer(ctx context.Context, in *SubmitDragDropAnswerRequest, opts ...grpc.CallOption) (*SubmitDragDropAnswerResponse, error)
+	SubmitEssayAnswer(ctx context.Context, in *SubmitEssayAnswerRequest, opts ...grpc.CallOption) (*SubmitEssayAnswerResponse, error)
 	ClearAnswer(ctx context.Context, in *ClearAnswerRequest, opts ...grpc.CallOption) (*ClearAnswerResponse, error)
 	CompleteSession(ctx context.Context, in *CompleteSessionRequest, opts ...grpc.CallOption) (*TestSessionResponse, error)
 	// Results & review
 	GetTestResult(ctx context.Context, in *GetTestResultRequest, opts ...grpc.CallOption) (*TestResultResponse, error)
+	GradeEssayAnswer(ctx context.Context, in *GradeEssayAnswerRequest, opts ...grpc.CallOption) (*GradeEssayAnswerResponse, error)
 	// Scheduled LMS sessions (student)
 	ListMyScheduledSessions(ctx context.Context, in *ListMyScheduledSessionsRequest, opts ...grpc.CallOption) (*ListTestSessionsResponse, error)
 	StartScheduledSession(ctx context.Context, in *StartScheduledSessionRequest, opts ...grpc.CallOption) (*TestSessionResponse, error)
@@ -1511,6 +1515,16 @@ func (c *testSessionServiceClient) SubmitDragDropAnswer(ctx context.Context, in 
 	return out, nil
 }
 
+func (c *testSessionServiceClient) SubmitEssayAnswer(ctx context.Context, in *SubmitEssayAnswerRequest, opts ...grpc.CallOption) (*SubmitEssayAnswerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubmitEssayAnswerResponse)
+	err := c.cc.Invoke(ctx, TestSessionService_SubmitEssayAnswer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *testSessionServiceClient) ClearAnswer(ctx context.Context, in *ClearAnswerRequest, opts ...grpc.CallOption) (*ClearAnswerResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ClearAnswerResponse)
@@ -1535,6 +1549,16 @@ func (c *testSessionServiceClient) GetTestResult(ctx context.Context, in *GetTes
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(TestResultResponse)
 	err := c.cc.Invoke(ctx, TestSessionService_GetTestResult_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testSessionServiceClient) GradeEssayAnswer(ctx context.Context, in *GradeEssayAnswerRequest, opts ...grpc.CallOption) (*GradeEssayAnswerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GradeEssayAnswerResponse)
+	err := c.cc.Invoke(ctx, TestSessionService_GradeEssayAnswer_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1582,10 +1606,12 @@ type TestSessionServiceServer interface {
 	GetTestQuestions(context.Context, *GetTestQuestionsRequest) (*TestQuestionsResponse, error)
 	SubmitAnswer(context.Context, *SubmitAnswerRequest) (*SubmitAnswerResponse, error)
 	SubmitDragDropAnswer(context.Context, *SubmitDragDropAnswerRequest) (*SubmitDragDropAnswerResponse, error)
+	SubmitEssayAnswer(context.Context, *SubmitEssayAnswerRequest) (*SubmitEssayAnswerResponse, error)
 	ClearAnswer(context.Context, *ClearAnswerRequest) (*ClearAnswerResponse, error)
 	CompleteSession(context.Context, *CompleteSessionRequest) (*TestSessionResponse, error)
 	// Results & review
 	GetTestResult(context.Context, *GetTestResultRequest) (*TestResultResponse, error)
+	GradeEssayAnswer(context.Context, *GradeEssayAnswerRequest) (*GradeEssayAnswerResponse, error)
 	// Scheduled LMS sessions (student)
 	ListMyScheduledSessions(context.Context, *ListMyScheduledSessionsRequest) (*ListTestSessionsResponse, error)
 	StartScheduledSession(context.Context, *StartScheduledSessionRequest) (*TestSessionResponse, error)
@@ -1616,6 +1642,9 @@ func (UnimplementedTestSessionServiceServer) SubmitAnswer(context.Context, *Subm
 func (UnimplementedTestSessionServiceServer) SubmitDragDropAnswer(context.Context, *SubmitDragDropAnswerRequest) (*SubmitDragDropAnswerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitDragDropAnswer not implemented")
 }
+func (UnimplementedTestSessionServiceServer) SubmitEssayAnswer(context.Context, *SubmitEssayAnswerRequest) (*SubmitEssayAnswerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SubmitEssayAnswer not implemented")
+}
 func (UnimplementedTestSessionServiceServer) ClearAnswer(context.Context, *ClearAnswerRequest) (*ClearAnswerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClearAnswer not implemented")
 }
@@ -1624,6 +1653,9 @@ func (UnimplementedTestSessionServiceServer) CompleteSession(context.Context, *C
 }
 func (UnimplementedTestSessionServiceServer) GetTestResult(context.Context, *GetTestResultRequest) (*TestResultResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTestResult not implemented")
+}
+func (UnimplementedTestSessionServiceServer) GradeEssayAnswer(context.Context, *GradeEssayAnswerRequest) (*GradeEssayAnswerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GradeEssayAnswer not implemented")
 }
 func (UnimplementedTestSessionServiceServer) ListMyScheduledSessions(context.Context, *ListMyScheduledSessionsRequest) (*ListTestSessionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListMyScheduledSessions not implemented")
@@ -1745,6 +1777,24 @@ func _TestSessionService_SubmitDragDropAnswer_Handler(srv interface{}, ctx conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestSessionService_SubmitEssayAnswer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubmitEssayAnswerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestSessionServiceServer).SubmitEssayAnswer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TestSessionService_SubmitEssayAnswer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestSessionServiceServer).SubmitEssayAnswer(ctx, req.(*SubmitEssayAnswerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TestSessionService_ClearAnswer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ClearAnswerRequest)
 	if err := dec(in); err != nil {
@@ -1795,6 +1845,24 @@ func _TestSessionService_GetTestResult_Handler(srv interface{}, ctx context.Cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TestSessionServiceServer).GetTestResult(ctx, req.(*GetTestResultRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestSessionService_GradeEssayAnswer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GradeEssayAnswerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestSessionServiceServer).GradeEssayAnswer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TestSessionService_GradeEssayAnswer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestSessionServiceServer).GradeEssayAnswer(ctx, req.(*GradeEssayAnswerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1881,6 +1949,10 @@ var TestSessionService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _TestSessionService_SubmitDragDropAnswer_Handler,
 		},
 		{
+			MethodName: "SubmitEssayAnswer",
+			Handler:    _TestSessionService_SubmitEssayAnswer_Handler,
+		},
+		{
 			MethodName: "ClearAnswer",
 			Handler:    _TestSessionService_ClearAnswer_Handler,
 		},
@@ -1891,6 +1963,10 @@ var TestSessionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTestResult",
 			Handler:    _TestSessionService_GetTestResult_Handler,
+		},
+		{
+			MethodName: "GradeEssayAnswer",
+			Handler:    _TestSessionService_GradeEssayAnswer_Handler,
 		},
 		{
 			MethodName: "ListMyScheduledSessions",

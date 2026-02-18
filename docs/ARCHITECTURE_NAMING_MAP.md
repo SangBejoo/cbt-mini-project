@@ -2,6 +2,8 @@
 
 This document defines canonical cross-service terminology to reduce semantic mismatch.
 
+Reference decision record: `docs/ADR_CBT_LMS_OWNERSHIP_AND_NAMING.md`.
+
 ## Canonical Terms
 
 - **Learning Module**: material/exam package consumed by assignment flow.

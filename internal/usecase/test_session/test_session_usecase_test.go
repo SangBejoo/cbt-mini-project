@@ -198,6 +198,18 @@ func (m *MockTestSessionRepo) SubmitDragDropAnswer(token string, nomorUrut int, 
 	return args.Error(0)
 }
 
+func (m *MockTestSessionRepo) SubmitEssayAnswer(token string, nomorUrut int, jawabanEssay string) error {
+	return nil
+}
+
+func (m *MockTestSessionRepo) GradeEssayAnswer(answerID int, score float64, feedback string) (string, error) {
+	return "", nil
+}
+
+func (m *MockTestSessionRepo) HasEssayQuestions(token string) (bool, error) {
+	return false, nil
+}
+
 func (m *MockTestSessionRepo) ClearAnswer(token string, nomorUrut int) error {
 	args := m.Called(token, nomorUrut)
 	return args.Error(0)

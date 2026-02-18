@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/cloudinary/cloudinary-go/v2"
@@ -77,11 +78,17 @@ func (u *soalUsecaseImpl) saveImages(imageFilesBytes [][]byte) ([]entity.SoalGam
 
 // CreateSoal creates a new soal with multiple images
 func (u *soalUsecaseImpl) CreateSoal(idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD, pembahasan string, jawabanBenar entity.JawabanOption, imageFilesBytes [][]byte) (*entity.Soal, error) {
-	if pertanyaan == "" || opsiA == "" || opsiB == "" || opsiC == "" || opsiD == "" {
-		return nil, errors.New("all fields must be filled")
+	isEssay := strings.HasPrefix(strings.TrimSpace(pembahasan), "[ESSAY]")
+	if pertanyaan == "" {
+		return nil, errors.New("pertanyaan must be filled")
 	}
-	if jawabanBenar < entity.JawabanA || jawabanBenar > entity.JawabanD {
-		return nil, errors.New("invalid jawaban benar")
+	if !isEssay {
+		if opsiA == "" || opsiB == "" || opsiC == "" || opsiD == "" {
+			return nil, errors.New("all fields must be filled")
+		}
+		if jawabanBenar < entity.JawabanA || jawabanBenar > entity.JawabanD {
+			return nil, errors.New("invalid jawaban benar")
+		}
 	}
 
 	gambar, err := u.saveImages(imageFilesBytes)
@@ -93,6 +100,7 @@ func (u *soalUsecaseImpl) CreateSoal(idMateri, idTingkat int, pertanyaan, opsiA,
 		IDMateri:     idMateri,
 		IDTingkat:    idTingkat,
 		Pertanyaan:   pertanyaan,
+		QuestionType: entity.QuestionTypeMultipleChoice,
 		OpsiA:        opsiA,
 		OpsiB:        opsiB,
 		OpsiC:        opsiC,
@@ -100,6 +108,18 @@ func (u *soalUsecaseImpl) CreateSoal(idMateri, idTingkat int, pertanyaan, opsiA,
 		JawabanBenar: jawabanBenar,
 		Pembahasan:   &pembahasan,
 		Gambar:       gambar,
+	}
+	if isEssay {
+		s.QuestionType = entity.QuestionTypeEssay
+		essayKey := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(pembahasan), "[ESSAY]"))
+		if essayKey != "" {
+			s.JawabanEssayKey = &essayKey
+		}
+		s.OpsiA = "-"
+		s.OpsiB = "-"
+		s.OpsiC = "-"
+		s.OpsiD = "-"
+		s.JawabanBenar = entity.JawabanA
 	}
 	err = u.repo.Create(s)
 	if err != nil {
@@ -115,11 +135,17 @@ func (u *soalUsecaseImpl) GetSoal(id int) (*entity.Soal, error) {
 
 // UpdateSoal updates existing with multiple images
 func (u *soalUsecaseImpl) UpdateSoal(id, idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD, pembahasan string, jawabanBenar entity.JawabanOption, imageFilesBytes [][]byte) (*entity.Soal, error) {
-	if pertanyaan == "" || opsiA == "" || opsiB == "" || opsiC == "" || opsiD == "" {
-		return nil, errors.New("all fields must be filled")
+	isEssay := strings.HasPrefix(strings.TrimSpace(pembahasan), "[ESSAY]")
+	if pertanyaan == "" {
+		return nil, errors.New("pertanyaan must be filled")
 	}
-	if jawabanBenar < entity.JawabanA || jawabanBenar > entity.JawabanD {
-		return nil, errors.New("invalid jawaban benar")
+	if !isEssay {
+		if opsiA == "" || opsiB == "" || opsiC == "" || opsiD == "" {
+			return nil, errors.New("all fields must be filled")
+		}
+		if jawabanBenar < entity.JawabanA || jawabanBenar > entity.JawabanD {
+			return nil, errors.New("invalid jawaban benar")
+		}
 	}
 
 	s, err := u.repo.GetByID(id)
@@ -144,6 +170,23 @@ func (u *soalUsecaseImpl) UpdateSoal(id, idMateri, idTingkat int, pertanyaan, op
 	s.OpsiD = opsiD
 	s.JawabanBenar = jawabanBenar
 	s.Pembahasan = &pembahasan
+	if isEssay {
+		s.QuestionType = entity.QuestionTypeEssay
+		essayKey := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(pembahasan), "[ESSAY]"))
+		if essayKey != "" {
+			s.JawabanEssayKey = &essayKey
+		} else {
+			s.JawabanEssayKey = nil
+		}
+		s.OpsiA = "-"
+		s.OpsiB = "-"
+		s.OpsiC = "-"
+		s.OpsiD = "-"
+		s.JawabanBenar = entity.JawabanA
+	} else {
+		s.QuestionType = entity.QuestionTypeMultipleChoice
+		s.JawabanEssayKey = nil
+	}
 	err = u.repo.Update(s)
 	if err != nil {
 		return nil, err

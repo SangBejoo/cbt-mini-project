@@ -102,6 +102,16 @@ func (u *testSessionUsecaseImpl) CompleteSession(sessionToken string) (*entity.T
 		return nil, err
 	}
 
+	hasEssay, err := u.repo.HasEssayQuestions(sessionToken)
+	if err != nil {
+		return nil, err
+	}
+	if hasEssay {
+		if err := u.repo.UpdateSessionStatus(sessionToken, entity.TestStatusGradingInProgress); err != nil {
+			return nil, err
+		}
+	}
+
 	updatedSession, err := u.repo.GetByToken(sessionToken)
 	if err != nil {
 		return nil, err
@@ -271,6 +281,22 @@ func (u *testSessionUsecaseImpl) GetTestQuestions(sessionToken string, nomorUrut
 		question.DDItems = soalDD.Items
 		question.DDSlots = soalDD.Slots
 		question.DDUserAnswer = userAnswer
+	} else if tss.QuestionType == entity.QuestionTypeEssay && tss.Soal != nil {
+		var jawabanEssay *string
+		var nilaiEssay *float64
+		for _, ans := range answers {
+			if ans.TestSessionSoal.NomorUrut == nomorUrut && ans.QuestionType == entity.QuestionTypeEssay {
+				jawabanEssay = ans.JawabanEssay
+				nilaiEssay = ans.NilaiEssay
+				break
+			}
+		}
+
+		question.Materi = tss.Soal.Materi
+		question.EssayID = &tss.Soal.ID
+		question.EssayPertanyaan = &tss.Soal.Pertanyaan
+		question.EssayJawaban = jawabanEssay
+		question.EssayScore = nilaiEssay
 	}
 
 	return question, nil
@@ -344,6 +370,22 @@ func (u *testSessionUsecaseImpl) GetAllTestQuestions(sessionToken string) ([]ent
 			question.DDItems = tss.SoalDragDrop.Items
 			question.DDSlots = tss.SoalDragDrop.Slots
 			question.DDUserAnswer = userAnswer
+		} else if tss.QuestionType == entity.QuestionTypeEssay && tss.Soal != nil && tss.Soal.ID > 0 {
+			var jawabanEssay *string
+			var nilaiEssay *float64
+			for _, ans := range answers {
+				if ans.TestSessionSoal.NomorUrut == tss.NomorUrut && ans.QuestionType == entity.QuestionTypeEssay {
+					jawabanEssay = ans.JawabanEssay
+					nilaiEssay = ans.NilaiEssay
+					break
+				}
+			}
+
+			question.Materi = tss.Soal.Materi
+			question.EssayID = &tss.Soal.ID
+			question.EssayPertanyaan = &tss.Soal.Pertanyaan
+			question.EssayJawaban = jawabanEssay
+			question.EssayScore = nilaiEssay
 		}
 
 		questions = append(questions, *question)
@@ -400,6 +442,39 @@ func (u *testSessionUsecaseImpl) SubmitDragDropAnswer(sessionToken string, nomor
 	isCorrect := u.checkDragDropAnswer(correctAnswers, answer)
 
 	return u.repo.SubmitDragDropAnswer(sessionToken, nomorUrut, answer, isCorrect)
+}
+
+func (u *testSessionUsecaseImpl) SubmitEssayAnswer(sessionToken string, nomorUrut int, jawabanEssay string) error {
+	if strings.TrimSpace(jawabanEssay) == "" {
+		return errors.New("jawaban essay cannot be empty")
+	}
+
+	_, err := u.ensureSessionWritable(sessionToken)
+	if err != nil {
+		return err
+	}
+
+	tss, err := u.repo.GetTestSessionSoalByOrder(sessionToken, nomorUrut)
+	if err != nil {
+		return err
+	}
+	if tss.QuestionType != entity.QuestionTypeEssay {
+		return errors.New("this is not an essay question")
+	}
+
+	return u.repo.SubmitEssayAnswer(sessionToken, nomorUrut, jawabanEssay)
+}
+
+func (u *testSessionUsecaseImpl) GradeEssayAnswer(answerID int, score float64, feedback string) error {
+	if answerID < 1 {
+		return errors.New("answer_id must be positive")
+	}
+	if score < 0 || score > 100 {
+		return errors.New("score must be between 0 and 100")
+	}
+
+	_, err := u.repo.GradeEssayAnswer(answerID, score, feedback)
+	return err
 }
 
 // checkDragDropAnswer implements all-or-nothing scoring
@@ -515,19 +590,35 @@ func (u *testSessionUsecaseImpl) GetTestResult(sessionToken string) (*entity.Tes
 			// Use loaded Soal info directly
 
 			detail.Pertanyaan = question.Soal.Pertanyaan
-			detail.OpsiA = question.Soal.OpsiA
-			detail.OpsiB = question.Soal.OpsiB
-			detail.OpsiC = question.Soal.OpsiC
-			detail.OpsiD = question.Soal.OpsiD
-			detail.JawabanBenar = question.Soal.JawabanBenar
+			if question.QuestionType == entity.QuestionTypeEssay {
+				detail.OpsiA = ""
+				detail.OpsiB = ""
+				detail.OpsiC = ""
+				detail.OpsiD = ""
+				detail.JawabanBenar = ""
+			} else {
+				detail.OpsiA = question.Soal.OpsiA
+				detail.OpsiB = question.Soal.OpsiB
+				detail.OpsiC = question.Soal.OpsiC
+				detail.OpsiD = question.Soal.OpsiD
+				detail.JawabanBenar = question.Soal.JawabanBenar
+			}
 			detail.Pembahasan = question.Soal.Pembahasan
 			detail.Gambar = question.Soal.Gambar
 
 			// Add answer details if exists
 			if ans, exists := answersMap[question.NomorUrut]; exists {
-				detail.JawabanDipilih = ans.JawabanDipilih
-				detail.IsCorrect = ans.IsCorrect
-				detail.IsAnswered = ans.JawabanDipilih != nil
+				if question.QuestionType == entity.QuestionTypeEssay {
+					detail.JawabanEssay = ans.JawabanEssay
+					detail.NilaiEssay = ans.NilaiEssay
+					detail.FeedbackTeacher = ans.FeedbackTeacher
+					detail.IsAnswered = ans.JawabanEssay != nil && strings.TrimSpace(*ans.JawabanEssay) != ""
+					detail.IsCorrect = ans.NilaiEssay != nil && *ans.NilaiEssay >= 60
+				} else {
+					detail.JawabanDipilih = ans.JawabanDipilih
+					detail.IsCorrect = ans.IsCorrect
+					detail.IsAnswered = ans.JawabanDipilih != nil
+				}
 			} else {
 				// No answer provided
 				detail.IsCorrect = false

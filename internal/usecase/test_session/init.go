@@ -13,6 +13,8 @@ type TestSessionUsecase interface {
 	GetSessionAnswers(sessionToken string) ([]entity.JawabanSiswa, error)
 	SubmitAnswer(sessionToken string, nomorUrut int, jawaban entity.JawabanOption) error
 	SubmitDragDropAnswer(sessionToken string, nomorUrut int, answer map[int]int) error // NEW: for drag-drop
+	SubmitEssayAnswer(sessionToken string, nomorUrut int, jawabanEssay string) error
+	GradeEssayAnswer(answerID int, score float64, feedback string) error
 	ClearAnswer(sessionToken string, nomorUrut int) error
 	CompleteSession(sessionToken string) (*entity.TestSession, error)
 	GetTestResult(sessionToken string) (*entity.TestSession, []entity.JawabanDetail, error)

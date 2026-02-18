@@ -11,21 +11,23 @@ const (
 )
 
 type Soal struct {
-	ID           int           `json:"id" gorm:"primaryKey;autoIncrement"`
-	IDMateri     int           `json:"id_materi" gorm:"not null"`
-	LMSAssetID   *int64        `json:"lms_asset_id,omitempty" gorm:"column:lms_asset_id"`
-	Materi       Materi        `json:"materi" gorm:"foreignKey:IDMateri"`
-	IDTingkat    int           `json:"id_tingkat" gorm:"not null"`
-	Tingkat      Tingkat       `json:"tingkat" gorm:"foreignKey:IDTingkat"`
-	Pertanyaan   string        `json:"pertanyaan" gorm:"type:text;not null"`
-	OpsiA        string        `json:"opsi_a" gorm:"not null"`
-	OpsiB        string        `json:"opsi_b" gorm:"not null"`
-	OpsiC        string        `json:"opsi_c" gorm:"not null"`
-	OpsiD        string        `json:"opsi_d" gorm:"not null"`
-	JawabanBenar JawabanOption `json:"-" gorm:"type:char(1);not null"`
-	Pembahasan   *string       `json:"pembahasan,omitempty" gorm:"type:text"`
-	IsActive     bool          `json:"is_active" gorm:"default:true"`
-	Gambar       []SoalGambar  `json:"gambar" gorm:"foreignKey:IDSoal;references:ID;constraint:OnDelete:CASCADE"`
+	ID              int           `json:"id" gorm:"primaryKey;autoIncrement"`
+	IDMateri        int           `json:"id_materi" gorm:"not null"`
+	LMSAssetID      *int64        `json:"lms_asset_id,omitempty" gorm:"column:lms_asset_id"`
+	Materi          Materi        `json:"materi" gorm:"foreignKey:IDMateri"`
+	IDTingkat       int           `json:"id_tingkat" gorm:"not null"`
+	Tingkat         Tingkat       `json:"tingkat" gorm:"foreignKey:IDTingkat"`
+	Pertanyaan      string        `json:"pertanyaan" gorm:"type:text;not null"`
+	QuestionType    QuestionType  `json:"question_type" gorm:"column:question_type;type:enum('multiple_choice','drag_drop','essay');default:'multiple_choice'"`
+	OpsiA           string        `json:"opsi_a" gorm:"not null"`
+	OpsiB           string        `json:"opsi_b" gorm:"not null"`
+	OpsiC           string        `json:"opsi_c" gorm:"not null"`
+	OpsiD           string        `json:"opsi_d" gorm:"not null"`
+	JawabanBenar    JawabanOption `json:"-" gorm:"type:char(1);not null"`
+	JawabanEssayKey *string       `json:"jawaban_essay_key,omitempty" gorm:"column:jawaban_essay_key;type:text"`
+	Pembahasan      *string       `json:"pembahasan,omitempty" gorm:"type:text"`
+	IsActive        bool          `json:"is_active" gorm:"default:true"`
+	Gambar          []SoalGambar  `json:"gambar" gorm:"foreignKey:IDSoal;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 func (Soal) TableName() string { return "soal" }
@@ -69,4 +71,10 @@ type QuestionForStudent struct {
 	DDItems      []DragItem    `json:"dd_items,omitempty"`
 	DDSlots      []DragSlot    `json:"dd_slots,omitempty"`
 	DDUserAnswer map[int]int   `json:"dd_user_answer,omitempty"`
+
+	// Essay fields
+	EssayID         *int     `json:"essay_id,omitempty"`
+	EssayPertanyaan *string  `json:"essay_pertanyaan,omitempty"`
+	EssayJawaban    *string  `json:"essay_jawaban,omitempty"`
+	EssayScore      *float64 `json:"essay_score,omitempty"`
 }

@@ -151,7 +151,9 @@
               "ONGOING",
               "COMPLETED",
               "TIMEOUT",
-              "SCHEDULED"
+              "SCHEDULED",
+              "GRADING_IN_PROGRESS",
+              "GRADED"
             ],
             "default": "STATUS_INVALID"
           },
@@ -1551,6 +1553,38 @@
         ]
       }
     },
+    "/v1/test-sessions/grade-essay": {
+      "post": {
+        "operationId": "TestSessionService_GradeEssayAnswer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseGradeEssayAnswerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/baseGradeEssayAnswerRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TestSessionService"
+        ]
+      }
+    },
     "/v1/test-sessions/scheduled": {
       "get": {
         "summary": "Scheduled LMS sessions (student)",
@@ -1779,6 +1813,44 @@
         ]
       }
     },
+    "/v1/test-sessions/{sessionToken}/essay-answers": {
+      "post": {
+        "operationId": "TestSessionService_SubmitEssayAnswer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseSubmitEssayAnswerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionToken",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TestSessionServiceSubmitEssayAnswerBody"
+            }
+          }
+        ],
+        "tags": [
+          "TestSessionService"
+        ]
+      }
+    },
     "/v1/test-sessions/{sessionToken}/questions": {
       "get": {
         "summary": "Test execution (NEW - critical!)",
@@ -1988,6 +2060,18 @@
         "defaultJumlahSoal": {
           "type": "integer",
           "format": "int32"
+        },
+        "lmsModuleId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "lmsBookId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "lmsTeacherMaterialId": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -2153,6 +2237,18 @@
         }
       }
     },
+    "TestSessionServiceSubmitEssayAnswerBody": {
+      "type": "object",
+      "properties": {
+        "nomorUrut": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "jawabanEssay": {
+          "type": "string"
+        }
+      }
+    },
     "UserLimitServiceResetUserLimitBody": {
       "type": "object"
     },
@@ -2269,6 +2365,18 @@
             "type": "string"
           },
           "title": "Optional labels/tags for the materi"
+        },
+        "lmsModuleId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "lmsBookId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "lmsTeacherMaterialId": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -2508,6 +2616,33 @@
         }
       }
     },
+    "baseGradeEssayAnswerRequest": {
+      "type": "object",
+      "properties": {
+        "answerId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "score": {
+          "type": "number",
+          "format": "double"
+        },
+        "feedback": {
+          "type": "string"
+        }
+      }
+    },
+    "baseGradeEssayAnswerResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
     "baseHistoryDetailResponse": {
       "type": "object",
       "properties": {
@@ -2657,6 +2792,16 @@
             "type": "integer",
             "format": "int32"
           }
+        },
+        "jawabanEssay": {
+          "type": "string"
+        },
+        "nilaiEssay": {
+          "type": "number",
+          "format": "double"
+        },
+        "feedbackTeacher": {
+          "type": "string"
         }
       }
     },
@@ -2868,6 +3013,14 @@
             "type": "string"
           },
           "title": "Tags / labels untuk materi"
+        },
+        "lmsBookId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "lmsTeacherMaterialId": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -3034,6 +3187,17 @@
             "format": "int32"
           },
           "title": "item_id -\u003e slot_id"
+        },
+        "essayId": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Essay fields (only populated when question_type = ESSAY)"
+        },
+        "essayPertanyaan": {
+          "type": "string"
+        },
+        "essayJawaban": {
+          "type": "string"
         }
       },
       "title": "Unified question for mixed test sessions"
@@ -3043,7 +3207,8 @@
       "enum": [
         "QUESTION_TYPE_INVALID",
         "MULTIPLE_CHOICE",
-        "DRAG_DROP"
+        "DRAG_DROP",
+        "ESSAY"
       ],
       "default": "QUESTION_TYPE_INVALID",
       "title": "Question type for mixed sessions"
@@ -3287,6 +3452,25 @@
         }
       }
     },
+    "baseSubmitEssayAnswerResponse": {
+      "type": "object",
+      "properties": {
+        "sessionToken": {
+          "type": "string"
+        },
+        "nomorUrut": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "jawabanEssay": {
+          "type": "string"
+        },
+        "dijawabPada": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "baseTestQuestionsResponse": {
       "type": "object",
       "properties": {
@@ -3427,7 +3611,9 @@
         "ONGOING",
         "COMPLETED",
         "TIMEOUT",
-        "SCHEDULED"
+        "SCHEDULED",
+        "GRADING_IN_PROGRESS",
+        "GRADED"
       ],
       "default": "STATUS_INVALID"
     },

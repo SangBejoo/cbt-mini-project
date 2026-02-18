@@ -238,6 +238,16 @@ func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.Get
 			}
 		}
 
+		if q.QuestionType == entity.QuestionTypeEssay && q.EssayID != nil {
+			protoQuestion.EssayId = int32(*q.EssayID)
+			if q.EssayPertanyaan != nil {
+				protoQuestion.EssayPertanyaan = *q.EssayPertanyaan
+			}
+			if q.EssayJawaban != nil {
+				protoQuestion.EssayJawaban = *q.EssayJawaban
+			}
+		}
+
 		protoQuestions = append(protoQuestions, protoQuestion)
 	}
 
@@ -339,6 +349,34 @@ func (h *testSessionHandler) SubmitDragDropAnswer(ctx context.Context, req *base
 		NomorUrut:    req.NomorUrut,
 		Answer:       req.Answer,
 		IsCorrect:    true, // Determined by usecase
+		DijawabPada:  timestamppb.Now(),
+	}, nil
+}
+
+func (h *testSessionHandler) SubmitEssayAnswer(ctx context.Context, req *base.SubmitEssayAnswerRequest) (*base.SubmitEssayAnswerResponse, error) {
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+	}
+
+	session, err := h.usecase.GetTestSession(req.SessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	if session.UserID == nil || *session.UserID != int(user.Id) {
+		return nil, status.Error(codes.PermissionDenied, "you do not have permission to access this session")
+	}
+
+	err = h.usecase.SubmitEssayAnswer(req.SessionToken, int(req.NomorUrut), req.JawabanEssay)
+	if err != nil {
+		return nil, err
+	}
+
+	return &base.SubmitEssayAnswerResponse{
+		SessionToken: req.SessionToken,
+		NomorUrut:    req.NomorUrut,
+		JawabanEssay: req.JawabanEssay,
 		DijawabPada:  timestamppb.Now(),
 	}, nil
 }
@@ -455,6 +493,18 @@ func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTes
 			QuestionType:   base.QuestionType(base.QuestionType_value[strings.ToUpper(string(d.QuestionType))]),
 		}
 
+		if d.QuestionType == entity.QuestionTypeEssay {
+			if d.JawabanEssay != nil {
+				jawabanDetail.JawabanEssay = *d.JawabanEssay
+			}
+			if d.NilaiEssay != nil {
+				jawabanDetail.NilaiEssay = *d.NilaiEssay
+			}
+			if d.FeedbackTeacher != nil {
+				jawabanDetail.FeedbackTeacher = *d.FeedbackTeacher
+			}
+		}
+
 		if d.QuestionType == entity.QuestionTypeDragDrop {
 			if d.DragType != nil {
 				jawabanDetail.DragType = base.DragDropType(base.DragDropType_value[strings.ToUpper(string(*d.DragType))])
@@ -491,6 +541,26 @@ func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTes
 		SessionInfo:   h.convertToProtoTestSession(session),
 		DetailJawaban: jawabanDetails,
 		Tingkat:       protoTingkat,
+	}, nil
+}
+
+func (h *testSessionHandler) GradeEssayAnswer(ctx context.Context, req *base.GradeEssayAnswerRequest) (*base.GradeEssayAnswerResponse, error) {
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+	}
+
+	if user.Role != base.UserRole_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "only admin can grade essay answers")
+	}
+
+	if err := h.usecase.GradeEssayAnswer(int(req.AnswerId), req.Score, req.Feedback); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	return &base.GradeEssayAnswerResponse{
+		Success: true,
+		Message: "Essay answer graded successfully",
 	}, nil
 }
 

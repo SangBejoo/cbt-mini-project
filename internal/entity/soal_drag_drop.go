@@ -16,25 +16,26 @@ type QuestionType string
 const (
 	QuestionTypeMultipleChoice QuestionType = "multiple_choice"
 	QuestionTypeDragDrop       QuestionType = "drag_drop"
+	QuestionTypeEssay          QuestionType = "essay"
 )
 
 // SoalDragDrop represents a drag-and-drop question
 type SoalDragDrop struct {
-	ID             int            `json:"id" gorm:"primaryKey;autoIncrement"`
-	IDMateri       int            `json:"id_materi" gorm:"not null"`
-	Materi         Materi         `json:"materi" gorm:"foreignKey:IDMateri"`
-	IDTingkat      int            `json:"id_tingkat" gorm:"not null"`
-	Tingkat        Tingkat        `json:"tingkat" gorm:"foreignKey:IDTingkat"`
-	Pertanyaan     string         `json:"pertanyaan" gorm:"type:text;not null"`
-	DragType       DragDropType   `json:"drag_type" gorm:"type:enum('ordering','matching');not null"`
-	Pembahasan     *string        `json:"pembahasan,omitempty" gorm:"type:text"`
-	IsActive       bool           `json:"is_active" gorm:"default:true"`
-	Items          []DragItem     `json:"items" gorm:"foreignKey:IDSoalDragDrop;constraint:OnDelete:CASCADE"`
+	ID             int                  `json:"id" gorm:"primaryKey;autoIncrement"`
+	IDMateri       int                  `json:"id_materi" gorm:"not null"`
+	Materi         Materi               `json:"materi" gorm:"foreignKey:IDMateri"`
+	IDTingkat      int                  `json:"id_tingkat" gorm:"not null"`
+	Tingkat        Tingkat              `json:"tingkat" gorm:"foreignKey:IDTingkat"`
+	Pertanyaan     string               `json:"pertanyaan" gorm:"type:text;not null"`
+	DragType       DragDropType         `json:"drag_type" gorm:"type:enum('ordering','matching');not null"`
+	Pembahasan     *string              `json:"pembahasan,omitempty" gorm:"type:text"`
+	IsActive       bool                 `json:"is_active" gorm:"default:true"`
+	Items          []DragItem           `json:"items" gorm:"foreignKey:IDSoalDragDrop;constraint:OnDelete:CASCADE"`
 	Slots          []DragSlot           `json:"slots" gorm:"foreignKey:IDSoalDragDrop;constraint:OnDelete:CASCADE"`
 	Gambar         []SoalDragDropGambar `json:"gambar" gorm:"foreignKey:IDSoalDragDrop;constraint:OnDelete:CASCADE"`
-	CorrectAnswers []DragCorrectAnswer `json:"-" gorm:"-"` // Loaded separately for security
-	CreatedAt      time.Time      `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt      time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
+	CorrectAnswers []DragCorrectAnswer  `json:"-" gorm:"-"` // Loaded separately for security
+	CreatedAt      time.Time            `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt      time.Time            `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 func (SoalDragDrop) TableName() string { return "soal_drag_drop" }
@@ -75,27 +76,27 @@ func (DragCorrectAnswer) TableName() string { return "drag_correct_answer" }
 
 // SoalDragDropForStudent represents a drag-drop question for students (no correct answers)
 type SoalDragDropForStudent struct {
-	ID             int          `json:"id"`
-	NomorUrut      int          `json:"nomor_urut"`
-	Pertanyaan     string       `json:"pertanyaan"`
-	DragType       DragDropType `json:"drag_type"`
-	Items          []DragItem   `json:"items"`
-	Slots          []DragSlot   `json:"slots"`
-	Materi         Materi       `json:"materi"`
-	UserAnswer     map[int]int  `json:"user_answer,omitempty"` // item_id -> slot_id
-	IsAnswered     bool         `json:"is_answered"`
+	ID         int          `json:"id"`
+	NomorUrut  int          `json:"nomor_urut"`
+	Pertanyaan string       `json:"pertanyaan"`
+	DragType   DragDropType `json:"drag_type"`
+	Items      []DragItem   `json:"items"`
+	Slots      []DragSlot   `json:"slots"`
+	Materi     Materi       `json:"materi"`
+	UserAnswer map[int]int  `json:"user_answer,omitempty"` // item_id -> slot_id
+	IsAnswered bool         `json:"is_answered"`
 }
 
 // DragDropJawabanDetail for test results
 type DragDropJawabanDetail struct {
-	NomorUrut      int          `json:"nomor_urut"`
-	Pertanyaan     string       `json:"pertanyaan"`
-	DragType       DragDropType `json:"drag_type"`
-	Items          []DragItem   `json:"items"`
-	Slots          []DragSlot   `json:"slots"`
-	UserAnswer     map[int]int  `json:"user_answer"`     // item_id -> slot_id
-	CorrectAnswer  map[int]int  `json:"correct_answer"`  // item_id -> slot_id
-	IsCorrect      bool         `json:"is_correct"`
-	IsAnswered     bool         `json:"is_answered"`
-	Pembahasan     *string      `json:"pembahasan,omitempty"`
+	NomorUrut     int          `json:"nomor_urut"`
+	Pertanyaan    string       `json:"pertanyaan"`
+	DragType      DragDropType `json:"drag_type"`
+	Items         []DragItem   `json:"items"`
+	Slots         []DragSlot   `json:"slots"`
+	UserAnswer    map[int]int  `json:"user_answer"`    // item_id -> slot_id
+	CorrectAnswer map[int]int  `json:"correct_answer"` // item_id -> slot_id
+	IsCorrect     bool         `json:"is_correct"`
+	IsAnswered    bool         `json:"is_answered"`
+	Pembahasan    *string      `json:"pembahasan,omitempty"`
 }

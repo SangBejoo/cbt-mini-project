@@ -6,10 +6,12 @@ import "time"
 type TestStatus string
 
 const (
-	TestStatusOngoing    TestStatus = "ongoing"
-	TestStatusCompleted  TestStatus = "completed"
-	TestStatusTimeout    TestStatus = "timeout"
-	TestStatusScheduled  TestStatus = "scheduled"
+	TestStatusOngoing           TestStatus = "ongoing"
+	TestStatusCompleted         TestStatus = "completed"
+	TestStatusTimeout           TestStatus = "timeout"
+	TestStatusScheduled         TestStatus = "scheduled"
+	TestStatusGradingInProgress TestStatus = "grading_in_progress"
+	TestStatusGraded            TestStatus = "graded"
 )
 
 // TestSession represents the test_session table
@@ -54,10 +56,10 @@ type TestSessionSoal struct {
 	TestSession   TestSession `json:"-" gorm:"foreignKey:IDTestSession;constraint:OnDelete:CASCADE"`
 
 	// Question type for routing
-	QuestionType QuestionType `json:"question_type" gorm:"type:enum('multiple_choice','drag_drop');default:'multiple_choice'"`
+	QuestionType QuestionType `json:"question_type" gorm:"type:enum('multiple_choice','drag_drop','essay');default:'multiple_choice'"`
 
 	// Multiple-choice question FK (nullable when QuestionType is drag_drop)
-	IDSoal *int `json:"id_soal" gorm:""`
+	IDSoal *int  `json:"id_soal" gorm:""`
 	Soal   *Soal `json:"soal" gorm:"foreignKey:IDSoal"`
 
 	// Drag-drop question FK (nullable when QuestionType is multiple_choice)
@@ -73,4 +75,3 @@ func (TestSessionSoal) TableName() string { return "test_session_soal" }
 func (tss TestSessionSoal) IsDragDrop() bool {
 	return tss.QuestionType == QuestionTypeDragDrop
 }
-

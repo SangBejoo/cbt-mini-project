@@ -299,7 +299,7 @@ func (r *historyRepositoryImpl) getMateriBreakdown(token string) ([]entity.Mater
 // Get user from session token
 func (r *historyRepositoryImpl) GetUserFromSessionToken(sessionToken string) (*entity.User, error) {
 	query := `
-		SELECT u.id, u.email, u.password_hash, u.nama, u.role, u.is_active, u.created_at, u.updated_at
+		SELECT u.id, u.email, u.password_hash, u.full_name, u.role, u.is_active, u.created_at, u.updated_at
 		FROM users u
 		JOIN test_session ts ON ts.user_id = u.id
 		WHERE ts.session_token = $1`
