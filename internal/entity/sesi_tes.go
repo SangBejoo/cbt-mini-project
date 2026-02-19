@@ -56,7 +56,7 @@ type TestSessionSoal struct {
 	TestSession   TestSession `json:"-" gorm:"foreignKey:IDTestSession;constraint:OnDelete:CASCADE"`
 
 	// Question type for routing
-	QuestionType QuestionType `json:"question_type" gorm:"type:enum('multiple_choice','drag_drop','essay');default:'multiple_choice'"`
+	QuestionType QuestionType `json:"question_type" gorm:"type:enum('multiple_choice','drag_drop','essay','multiple_choices_complex');default:'multiple_choice'"`
 
 	// Multiple-choice question FK (nullable when QuestionType is drag_drop)
 	IDSoal *int  `json:"id_soal" gorm:""`

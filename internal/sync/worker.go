@@ -410,7 +410,7 @@ func (w *SyncWorker) handleLevelUpsert(payload string) error {
 
 	slog.Debug("parsed level payload", "id", p.ID, "name", p.Name, "school_id", p.SchoolID)
 
-	if err := w.tingkatRepo.UpsertByLMSID(p.ID, p.Name); err != nil {
+	if err := w.tingkatRepo.UpsertByLMSID(p.ID, p.Name, p.SchoolID); err != nil {
 		return fmt.Errorf("failed to sync level id=%d: %w", p.ID, err)
 	}
 	slog.Info("Synced Level from LMS", "id", p.ID, "name", p.Name, "school_id", p.SchoolID)
@@ -444,6 +444,11 @@ func (w *SyncWorker) handleModuleUpsert(payload string) error {
 
 	if err := w.materiRepo.UpsertByLMSID(p.ID, p.SubjectID, p.LevelID, p.ClassID, p.Name); err != nil {
 		return fmt.Errorf("failed to sync module id=%d: %w", p.ID, err)
+	}
+	if p.SubjectID > 0 && p.ClassID > 0 {
+		if err := w.subjectRepo.UpdateClassByLMSID(p.SubjectID, p.ClassID); err != nil {
+			slog.Warn("failed to update subject class scope from module", "subject_id", p.SubjectID, "class_id", p.ClassID, "error", err)
+		}
 	}
 	slog.Info("Synced Module from LMS", "id", p.ID, "name", p.Name)
 	return nil

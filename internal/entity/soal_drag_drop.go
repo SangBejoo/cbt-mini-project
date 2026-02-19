@@ -17,6 +17,7 @@ const (
 	QuestionTypeMultipleChoice QuestionType = "multiple_choice"
 	QuestionTypeDragDrop       QuestionType = "drag_drop"
 	QuestionTypeEssay          QuestionType = "essay"
+	QuestionTypeMultipleChoicesComplex QuestionType = "multiple_choices_complex"
 )
 
 // SoalDragDrop represents a drag-and-drop question

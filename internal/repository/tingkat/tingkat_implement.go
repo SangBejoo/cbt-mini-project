@@ -85,20 +85,21 @@ func (r *tingkatRepositoryImpl) List(limit, offset int) ([]entity.Tingkat, int, 
 }
 
 // UpsertByLMSID inserts or updates a tingkat by LMS ID
-func (r *tingkatRepositoryImpl) UpsertByLMSID(lmsID int64, name string) error {
+func (r *tingkatRepositoryImpl) UpsertByLMSID(lmsID int64, name string, schoolID int64) error {
 	query := `
 		WITH updated AS (
 			UPDATE grade_levels
 			SET name = $1,
+				lms_school_id = $3,
 				is_active = true,
 				updated_at = CURRENT_TIMESTAMP
 			WHERE lms_level_id = $2
 			RETURNING id
 		)
-		INSERT INTO grade_levels (name, is_active, lms_level_id, created_at, updated_at)
-		SELECT $1, true, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+		INSERT INTO grade_levels (name, is_active, lms_level_id, lms_school_id, created_at, updated_at)
+		SELECT $1, true, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 		WHERE NOT EXISTS (SELECT 1 FROM updated)`
-	_, err := r.db.Exec(query, name, lmsID)
+	_, err := r.db.Exec(query, name, lmsID, schoolID)
 	return err
 }
 

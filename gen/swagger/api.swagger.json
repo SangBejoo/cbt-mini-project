@@ -1775,6 +1775,44 @@
         ]
       }
     },
+    "/v1/test-sessions/{sessionToken}/complex-answers": {
+      "post": {
+        "operationId": "TestSessionService_SubmitComplexAnswer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/baseSubmitComplexAnswerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionToken",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TestSessionServiceSubmitComplexAnswerBody"
+            }
+          }
+        ],
+        "tags": [
+          "TestSessionService"
+        ]
+      }
+    },
     "/v1/test-sessions/{sessionToken}/drag-drop-answers": {
       "post": {
         "operationId": "TestSessionService_SubmitDragDropAnswer",
@@ -2171,6 +2209,15 @@
             "type": "string",
             "format": "byte"
           }
+        },
+        "questionType": {
+          "$ref": "#/definitions/baseQuestionType"
+        },
+        "jawabanBenarComplex": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/baseJawabanOption"
+          }
         }
       }
     },
@@ -2217,6 +2264,21 @@
         },
         "jawabanDipilih": {
           "$ref": "#/definitions/baseJawabanOption"
+        }
+      }
+    },
+    "TestSessionServiceSubmitComplexAnswerBody": {
+      "type": "object",
+      "properties": {
+        "nomorUrut": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "jawabanDipilih": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/baseJawabanOption"
+          }
         }
       }
     },
@@ -2471,6 +2533,15 @@
           "type": "string",
           "format": "int64",
           "title": "Class scope for the question"
+        },
+        "questionType": {
+          "$ref": "#/definitions/baseQuestionType"
+        },
+        "jawabanBenarComplex": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/baseJawabanOption"
+          }
         }
       }
     },
@@ -2498,6 +2569,13 @@
           "type": "string",
           "format": "int64",
           "title": "Class scope"
+        },
+        "includeQuestionTypes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/baseQuestionType"
+          },
+          "title": "Optional type filter (defaults to all)"
         }
       }
     },
@@ -2802,6 +2880,18 @@
         },
         "feedbackTeacher": {
           "type": "string"
+        },
+        "jawabanDipilihComplex": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/baseJawabanOption"
+          }
+        },
+        "jawabanBenarComplex": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/baseJawabanOption"
+          }
         }
       }
     },
@@ -3198,6 +3288,39 @@
         },
         "essayJawaban": {
           "type": "string"
+        },
+        "mccId": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Multiple choices complex fields (only populated when question_type = MULTIPLE_CHOICES_COMPLEX)"
+        },
+        "mccPertanyaan": {
+          "type": "string"
+        },
+        "mccOpsiA": {
+          "type": "string"
+        },
+        "mccOpsiB": {
+          "type": "string"
+        },
+        "mccOpsiC": {
+          "type": "string"
+        },
+        "mccOpsiD": {
+          "type": "string"
+        },
+        "mccJawabanDipilih": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/baseJawabanOption"
+          }
+        },
+        "mccGambar": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/baseSoalGambar"
+          }
         }
       },
       "title": "Unified question for mixed test sessions"
@@ -3208,7 +3331,8 @@
         "QUESTION_TYPE_INVALID",
         "MULTIPLE_CHOICE",
         "DRAG_DROP",
-        "ESSAY"
+        "ESSAY",
+        "MULTIPLE_CHOICES_COMPLEX"
       ],
       "default": "QUESTION_TYPE_INVALID",
       "title": "Question type for mixed sessions"
@@ -3320,6 +3444,15 @@
         "lmsClassId": {
           "type": "string",
           "format": "int64"
+        },
+        "questionType": {
+          "$ref": "#/definitions/baseQuestionType"
+        },
+        "jawabanBenarComplex": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/baseJawabanOption"
+          }
         }
       },
       "title": "Full soal with answer (for admin/teacher only)"
@@ -3419,6 +3552,31 @@
         "isCorrect": {
           "type": "boolean",
           "title": "Immediate feedback"
+        },
+        "dijawabPada": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "baseSubmitComplexAnswerResponse": {
+      "type": "object",
+      "properties": {
+        "sessionToken": {
+          "type": "string"
+        },
+        "nomorUrut": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "jawabanDipilih": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/baseJawabanOption"
+          }
+        },
+        "isCorrect": {
+          "type": "boolean"
         },
         "dijawabPada": {
           "type": "string",

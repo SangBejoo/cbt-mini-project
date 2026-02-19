@@ -109,8 +109,8 @@ func (m *MockTestSessionRepo) GetByToken(token string) (*entity.TestSession, err
 	return args.Get(0).(*entity.TestSession), args.Error(1)
 }
 
-func (m *MockTestSessionRepo) AssignRandomQuestions(sessionID, idMataPelajaran, idTingkat, jumlahSoal int) error {
-	args := m.Called(sessionID, idMataPelajaran, idTingkat, jumlahSoal)
+func (m *MockTestSessionRepo) AssignRandomQuestions(sessionID, idMataPelajaran, idTingkat, jumlahSoal int, includeTypes []entity.QuestionType) error {
+	args := m.Called(sessionID, idMataPelajaran, idTingkat, jumlahSoal, includeTypes)
 	return args.Error(0)
 }
 
@@ -131,6 +131,11 @@ func (m *MockTestSessionRepo) GetQuestionByOrder(token string, nomorUrut int) (*
 }
 
 func (m *MockTestSessionRepo) SubmitAnswer(token string, nomorUrut int, jawaban entity.JawabanOption) error {
+	args := m.Called(token, nomorUrut, jawaban)
+	return args.Error(0)
+}
+
+func (m *MockTestSessionRepo) SubmitComplexAnswer(token string, nomorUrut int, jawaban []entity.JawabanOption) error {
 	args := m.Called(token, nomorUrut, jawaban)
 	return args.Error(0)
 }

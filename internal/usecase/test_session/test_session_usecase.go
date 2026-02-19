@@ -121,7 +121,7 @@ func (u *testSessionUsecaseImpl) CompleteSession(sessionToken string) (*entity.T
 }
 
 // CreateTestSession creates a new test session with random questions
-func (u *testSessionUsecaseImpl) CreateTestSession(userID, tingkatan, idMataPelajaran, durasiMenit, jumlahSoal int) (*entity.TestSession, error) {
+func (u *testSessionUsecaseImpl) CreateTestSession(userID, tingkatan, idMataPelajaran, durasiMenit, jumlahSoal int, includeTypes []entity.QuestionType) (*entity.TestSession, error) {
 	fmt.Printf("=== USECASE CreateTestSession: userID=%d, tingkatan=%d, idMataPelajaran=%d ===\n", userID, tingkatan, idMataPelajaran)
 
 	if userID < 1 || tingkatan < 1 || idMataPelajaran < 1 || durasiMenit < 1 || jumlahSoal < 1 {
@@ -172,7 +172,7 @@ func (u *testSessionUsecaseImpl) CreateTestSession(userID, tingkatan, idMataPela
 
 	// Select and assign random questions
 	fmt.Printf("=== USECASE: Assigning random questions ===\n")
-	err = u.repo.AssignRandomQuestions(session.ID, idMataPelajaran, tingkatan, jumlahSoal)
+	err = u.repo.AssignRandomQuestions(session.ID, idMataPelajaran, tingkatan, jumlahSoal, includeTypes)
 	if err != nil {
 		// Cleanup session if question assignment fails
 		u.repo.Delete(session.ID)
@@ -258,6 +258,31 @@ func (u *testSessionUsecaseImpl) GetTestQuestions(sessionToken string, nomorUrut
 		question.MCOpsiD = &soal.OpsiD
 		question.MCJawabanDipilih = jawabanDipilih
 		question.MCGambar = soal.Gambar
+
+	} else if tss.QuestionType == entity.QuestionTypeMultipleChoicesComplex && tss.IDSoal != nil {
+		soal, err := u.repo.GetQuestionByOrder(sessionToken, nomorUrut)
+		if err != nil {
+			return nil, err
+		}
+
+		var jawabanDipilihComplex []entity.JawabanOption
+		for _, ans := range answers {
+			if ans.TestSessionSoal.NomorUrut == nomorUrut && ans.QuestionType == entity.QuestionTypeMultipleChoicesComplex {
+				jawabanDipilihComplex = ans.GetJawabanDipilihComplex()
+				break
+			}
+		}
+
+		question.Materi = soal.Materi
+		question.MCCID = &soal.ID
+		question.MCCPertanyaan = &soal.Pertanyaan
+		question.MCCOpsiA = &soal.OpsiA
+		question.MCCOpsiB = &soal.OpsiB
+		question.MCCOpsiC = &soal.OpsiC
+		question.MCCOpsiD = &soal.OpsiD
+		question.MCCJawabanDipilih = jawabanDipilihComplex
+		question.MCCJawabanBenar = soal.GetJawabanBenarComplex()
+		question.MCCGambar = soal.Gambar
 
 	} else if tss.QuestionType == entity.QuestionTypeDragDrop && tss.IDSoalDragDrop != nil {
 		// Handle drag-drop question
@@ -353,6 +378,26 @@ func (u *testSessionUsecaseImpl) GetAllTestQuestions(sessionToken string) ([]ent
 			question.MCJawabanDipilih = jawabanDipilih
 			question.MCGambar = tss.Soal.Gambar
 
+		} else if tss.QuestionType == entity.QuestionTypeMultipleChoicesComplex && tss.Soal.ID > 0 {
+			var jawabanDipilihComplex []entity.JawabanOption
+			for _, ans := range answers {
+				if ans.TestSessionSoal.NomorUrut == tss.NomorUrut && ans.QuestionType == entity.QuestionTypeMultipleChoicesComplex {
+					jawabanDipilihComplex = ans.GetJawabanDipilihComplex()
+					break
+				}
+			}
+
+			question.Materi = tss.Soal.Materi
+			question.MCCID = &tss.Soal.ID
+			question.MCCPertanyaan = &tss.Soal.Pertanyaan
+			question.MCCOpsiA = &tss.Soal.OpsiA
+			question.MCCOpsiB = &tss.Soal.OpsiB
+			question.MCCOpsiC = &tss.Soal.OpsiC
+			question.MCCOpsiD = &tss.Soal.OpsiD
+			question.MCCJawabanDipilih = jawabanDipilihComplex
+			question.MCCJawabanBenar = tss.Soal.GetJawabanBenarComplex()
+			question.MCCGambar = tss.Soal.Gambar
+
 		} else if tss.QuestionType == entity.QuestionTypeDragDrop && tss.SoalDragDrop != nil && tss.SoalDragDrop.ID > 0 {
 			// Handle drag-drop question
 			var userAnswer map[int]int
@@ -412,6 +457,37 @@ func (u *testSessionUsecaseImpl) SubmitAnswer(sessionToken string, nomorUrut int
 	}
 
 	return u.repo.SubmitAnswer(sessionToken, nomorUrut, jawaban)
+}
+
+func (u *testSessionUsecaseImpl) SubmitComplexAnswer(sessionToken string, nomorUrut int, jawaban []entity.JawabanOption) error {
+	if len(jawaban) == 0 {
+		return errors.New("jawaban complex cannot be empty")
+	}
+	seen := map[entity.JawabanOption]struct{}{}
+	for _, option := range jawaban {
+		if option < entity.JawabanA || option > entity.JawabanD {
+			return errors.New("invalid jawaban complex option")
+		}
+		if _, exists := seen[option]; exists {
+			return errors.New("duplicate jawaban complex option")
+		}
+		seen[option] = struct{}{}
+	}
+
+	_, err := u.ensureSessionWritable(sessionToken)
+	if err != nil {
+		return err
+	}
+
+	tss, err := u.repo.GetTestSessionSoalByOrder(sessionToken, nomorUrut)
+	if err != nil {
+		return err
+	}
+	if tss.QuestionType != entity.QuestionTypeMultipleChoicesComplex {
+		return errors.New("this is not a complex multiple-choice question")
+	}
+
+	return u.repo.SubmitComplexAnswer(sessionToken, nomorUrut, jawaban)
 }
 
 // SubmitDragDropAnswer submits a drag-drop answer with all-or-nothing scoring
@@ -590,13 +666,21 @@ func (u *testSessionUsecaseImpl) GetTestResult(sessionToken string) (*entity.Tes
 			// Use loaded Soal info directly
 
 			detail.Pertanyaan = question.Soal.Pertanyaan
-			if question.QuestionType == entity.QuestionTypeEssay {
+			switch question.QuestionType {
+			case entity.QuestionTypeEssay:
 				detail.OpsiA = ""
 				detail.OpsiB = ""
 				detail.OpsiC = ""
 				detail.OpsiD = ""
 				detail.JawabanBenar = ""
-			} else {
+			case entity.QuestionTypeMultipleChoicesComplex:
+				detail.OpsiA = question.Soal.OpsiA
+				detail.OpsiB = question.Soal.OpsiB
+				detail.OpsiC = question.Soal.OpsiC
+				detail.OpsiD = question.Soal.OpsiD
+				detail.JawabanBenar = ""
+				detail.JawabanBenarComplex = question.Soal.GetJawabanBenarComplex()
+			default:
 				detail.OpsiA = question.Soal.OpsiA
 				detail.OpsiB = question.Soal.OpsiB
 				detail.OpsiC = question.Soal.OpsiC
@@ -608,13 +692,18 @@ func (u *testSessionUsecaseImpl) GetTestResult(sessionToken string) (*entity.Tes
 
 			// Add answer details if exists
 			if ans, exists := answersMap[question.NomorUrut]; exists {
-				if question.QuestionType == entity.QuestionTypeEssay {
+				switch question.QuestionType {
+				case entity.QuestionTypeEssay:
 					detail.JawabanEssay = ans.JawabanEssay
 					detail.NilaiEssay = ans.NilaiEssay
 					detail.FeedbackTeacher = ans.FeedbackTeacher
 					detail.IsAnswered = ans.JawabanEssay != nil && strings.TrimSpace(*ans.JawabanEssay) != ""
 					detail.IsCorrect = ans.NilaiEssay != nil && *ans.NilaiEssay >= 60
-				} else {
+				case entity.QuestionTypeMultipleChoicesComplex:
+					detail.JawabanDipilihComplex = ans.GetJawabanDipilihComplex()
+					detail.IsCorrect = ans.IsCorrect
+					detail.IsAnswered = len(detail.JawabanDipilihComplex) > 0
+				default:
 					detail.JawabanDipilih = ans.JawabanDipilih
 					detail.IsCorrect = ans.IsCorrect
 					detail.IsAnswered = ans.JawabanDipilih != nil

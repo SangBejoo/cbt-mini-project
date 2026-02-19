@@ -27,6 +27,33 @@ func NewSoalUsecase(repo test_soal.SoalRepository, config *config.Main) SoalUsec
 	return &soalUsecaseImpl{repo: repo, config: config}
 }
 
+func normalizeQuestionType(questionType entity.QuestionType, pembahasan string) entity.QuestionType {
+	if questionType == entity.QuestionTypeMultipleChoice || questionType == entity.QuestionTypeEssay || questionType == entity.QuestionTypeMultipleChoicesComplex {
+		return questionType
+	}
+	if strings.HasPrefix(strings.TrimSpace(pembahasan), "[ESSAY]") {
+		return entity.QuestionTypeEssay
+	}
+	return entity.QuestionTypeMultipleChoice
+}
+
+func validateComplexOptions(options []entity.JawabanOption) error {
+	if len(options) < 2 {
+		return errors.New("complex multiple-choice requires at least 2 correct answers")
+	}
+	seen := map[entity.JawabanOption]struct{}{}
+	for _, option := range options {
+		if option < entity.JawabanA || option > entity.JawabanD {
+			return errors.New("invalid complex answer option")
+		}
+		if _, exists := seen[option]; exists {
+			return errors.New("duplicate complex answer option")
+		}
+		seen[option] = struct{}{}
+	}
+	return nil
+}
+
 // saveImages saves multiple image files and returns list of SoalGambar entities
 func (u *soalUsecaseImpl) saveImages(imageFilesBytes [][]byte) ([]entity.SoalGambar, error) {
 	var gambar []entity.SoalGambar
@@ -77,17 +104,24 @@ func (u *soalUsecaseImpl) saveImages(imageFilesBytes [][]byte) ([]entity.SoalGam
 }
 
 // CreateSoal creates a new soal with multiple images
-func (u *soalUsecaseImpl) CreateSoal(idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD, pembahasan string, jawabanBenar entity.JawabanOption, imageFilesBytes [][]byte) (*entity.Soal, error) {
-	isEssay := strings.HasPrefix(strings.TrimSpace(pembahasan), "[ESSAY]")
+func (u *soalUsecaseImpl) CreateSoal(idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD, pembahasan string, questionType entity.QuestionType, jawabanBenar entity.JawabanOption, jawabanBenarComplex []entity.JawabanOption, imageFilesBytes [][]byte) (*entity.Soal, error) {
+	questionType = normalizeQuestionType(questionType, pembahasan)
 	if pertanyaan == "" {
 		return nil, errors.New("pertanyaan must be filled")
 	}
-	if !isEssay {
+	if questionType != entity.QuestionTypeEssay {
 		if opsiA == "" || opsiB == "" || opsiC == "" || opsiD == "" {
 			return nil, errors.New("all fields must be filled")
 		}
+	}
+	if questionType == entity.QuestionTypeMultipleChoice {
 		if jawabanBenar < entity.JawabanA || jawabanBenar > entity.JawabanD {
 			return nil, errors.New("invalid jawaban benar")
+		}
+	}
+	if questionType == entity.QuestionTypeMultipleChoicesComplex {
+		if err := validateComplexOptions(jawabanBenarComplex); err != nil {
+			return nil, err
 		}
 	}
 
@@ -100,7 +134,7 @@ func (u *soalUsecaseImpl) CreateSoal(idMateri, idTingkat int, pertanyaan, opsiA,
 		IDMateri:     idMateri,
 		IDTingkat:    idTingkat,
 		Pertanyaan:   pertanyaan,
-		QuestionType: entity.QuestionTypeMultipleChoice,
+		QuestionType: questionType,
 		OpsiA:        opsiA,
 		OpsiB:        opsiB,
 		OpsiC:        opsiC,
@@ -109,8 +143,7 @@ func (u *soalUsecaseImpl) CreateSoal(idMateri, idTingkat int, pertanyaan, opsiA,
 		Pembahasan:   &pembahasan,
 		Gambar:       gambar,
 	}
-	if isEssay {
-		s.QuestionType = entity.QuestionTypeEssay
+	if questionType == entity.QuestionTypeEssay {
 		essayKey := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(pembahasan), "[ESSAY]"))
 		if essayKey != "" {
 			s.JawabanEssayKey = &essayKey
@@ -119,6 +152,12 @@ func (u *soalUsecaseImpl) CreateSoal(idMateri, idTingkat int, pertanyaan, opsiA,
 		s.OpsiB = "-"
 		s.OpsiC = "-"
 		s.OpsiD = "-"
+		s.JawabanBenar = entity.JawabanA
+	}
+	if questionType == entity.QuestionTypeMultipleChoicesComplex {
+		if err := s.SetJawabanBenarComplex(jawabanBenarComplex); err != nil {
+			return nil, err
+		}
 		s.JawabanBenar = entity.JawabanA
 	}
 	err = u.repo.Create(s)
@@ -134,17 +173,24 @@ func (u *soalUsecaseImpl) GetSoal(id int) (*entity.Soal, error) {
 }
 
 // UpdateSoal updates existing with multiple images
-func (u *soalUsecaseImpl) UpdateSoal(id, idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD, pembahasan string, jawabanBenar entity.JawabanOption, imageFilesBytes [][]byte) (*entity.Soal, error) {
-	isEssay := strings.HasPrefix(strings.TrimSpace(pembahasan), "[ESSAY]")
+func (u *soalUsecaseImpl) UpdateSoal(id, idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD, pembahasan string, questionType entity.QuestionType, jawabanBenar entity.JawabanOption, jawabanBenarComplex []entity.JawabanOption, imageFilesBytes [][]byte) (*entity.Soal, error) {
+	questionType = normalizeQuestionType(questionType, pembahasan)
 	if pertanyaan == "" {
 		return nil, errors.New("pertanyaan must be filled")
 	}
-	if !isEssay {
+	if questionType != entity.QuestionTypeEssay {
 		if opsiA == "" || opsiB == "" || opsiC == "" || opsiD == "" {
 			return nil, errors.New("all fields must be filled")
 		}
+	}
+	if questionType == entity.QuestionTypeMultipleChoice {
 		if jawabanBenar < entity.JawabanA || jawabanBenar > entity.JawabanD {
 			return nil, errors.New("invalid jawaban benar")
+		}
+	}
+	if questionType == entity.QuestionTypeMultipleChoicesComplex {
+		if err := validateComplexOptions(jawabanBenarComplex); err != nil {
+			return nil, err
 		}
 	}
 
@@ -170,8 +216,9 @@ func (u *soalUsecaseImpl) UpdateSoal(id, idMateri, idTingkat int, pertanyaan, op
 	s.OpsiD = opsiD
 	s.JawabanBenar = jawabanBenar
 	s.Pembahasan = &pembahasan
-	if isEssay {
-		s.QuestionType = entity.QuestionTypeEssay
+	s.QuestionType = questionType
+	switch questionType {
+	case entity.QuestionTypeEssay:
 		essayKey := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(pembahasan), "[ESSAY]"))
 		if essayKey != "" {
 			s.JawabanEssayKey = &essayKey
@@ -183,9 +230,16 @@ func (u *soalUsecaseImpl) UpdateSoal(id, idMateri, idTingkat int, pertanyaan, op
 		s.OpsiC = "-"
 		s.OpsiD = "-"
 		s.JawabanBenar = entity.JawabanA
-	} else {
-		s.QuestionType = entity.QuestionTypeMultipleChoice
+		s.JawabanBenarComplex = nil
+	case entity.QuestionTypeMultipleChoicesComplex:
+		if err := s.SetJawabanBenarComplex(jawabanBenarComplex); err != nil {
+			return nil, err
+		}
 		s.JawabanEssayKey = nil
+		s.JawabanBenar = entity.JawabanA
+	default:
+		s.JawabanEssayKey = nil
+		s.JawabanBenarComplex = nil
 	}
 	err = u.repo.Update(s)
 	if err != nil {

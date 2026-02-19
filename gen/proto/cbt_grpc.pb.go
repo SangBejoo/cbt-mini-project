@@ -1422,6 +1422,7 @@ const (
 	TestSessionService_GetTestSession_FullMethodName          = "/base.TestSessionService/GetTestSession"
 	TestSessionService_GetTestQuestions_FullMethodName        = "/base.TestSessionService/GetTestQuestions"
 	TestSessionService_SubmitAnswer_FullMethodName            = "/base.TestSessionService/SubmitAnswer"
+	TestSessionService_SubmitComplexAnswer_FullMethodName     = "/base.TestSessionService/SubmitComplexAnswer"
 	TestSessionService_SubmitDragDropAnswer_FullMethodName    = "/base.TestSessionService/SubmitDragDropAnswer"
 	TestSessionService_SubmitEssayAnswer_FullMethodName       = "/base.TestSessionService/SubmitEssayAnswer"
 	TestSessionService_ClearAnswer_FullMethodName             = "/base.TestSessionService/ClearAnswer"
@@ -1443,6 +1444,7 @@ type TestSessionServiceClient interface {
 	// Test execution (NEW - critical!)
 	GetTestQuestions(ctx context.Context, in *GetTestQuestionsRequest, opts ...grpc.CallOption) (*TestQuestionsResponse, error)
 	SubmitAnswer(ctx context.Context, in *SubmitAnswerRequest, opts ...grpc.CallOption) (*SubmitAnswerResponse, error)
+	SubmitComplexAnswer(ctx context.Context, in *SubmitComplexAnswerRequest, opts ...grpc.CallOption) (*SubmitComplexAnswerResponse, error)
 	SubmitDragDropAnswer(ctx context.Context, in *SubmitDragDropAnswerRequest, opts ...grpc.CallOption) (*SubmitDragDropAnswerResponse, error)
 	SubmitEssayAnswer(ctx context.Context, in *SubmitEssayAnswerRequest, opts ...grpc.CallOption) (*SubmitEssayAnswerResponse, error)
 	ClearAnswer(ctx context.Context, in *ClearAnswerRequest, opts ...grpc.CallOption) (*ClearAnswerResponse, error)
@@ -1499,6 +1501,16 @@ func (c *testSessionServiceClient) SubmitAnswer(ctx context.Context, in *SubmitA
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SubmitAnswerResponse)
 	err := c.cc.Invoke(ctx, TestSessionService_SubmitAnswer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testSessionServiceClient) SubmitComplexAnswer(ctx context.Context, in *SubmitComplexAnswerRequest, opts ...grpc.CallOption) (*SubmitComplexAnswerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubmitComplexAnswerResponse)
+	err := c.cc.Invoke(ctx, TestSessionService_SubmitComplexAnswer_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1605,6 +1617,7 @@ type TestSessionServiceServer interface {
 	// Test execution (NEW - critical!)
 	GetTestQuestions(context.Context, *GetTestQuestionsRequest) (*TestQuestionsResponse, error)
 	SubmitAnswer(context.Context, *SubmitAnswerRequest) (*SubmitAnswerResponse, error)
+	SubmitComplexAnswer(context.Context, *SubmitComplexAnswerRequest) (*SubmitComplexAnswerResponse, error)
 	SubmitDragDropAnswer(context.Context, *SubmitDragDropAnswerRequest) (*SubmitDragDropAnswerResponse, error)
 	SubmitEssayAnswer(context.Context, *SubmitEssayAnswerRequest) (*SubmitEssayAnswerResponse, error)
 	ClearAnswer(context.Context, *ClearAnswerRequest) (*ClearAnswerResponse, error)
@@ -1638,6 +1651,9 @@ func (UnimplementedTestSessionServiceServer) GetTestQuestions(context.Context, *
 }
 func (UnimplementedTestSessionServiceServer) SubmitAnswer(context.Context, *SubmitAnswerRequest) (*SubmitAnswerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitAnswer not implemented")
+}
+func (UnimplementedTestSessionServiceServer) SubmitComplexAnswer(context.Context, *SubmitComplexAnswerRequest) (*SubmitComplexAnswerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SubmitComplexAnswer not implemented")
 }
 func (UnimplementedTestSessionServiceServer) SubmitDragDropAnswer(context.Context, *SubmitDragDropAnswerRequest) (*SubmitDragDropAnswerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitDragDropAnswer not implemented")
@@ -1755,6 +1771,24 @@ func _TestSessionService_SubmitAnswer_Handler(srv interface{}, ctx context.Conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TestSessionServiceServer).SubmitAnswer(ctx, req.(*SubmitAnswerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestSessionService_SubmitComplexAnswer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubmitComplexAnswerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestSessionServiceServer).SubmitComplexAnswer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TestSessionService_SubmitComplexAnswer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestSessionServiceServer).SubmitComplexAnswer(ctx, req.(*SubmitComplexAnswerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1943,6 +1977,10 @@ var TestSessionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SubmitAnswer",
 			Handler:    _TestSessionService_SubmitAnswer_Handler,
+		},
+		{
+			MethodName: "SubmitComplexAnswer",
+			Handler:    _TestSessionService_SubmitComplexAnswer_Handler,
 		},
 		{
 			MethodName: "SubmitDragDropAnswer",

@@ -16,7 +16,9 @@ type JawabanSiswa struct {
 	JawabanDipilih *JawabanOption `json:"jawaban_dipilih" gorm:"type:char(1)"`
 
 	// Question type for routing
-	QuestionType QuestionType `json:"question_type" gorm:"type:enum('multiple_choice','drag_drop','essay');default:'multiple_choice'"`
+	QuestionType QuestionType `json:"question_type" gorm:"type:enum('multiple_choice','drag_drop','essay','multiple_choices_complex');default:'multiple_choice'"`
+
+	JawabanDipilihComplex *string `json:"jawaban_dipilih_complex,omitempty" gorm:"column:jawaban_dipilih_complex;type:json"`
 
 	// Drag-drop answer (for DRAG_DROP questions) - stored as JSON
 	JawabanDragDrop *string  `json:"jawaban_drag_drop,omitempty" gorm:"type:json"`
@@ -75,4 +77,39 @@ type JawabanDetail struct {
 	JawabanEssay      *string       `json:"jawaban_essay,omitempty"`
 	NilaiEssay        *float64      `json:"nilai_essay,omitempty"`
 	FeedbackTeacher   *string       `json:"feedback_teacher,omitempty"`
+	JawabanDipilihComplex []JawabanOption `json:"jawaban_dipilih_complex,omitempty"`
+	JawabanBenarComplex []JawabanOption `json:"jawaban_benar_complex,omitempty"`
+}
+
+func (j *JawabanSiswa) GetJawabanDipilihComplex() []JawabanOption {
+	if j.JawabanDipilihComplex == nil {
+		return nil
+	}
+	var raw []string
+	if err := json.Unmarshal([]byte(*j.JawabanDipilihComplex), &raw); err != nil {
+		return nil
+	}
+	answers := make([]JawabanOption, 0, len(raw))
+	for _, option := range raw {
+		answers = append(answers, JawabanOption(option))
+	}
+	return answers
+}
+
+func (j *JawabanSiswa) SetJawabanDipilihComplex(options []JawabanOption) error {
+	if len(options) == 0 {
+		j.JawabanDipilihComplex = nil
+		return nil
+	}
+	raw := make([]string, 0, len(options))
+	for _, option := range options {
+		raw = append(raw, string(option))
+	}
+	bytes, err := json.Marshal(raw)
+	if err != nil {
+		return err
+	}
+	encoded := string(bytes)
+	j.JawabanDipilihComplex = &encoded
+	return nil
 }

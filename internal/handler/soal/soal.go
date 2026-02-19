@@ -23,7 +23,9 @@ func NewSoalHandler(usecase soal.SoalUsecase) base.SoalServiceServer {
 
 // CreateSoal creates a new soal with multiple images
 func (h *soalHandler) CreateSoal(ctx context.Context, req *base.CreateSoalRequest) (*base.SoalResponse, error) {
-	jawabanBenar := entity.JawabanOption(req.JawabanBenar.String()[0])
+	jawabanBenar := toEntityJawabanOption(req.JawabanBenar)
+	questionType := toEntityQuestionType(req.QuestionType)
+	jawabanBenarComplex := toEntityJawabanOptions(req.JawabanBenarComplex)
 	
 	// Handle multiple image_bytes from repeated field
 	var imageFilesBytes [][]byte
@@ -31,7 +33,7 @@ func (h *soalHandler) CreateSoal(ctx context.Context, req *base.CreateSoalReques
 		imageFilesBytes = req.ImageBytes
 	}
 	
-	s, err := h.usecase.CreateSoal(int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, req.Pembahasan, jawabanBenar, imageFilesBytes)
+	s, err := h.usecase.CreateSoal(int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, req.Pembahasan, questionType, jawabanBenar, jawabanBenarComplex, imageFilesBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -81,6 +83,8 @@ func (h *soalHandler) CreateSoal(ctx context.Context, req *base.CreateSoalReques
 			OpsiC:        s.OpsiC,
 			OpsiD:        s.OpsiD,
 			JawabanBenar: base.JawabanOption(base.JawabanOption_value[string(s.JawabanBenar)]),
+			QuestionType: toProtoQuestionType(s.QuestionType),
+			JawabanBenarComplex: toProtoJawabanOptions(s.GetJawabanBenarComplex()),
 			Pembahasan: func() string {
 				if s.Pembahasan != nil {
 					return *s.Pembahasan
@@ -114,6 +118,8 @@ func (h *soalHandler) GetSoal(ctx context.Context, req *base.GetSoalRequest) (*b
 			OpsiC:         s.OpsiC,
 			OpsiD:         s.OpsiD,
 			JawabanBenar:  base.JawabanOption(base.JawabanOption_value[string(s.JawabanBenar)]),
+			QuestionType: toProtoQuestionType(s.QuestionType),
+			JawabanBenarComplex: toProtoJawabanOptions(s.GetJawabanBenarComplex()),
 			Pembahasan: func() string {
 				if s.Pembahasan != nil {
 					return *s.Pembahasan
@@ -201,7 +207,9 @@ func (h *soalHandler) UpdateImageInSoal(ctx context.Context, req *base.UpdateIma
 
 // UpdateSoal updates soal with multiple images
 func (h *soalHandler) UpdateSoal(ctx context.Context, req *base.UpdateSoalRequest) (*base.SoalResponse, error) {
-	jawabanBenar := entity.JawabanOption(req.JawabanBenar.String()[0])
+	jawabanBenar := toEntityJawabanOption(req.JawabanBenar)
+	questionType := toEntityQuestionType(req.QuestionType)
+	jawabanBenarComplex := toEntityJawabanOptions(req.JawabanBenarComplex)
 	
 	// Handle multiple image_bytes from repeated field
 	var imageFilesBytes [][]byte
@@ -209,7 +217,7 @@ func (h *soalHandler) UpdateSoal(ctx context.Context, req *base.UpdateSoalReques
 		imageFilesBytes = req.ImageBytes
 	}
 	
-	s, err := h.usecase.UpdateSoal(int(req.Id), int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, req.Pembahasan, jawabanBenar, imageFilesBytes)
+	s, err := h.usecase.UpdateSoal(int(req.Id), int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, req.Pembahasan, questionType, jawabanBenar, jawabanBenarComplex, imageFilesBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -239,6 +247,8 @@ func (h *soalHandler) UpdateSoal(ctx context.Context, req *base.UpdateSoalReques
 			OpsiC:        s.OpsiC,
 			OpsiD:        s.OpsiD,
 			JawabanBenar: base.JawabanOption(base.JawabanOption_value[string(s.JawabanBenar)]),
+			QuestionType: toProtoQuestionType(s.QuestionType),
+			JawabanBenarComplex: toProtoJawabanOptions(s.GetJawabanBenarComplex()),
 			Pembahasan: func() string {
 				if s.Pembahasan != nil {
 					return *s.Pembahasan
@@ -299,6 +309,8 @@ func (h *soalHandler) ListSoal(ctx context.Context, req *base.ListSoalRequest) (
 			OpsiC:         s.OpsiC,
 			OpsiD:         s.OpsiD,
 			JawabanBenar:  base.JawabanOption(base.JawabanOption_value[string(s.JawabanBenar)]),
+			QuestionType: toProtoQuestionType(s.QuestionType),
+			JawabanBenarComplex: toProtoJawabanOptions(s.GetJawabanBenarComplex()),
 			Pembahasan: func() string {
 				if s.Pembahasan != nil {
 					return *s.Pembahasan
@@ -377,4 +389,78 @@ func (h *soalHandler) GetQuestionCountsByTopic(ctx context.Context, req *emptypb
 	return &base.QuestionCountsResponse{
 		Counts: protoCounts,
 	}, nil
+}
+
+func toEntityJawabanOption(option base.JawabanOption) entity.JawabanOption {
+	switch option {
+	case base.JawabanOption_A:
+		return entity.JawabanA
+	case base.JawabanOption_B:
+		return entity.JawabanB
+	case base.JawabanOption_C:
+		return entity.JawabanC
+	case base.JawabanOption_D:
+		return entity.JawabanD
+	default:
+		return ""
+	}
+}
+
+func toEntityJawabanOptions(options []base.JawabanOption) []entity.JawabanOption {
+	result := make([]entity.JawabanOption, 0, len(options))
+	for _, option := range options {
+		mapped := toEntityJawabanOption(option)
+		if mapped == "" {
+			continue
+		}
+		result = append(result, mapped)
+	}
+	return result
+}
+
+func toEntityQuestionType(questionType base.QuestionType) entity.QuestionType {
+	switch questionType {
+	case base.QuestionType_MULTIPLE_CHOICE:
+		return entity.QuestionTypeMultipleChoice
+	case base.QuestionType_DRAG_DROP:
+		return entity.QuestionTypeDragDrop
+	case base.QuestionType_ESSAY:
+		return entity.QuestionTypeEssay
+	case base.QuestionType_MULTIPLE_CHOICES_COMPLEX:
+		return entity.QuestionTypeMultipleChoicesComplex
+	default:
+		return entity.QuestionType("")
+	}
+}
+
+func toProtoQuestionType(questionType entity.QuestionType) base.QuestionType {
+	switch questionType {
+	case entity.QuestionTypeMultipleChoice:
+		return base.QuestionType_MULTIPLE_CHOICE
+	case entity.QuestionTypeDragDrop:
+		return base.QuestionType_DRAG_DROP
+	case entity.QuestionTypeEssay:
+		return base.QuestionType_ESSAY
+	case entity.QuestionTypeMultipleChoicesComplex:
+		return base.QuestionType_MULTIPLE_CHOICES_COMPLEX
+	default:
+		return base.QuestionType_QUESTION_TYPE_INVALID
+	}
+}
+
+func toProtoJawabanOptions(options []entity.JawabanOption) []base.JawabanOption {
+	result := make([]base.JawabanOption, 0, len(options))
+	for _, option := range options {
+		switch option {
+		case entity.JawabanA:
+			result = append(result, base.JawabanOption_A)
+		case entity.JawabanB:
+			result = append(result, base.JawabanOption_B)
+		case entity.JawabanC:
+			result = append(result, base.JawabanOption_C)
+		case entity.JawabanD:
+			result = append(result, base.JawabanOption_D)
+		}
+	}
+	return result
 }

@@ -26,5 +26,6 @@ type MataPelajaranRepository interface {
 
 	// LMS sync methods
 	UpsertByLMSID(lmsID int64, name string, schoolID int64) error
+	UpdateClassByLMSID(lmsID int64, classID int64) error
 	DeleteByLMSID(lmsID int64) error
 }

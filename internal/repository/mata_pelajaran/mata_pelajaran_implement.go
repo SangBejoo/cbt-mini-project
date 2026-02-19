@@ -110,6 +110,16 @@ func (r *mataPelajaranRepositoryImpl) UpsertByLMSID(lmsID int64, name string, sc
 	return err
 }
 
+func (r *mataPelajaranRepositoryImpl) UpdateClassByLMSID(lmsID int64, classID int64) error {
+	query := `
+		UPDATE subjects
+		SET lms_class_id = $2,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE lms_subject_id = $1`
+	_, err := r.db.Exec(query, lmsID, classID)
+	return err
+}
+
 // DeleteByLMSID soft deletes by LMS ID
 func (r *mataPelajaranRepositoryImpl) DeleteByLMSID(lmsID int64) error {
 	query := `UPDATE subjects SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE lms_subject_id = $1`

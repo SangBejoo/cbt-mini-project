@@ -74,7 +74,21 @@ func (h *testSessionHandler) CreateTestSession(ctx context.Context, req *base.Cr
 		jumlahSoal = 20 // fallback default
 	}
 
-	session, err := h.usecase.CreateTestSession(int(userID), int(req.IdTingkat), int(req.IdMataPelajaran), durasiMenit, jumlahSoal)
+	includeTypes := make([]entity.QuestionType, 0, len(req.IncludeQuestionTypes))
+	for _, questionType := range req.IncludeQuestionTypes {
+		switch questionType {
+		case base.QuestionType_MULTIPLE_CHOICE:
+			includeTypes = append(includeTypes, entity.QuestionTypeMultipleChoice)
+		case base.QuestionType_DRAG_DROP:
+			includeTypes = append(includeTypes, entity.QuestionTypeDragDrop)
+		case base.QuestionType_ESSAY:
+			includeTypes = append(includeTypes, entity.QuestionTypeEssay)
+		case base.QuestionType_MULTIPLE_CHOICES_COMPLEX:
+			includeTypes = append(includeTypes, entity.QuestionTypeMultipleChoicesComplex)
+		}
+	}
+
+	session, err := h.usecase.CreateTestSession(int(userID), int(req.IdTingkat), int(req.IdMataPelajaran), durasiMenit, jumlahSoal, includeTypes)
 	if err != nil {
 		fmt.Printf("=== HANDLER: CreateTestSession FAILED: %v ===\n", err)
 		return nil, status.Error(codes.Internal, err.Error())
@@ -219,6 +233,27 @@ func (h *testSessionHandler) GetTestQuestions(ctx context.Context, req *base.Get
 			protoQuestion.McGambar = convertSoalGambarToProto(q.MCGambar)
 		}
 
+		if q.QuestionType == entity.QuestionTypeMultipleChoicesComplex && q.MCCID != nil {
+			protoQuestion.MccId = int32(*q.MCCID)
+			if q.MCCPertanyaan != nil {
+				protoQuestion.MccPertanyaan = *q.MCCPertanyaan
+			}
+			if q.MCCOpsiA != nil {
+				protoQuestion.MccOpsiA = *q.MCCOpsiA
+			}
+			if q.MCCOpsiB != nil {
+				protoQuestion.MccOpsiB = *q.MCCOpsiB
+			}
+			if q.MCCOpsiC != nil {
+				protoQuestion.MccOpsiC = *q.MCCOpsiC
+			}
+			if q.MCCOpsiD != nil {
+				protoQuestion.MccOpsiD = *q.MCCOpsiD
+			}
+			protoQuestion.MccJawabanDipilih = toProtoJawabanOptions(q.MCCJawabanDipilih)
+			protoQuestion.MccGambar = convertSoalGambarToProto(q.MCCGambar)
+		}
+
 		// Handle drag-drop fields
 		if q.QuestionType == entity.QuestionTypeDragDrop && q.DDID != nil {
 			protoQuestion.DdId = int32(*q.DDID)
@@ -310,6 +345,36 @@ func (h *testSessionHandler) SubmitAnswer(ctx context.Context, req *base.SubmitA
 		NomorUrut:      req.NomorUrut,
 		JawabanDipilih: req.JawabanDipilih,
 		IsCorrect:      true, // TODO: get from usecase
+		DijawabPada:    timestamppb.Now(),
+	}, nil
+}
+
+func (h *testSessionHandler) SubmitComplexAnswer(ctx context.Context, req *base.SubmitComplexAnswerRequest) (*base.SubmitComplexAnswerResponse, error) {
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+	}
+
+	session, err := h.usecase.GetTestSession(req.SessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	if session.UserID == nil || *session.UserID != int(user.Id) {
+		return nil, status.Error(codes.PermissionDenied, "you do not have permission to access this session")
+	}
+
+	jawaban := toEntityJawabanOptions(req.JawabanDipilih)
+	err = h.usecase.SubmitComplexAnswer(req.SessionToken, int(req.NomorUrut), jawaban)
+	if err != nil {
+		return nil, err
+	}
+
+	return &base.SubmitComplexAnswerResponse{
+		SessionToken:   req.SessionToken,
+		NomorUrut:      req.NomorUrut,
+		JawabanDipilih: req.JawabanDipilih,
+		IsCorrect:      true,
 		DijawabPada:    timestamppb.Now(),
 	}, nil
 }
@@ -505,6 +570,11 @@ func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTes
 			}
 		}
 
+		if d.QuestionType == entity.QuestionTypeMultipleChoicesComplex {
+			jawabanDetail.JawabanDipilihComplex = toProtoJawabanOptions(d.JawabanDipilihComplex)
+			jawabanDetail.JawabanBenarComplex = toProtoJawabanOptions(d.JawabanBenarComplex)
+		}
+
 		if d.QuestionType == entity.QuestionTypeDragDrop {
 			if d.DragType != nil {
 				jawabanDetail.DragType = base.DragDropType(base.DragDropType_value[strings.ToUpper(string(*d.DragType))])
@@ -542,6 +612,40 @@ func (h *testSessionHandler) GetTestResult(ctx context.Context, req *base.GetTes
 		DetailJawaban: jawabanDetails,
 		Tingkat:       protoTingkat,
 	}, nil
+}
+
+func toEntityJawabanOptions(options []base.JawabanOption) []entity.JawabanOption {
+	result := make([]entity.JawabanOption, 0, len(options))
+	for _, option := range options {
+		switch option {
+		case base.JawabanOption_A:
+			result = append(result, entity.JawabanA)
+		case base.JawabanOption_B:
+			result = append(result, entity.JawabanB)
+		case base.JawabanOption_C:
+			result = append(result, entity.JawabanC)
+		case base.JawabanOption_D:
+			result = append(result, entity.JawabanD)
+		}
+	}
+	return result
+}
+
+func toProtoJawabanOptions(options []entity.JawabanOption) []base.JawabanOption {
+	result := make([]base.JawabanOption, 0, len(options))
+	for _, option := range options {
+		switch option {
+		case entity.JawabanA:
+			result = append(result, base.JawabanOption_A)
+		case entity.JawabanB:
+			result = append(result, base.JawabanOption_B)
+		case entity.JawabanC:
+			result = append(result, base.JawabanOption_C)
+		case entity.JawabanD:
+			result = append(result, base.JawabanOption_D)
+		}
+	}
+	return result
 }
 
 func (h *testSessionHandler) GradeEssayAnswer(ctx context.Context, req *base.GradeEssayAnswerRequest) (*base.GradeEssayAnswerResponse, error) {

@@ -34,6 +34,7 @@ enum QuestionType {
     MULTIPLE_CHOICE = 1;
     DRAG_DROP = 2;
     ESSAY = 3;
+    MULTIPLE_CHOICES_COMPLEX = 4;
 }
 
 // Drag-drop question subtype
@@ -129,6 +130,7 @@ service TestSessionService {
     // Test execution (NEW - critical!)
     rpc GetTestQuestions(GetTestQuestionsRequest) returns (TestQuestionsResponse) {};
     rpc SubmitAnswer(SubmitAnswerRequest) returns (SubmitAnswerResponse) {};
+    rpc SubmitComplexAnswer(SubmitComplexAnswerRequest) returns (SubmitComplexAnswerResponse) {};
     rpc SubmitDragDropAnswer(SubmitDragDropAnswerRequest) returns (SubmitDragDropAnswerResponse) {};
     rpc SubmitEssayAnswer(SubmitEssayAnswerRequest) returns (SubmitEssayAnswerResponse) {};
     rpc ClearAnswer(ClearAnswerRequest) returns (ClearAnswerResponse) {};
@@ -522,6 +524,8 @@ message SoalFull {
     string pembahasan = 9;
     repeated SoalGambar gambar = 10;
     int64 lms_class_id = 11;
+    QuestionType question_type = 12;
+    repeated JawabanOption jawaban_benar_complex = 13;
 }
 
 // Soal for student (no answer exposed)
@@ -551,6 +555,8 @@ message CreateSoalRequest {
     string pembahasan = 9;
     repeated bytes image_bytes = 10;
     int64 lms_class_id = 11;  // Class scope for the question
+    QuestionType question_type = 12;
+    repeated JawabanOption jawaban_benar_complex = 13;
 }
 
 message GetSoalRequest {
@@ -569,6 +575,8 @@ message UpdateSoalRequest {
     JawabanOption jawaban_benar = 9;
     string pembahasan = 10;
     repeated bytes image_bytes = 11;
+    QuestionType question_type = 12;
+    repeated JawabanOption jawaban_benar_complex = 13;
 }
 
 message DeleteSoalRequest {
@@ -704,6 +712,16 @@ message QuestionForStudent {
     int32 essay_id = 19;
     string essay_pertanyaan = 20;
     string essay_jawaban = 21;
+
+    // Multiple choices complex fields (only populated when question_type = MULTIPLE_CHOICES_COMPLEX)
+    int32 mcc_id = 22;
+    string mcc_pertanyaan = 23;
+    string mcc_opsi_a = 24;
+    string mcc_opsi_b = 25;
+    string mcc_opsi_c = 26;
+    string mcc_opsi_d = 27;
+    repeated JawabanOption mcc_jawaban_dipilih = 28;
+    repeated SoalGambar mcc_gambar = 29;
 }
 
 message CreateSoalDragDropRequest {
@@ -783,6 +801,7 @@ message CreateTestSessionRequest {
     int32 durasi_menit = 3;
     int32 jumlah_soal = 4;  // ADDED - critical!
     int64 lms_class_id = 5;  // Class scope
+    repeated QuestionType include_question_types = 6;  // Optional type filter (defaults to all)
 }
 
 message GetTestSessionRequest {
@@ -835,6 +854,20 @@ message SubmitAnswerResponse {
     int32 nomor_urut = 2;
     JawabanOption jawaban_dipilih = 3;
     bool is_correct = 4;  // Immediate feedback
+    google.protobuf.Timestamp dijawab_pada = 5;
+}
+
+message SubmitComplexAnswerRequest {
+    string session_token = 1;
+    int32 nomor_urut = 2;
+    repeated JawabanOption jawaban_dipilih = 3;
+}
+
+message SubmitComplexAnswerResponse {
+    string session_token = 1;
+    int32 nomor_urut = 2;
+    repeated JawabanOption jawaban_dipilih = 3;
+    bool is_correct = 4;
     google.protobuf.Timestamp dijawab_pada = 5;
 }
 
@@ -910,6 +943,8 @@ message JawabanDetail {
     string jawaban_essay = 19;
     double nilai_essay = 20;
     string feedback_teacher = 21;
+    repeated JawabanOption jawaban_dipilih_complex = 22;
+    repeated JawabanOption jawaban_benar_complex = 23;
 }
 
 message GradeEssayAnswerRequest {

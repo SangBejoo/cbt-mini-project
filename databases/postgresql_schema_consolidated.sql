@@ -21,7 +21,7 @@ SET default_tablespace = '';
 CREATE TYPE user_role_enum AS ENUM ('student', 'admin', 'teacher', 'superadmin');
 CREATE TYPE exam_session_status_enum AS ENUM ('scheduled', 'ongoing', 'completed', 'timeout', 'grading_in_progress', 'graded');
 CREATE TYPE drag_type_enum AS ENUM ('ordering', 'matching');
-CREATE TYPE question_type_enum AS ENUM ('multiple_choice', 'drag_drop', 'essay');
+CREATE TYPE question_type_enum AS ENUM ('multiple_choice', 'drag_drop', 'essay', 'multiple_choices_complex');
 
 -- =============================================
 -- MASTER TABLES
@@ -175,6 +175,7 @@ CREATE TABLE questions (
     option_c VARCHAR(500) NULL,
     option_d VARCHAR(500) NULL,
     correct_answer CHAR(1) NULL, -- 'A', 'B', 'C', 'D'
+    correct_options_complex JSONB NULL, -- e.g. ["A","C"] for MULTIPLE_CHOICES_COMPLEX
     
     -- Essay Fields [NEW]
     essay_answer_key TEXT NULL, -- Optional keywords or model answer for teacher reference
@@ -354,6 +355,7 @@ CREATE TABLE student_answers (
     
     -- Multiple Choice Answer
     selected_option CHAR(1) NULL,
+    selected_options_complex JSONB NULL,
     
     -- Drag Drop Answer
     drag_drop_answer JSONB NULL,

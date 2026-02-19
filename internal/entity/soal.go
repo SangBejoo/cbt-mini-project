@@ -1,5 +1,7 @@
 package entity
 
+import "encoding/json"
+
 // JawabanOption defines valid answer options
 type JawabanOption string
 
@@ -18,12 +20,13 @@ type Soal struct {
 	IDTingkat       int           `json:"id_tingkat" gorm:"not null"`
 	Tingkat         Tingkat       `json:"tingkat" gorm:"foreignKey:IDTingkat"`
 	Pertanyaan      string        `json:"pertanyaan" gorm:"type:text;not null"`
-	QuestionType    QuestionType  `json:"question_type" gorm:"column:question_type;type:enum('multiple_choice','drag_drop','essay');default:'multiple_choice'"`
+	QuestionType    QuestionType  `json:"question_type" gorm:"column:question_type;type:enum('multiple_choice','drag_drop','essay','multiple_choices_complex');default:'multiple_choice'"`
 	OpsiA           string        `json:"opsi_a" gorm:"not null"`
 	OpsiB           string        `json:"opsi_b" gorm:"not null"`
 	OpsiC           string        `json:"opsi_c" gorm:"not null"`
 	OpsiD           string        `json:"opsi_d" gorm:"not null"`
 	JawabanBenar    JawabanOption `json:"-" gorm:"type:char(1);not null"`
+	JawabanBenarComplex *string   `json:"jawaban_benar_complex,omitempty" gorm:"column:jawaban_benar_complex;type:json"`
 	JawabanEssayKey *string       `json:"jawaban_essay_key,omitempty" gorm:"column:jawaban_essay_key;type:text"`
 	Pembahasan      *string       `json:"pembahasan,omitempty" gorm:"type:text"`
 	IsActive        bool          `json:"is_active" gorm:"default:true"`
@@ -42,6 +45,7 @@ type SoalForStudent struct {
 	OpsiC          string         `json:"opsi_c"`
 	OpsiD          string         `json:"opsi_d"`
 	JawabanDipilih *JawabanOption `json:"jawaban_dipilih"`
+	JawabanDipilihComplex []JawabanOption `json:"jawaban_dipilih_complex,omitempty"`
 	IsAnswered     bool           `json:"is_answered"`
 	Materi         Materi         `json:"materi"`
 	Gambar         []SoalGambar   `json:"gambar"`
@@ -62,6 +66,8 @@ type QuestionForStudent struct {
 	MCOpsiC          *string        `json:"mc_opsi_c,omitempty"`
 	MCOpsiD          *string        `json:"mc_opsi_d,omitempty"`
 	MCJawabanDipilih *JawabanOption `json:"mc_jawaban_dipilih,omitempty"`
+	MCJawabanDipilihComplex []JawabanOption `json:"mc_jawaban_dipilih_complex,omitempty"`
+	MCJawabanBenarComplex []JawabanOption `json:"mc_jawaban_benar_complex,omitempty"`
 	MCGambar         []SoalGambar   `json:"mc_gambar,omitempty"`
 
 	// Drag-drop fields
@@ -77,4 +83,48 @@ type QuestionForStudent struct {
 	EssayPertanyaan *string  `json:"essay_pertanyaan,omitempty"`
 	EssayJawaban    *string  `json:"essay_jawaban,omitempty"`
 	EssayScore      *float64 `json:"essay_score,omitempty"`
+
+	// Multiple choices complex fields
+	MCCID                 *int            `json:"mcc_id,omitempty"`
+	MCCPertanyaan         *string         `json:"mcc_pertanyaan,omitempty"`
+	MCCOpsiA              *string         `json:"mcc_opsi_a,omitempty"`
+	MCCOpsiB              *string         `json:"mcc_opsi_b,omitempty"`
+	MCCOpsiC              *string         `json:"mcc_opsi_c,omitempty"`
+	MCCOpsiD              *string         `json:"mcc_opsi_d,omitempty"`
+	MCCJawabanDipilih     []JawabanOption `json:"mcc_jawaban_dipilih,omitempty"`
+	MCCJawabanBenar       []JawabanOption `json:"mcc_jawaban_benar,omitempty"`
+	MCCGambar             []SoalGambar    `json:"mcc_gambar,omitempty"`
+}
+
+func (s *Soal) GetJawabanBenarComplex() []JawabanOption {
+	if s.JawabanBenarComplex == nil {
+		return nil
+	}
+	var raw []string
+	if err := json.Unmarshal([]byte(*s.JawabanBenarComplex), &raw); err != nil {
+		return nil
+	}
+	answers := make([]JawabanOption, 0, len(raw))
+	for _, option := range raw {
+		answers = append(answers, JawabanOption(option))
+	}
+	return answers
+}
+
+func (s *Soal) SetJawabanBenarComplex(options []JawabanOption) error {
+	if len(options) == 0 {
+		s.JawabanBenarComplex = nil
+		return nil
+	}
+	raw := make([]string, 0, len(options))
+	for _, option := range options {
+		raw = append(raw, string(option))
+	}
+	bytes, err := json.Marshal(raw)
+	if err != nil {
+		return err
+	}
+	encoded := string(bytes)
+	s.JawabanBenarComplex = &encoded
+	return nil
 }

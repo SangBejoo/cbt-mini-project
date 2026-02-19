@@ -41,7 +41,7 @@ type TestSessionRepository interface {
 	UpdateSessionStatus(token string, status entity.TestStatus) error
 
 	// Assign random questions to session
-	AssignRandomQuestions(sessionID, idMataPelajaran, tingkatan, jumlahSoal int) error
+	AssignRandomQuestions(sessionID, idMataPelajaran, tingkatan, jumlahSoal int, includeTypes []entity.QuestionType) error
 
 	// List sessions with filters
 	List(tingkatan, idMataPelajaran *int, status *entity.TestStatus, limit, offset int) ([]entity.TestSession, int, error)
@@ -63,6 +63,9 @@ type TestSessionRepository interface {
 
 	// Submit answer (multiple choice)
 	SubmitAnswer(token string, nomorUrut int, jawaban entity.JawabanOption) error
+
+	// Submit answer (multiple choices complex)
+	SubmitComplexAnswer(token string, nomorUrut int, jawaban []entity.JawabanOption) error
 
 	// Clear answer
 	ClearAnswer(token string, nomorUrut int) error

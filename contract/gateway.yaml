@@ -42,6 +42,11 @@ http:
       post: /v1/test-sessions/{session_token}/answers
       body: "*"
 
+    # 4.2. Submit Complex Multiple-Choice Answer (checkbox style)
+    - selector: base.TestSessionService.SubmitComplexAnswer
+      post: /v1/test-sessions/{session_token}/complex-answers
+      body: "*"
+
     # 4.4. Submit Drag-Drop Answer
     - selector: base.TestSessionService.SubmitDragDropAnswer
       post: /v1/test-sessions/{session_token}/drag-drop-answers

@@ -111,7 +111,8 @@ func ensureLegacyCompatibilityViews(ctx context.Context, db *sql.DB) error {
 					is_active,
 					lms_class_id,
 					created_at,
-					updated_at
+					updated_at,
+					correct_options_complex AS jawaban_benar_complex
 				FROM questions`,
 		},
 		{
@@ -230,7 +231,8 @@ func ensureLegacyCompatibilityViews(ctx context.Context, db *sql.DB) error {
 					drag_drop_answer AS jawaban_drag_drop,
 					essay_answer_text AS jawaban_essay,
 					essay_score AS nilai_essay,
-					teacher_feedback AS feedback_teacher
+					teacher_feedback AS feedback_teacher,
+					selected_options_complex AS jawaban_dipilih_complex
 				FROM student_answers`,
 		},
 	}

@@ -6,12 +6,13 @@ import (
 
 // TestSessionUsecase defines the interface for TestSession usecase operations
 type TestSessionUsecase interface {
-	CreateTestSession(userID, tingkatan, idMataPelajaran, durasiMenit, jumlahSoal int) (*entity.TestSession, error)
+	CreateTestSession(userID, tingkatan, idMataPelajaran, durasiMenit, jumlahSoal int, includeTypes []entity.QuestionType) (*entity.TestSession, error)
 	GetTestSession(sessionToken string) (*entity.TestSession, error)
 	GetTestQuestions(sessionToken string, nomorUrut int) (*entity.QuestionForStudent, error)
 	GetAllTestQuestions(sessionToken string) ([]entity.QuestionForStudent, error)
 	GetSessionAnswers(sessionToken string) ([]entity.JawabanSiswa, error)
 	SubmitAnswer(sessionToken string, nomorUrut int, jawaban entity.JawabanOption) error
+	SubmitComplexAnswer(sessionToken string, nomorUrut int, jawaban []entity.JawabanOption) error
 	SubmitDragDropAnswer(sessionToken string, nomorUrut int, answer map[int]int) error // NEW: for drag-drop
 	SubmitEssayAnswer(sessionToken string, nomorUrut int, jawabanEssay string) error
 	GradeEssayAnswer(answerID int, score float64, feedback string) error
