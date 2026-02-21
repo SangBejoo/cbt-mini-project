@@ -46,7 +46,7 @@ func (r *testSessionRepositoryImpl) GetByToken(token string) (*entity.TestSessio
 		JOIN mata_pelajaran mp ON ts.id_mata_pelajaran = mp.id
 		JOIN tingkat t ON ts.id_tingkat = t.id
 		JOIN users u ON ts.user_id = u.id
-		WHERE ts.session_token = $1`
+		WHERE ts.session_token = $1 AND ts.deleted_at IS NULL`
 	err := r.db.QueryRow(query, token).Scan(
 		&session.ID, &session.SessionToken, &session.UserID, &session.NamaPeserta, &session.IDTingkat, &session.IDMataPelajaran, &session.WaktuMulai, &session.WaktuSelesai, &session.DurasiMenit, &session.NilaiAkhir, &session.JumlahBenar, &session.TotalSoal, &session.Status, &session.LMSAssignmentID,
 		&session.MataPelajaran.ID, &session.MataPelajaran.Nama, &session.MataPelajaran.IsActive, &session.MataPelajaran.LmsSubjectID, &session.MataPelajaran.LmsSchoolID, &session.MataPelajaran.LmsClassID,
@@ -255,7 +255,7 @@ func (r *testSessionRepositoryImpl) UpdateScheduledSessionsByAssignment(lmsAssig
 }
 
 func (r *testSessionRepositoryImpl) DeleteSessionsByAssignment(lmsAssignmentID int64) (int64, error) {
-	result, err := r.db.Exec(`DELETE FROM test_session WHERE lms_assignment_id = $1`, lmsAssignmentID)
+	result, err := r.db.Exec(`UPDATE test_session SET deleted_at = NOW() WHERE lms_assignment_id = $1 AND deleted_at IS NULL`, lmsAssignmentID)
 	if err != nil {
 		return 0, err
 	}
@@ -265,7 +265,7 @@ func (r *testSessionRepositoryImpl) DeleteSessionsByAssignment(lmsAssignmentID i
 
 // Delete session by ID
 func (r *testSessionRepositoryImpl) Delete(id int) error {
-	query := `DELETE FROM test_session WHERE id = $1`
+	query := `UPDATE test_session SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`
 	_, err := r.db.Exec(query, id)
 	return err
 }
@@ -367,7 +367,7 @@ func (r *testSessionRepositoryImpl) List(tingkatan, idMataPelajaran *int, status
 	var total int
 
 	// Build count query
-	countQuery := `SELECT COUNT(*) FROM test_session ts`
+	countQuery := `SELECT COUNT(*) FROM test_session ts WHERE ts.deleted_at IS NULL`
 	var countArgs []interface{}
 	var countConditions []string
 
@@ -385,7 +385,7 @@ func (r *testSessionRepositoryImpl) List(tingkatan, idMataPelajaran *int, status
 	}
 
 	if len(countConditions) > 0 {
-		countQuery += " WHERE " + strings.Join(countConditions, " AND ")
+		countQuery += " AND " + strings.Join(countConditions, " AND ")
 	}
 
 	err := r.db.QueryRow(countQuery, countArgs...).Scan(&total)
@@ -402,7 +402,8 @@ func (r *testSessionRepositoryImpl) List(tingkatan, idMataPelajaran *int, status
 		FROM test_session ts
 		JOIN mata_pelajaran mp ON ts.id_mata_pelajaran = mp.id
 		JOIN tingkat t ON ts.id_tingkat = t.id
-		JOIN users u ON ts.user_id = u.id`
+		JOIN users u ON ts.user_id = u.id
+		WHERE ts.deleted_at IS NULL`
 	var dataArgs []interface{}
 	var dataConditions []string
 
@@ -420,7 +421,7 @@ func (r *testSessionRepositoryImpl) List(tingkatan, idMataPelajaran *int, status
 	}
 
 	if len(dataConditions) > 0 {
-		dataQuery += " WHERE " + strings.Join(dataConditions, " AND ")
+		dataQuery += " AND " + strings.Join(dataConditions, " AND ")
 	}
 
 	dataQuery += " ORDER BY ts.created_at DESC LIMIT $" + fmt.Sprintf("%d", len(dataArgs)+1) + " OFFSET $" + fmt.Sprintf("%d", len(dataArgs)+2)
@@ -455,7 +456,7 @@ func (r *testSessionRepositoryImpl) ListScheduledByUser(userID int, lmsClassID *
 	var sessions []entity.TestSession
 	var total int
 
-	countQuery := `SELECT COUNT(*) FROM test_session ts WHERE ts.user_id = $1 AND ts.status = 'scheduled'::test_session_status_enum`
+	countQuery := `SELECT COUNT(*) FROM test_session ts WHERE ts.user_id = $1 AND ts.status = 'scheduled'::test_session_status_enum AND ts.deleted_at IS NULL`
 	countArgs := []interface{}{userID}
 	if lmsClassID != nil {
 		countQuery += " AND ts.lms_class_id = $2"
@@ -475,7 +476,7 @@ func (r *testSessionRepositoryImpl) ListScheduledByUser(userID int, lmsClassID *
 		JOIN mata_pelajaran mp ON ts.id_mata_pelajaran = mp.id
 		JOIN tingkat t ON ts.id_tingkat = t.id
 		JOIN users u ON ts.user_id = u.id
-		WHERE ts.user_id = $1 AND ts.status = 'scheduled'::test_session_status_enum`
+		WHERE ts.user_id = $1 AND ts.status = 'scheduled'::test_session_status_enum AND ts.deleted_at IS NULL`
 	dataArgs := []interface{}{userID}
 	if lmsClassID != nil {
 		dataQuery += " AND ts.lms_class_id = $2"

@@ -44,7 +44,7 @@ func (r *soalRepositoryImpl) GetByID(id int) (*entity.Soal, error) {
 		JOIN materi m ON s.id_materi = m.id
 		JOIN mata_pelajaran mp ON m.id_mata_pelajaran = mp.id
 		JOIN tingkat t ON m.id_tingkat = t.id
-		WHERE s.id = $1`
+		WHERE s.id = $1 AND s.deleted_at IS NULL`
 
 	var soal entity.Soal
 	var pembahasan *string
@@ -112,7 +112,7 @@ func (r *soalRepositoryImpl) Update(soal *entity.Soal) error {
 
 // Delete soal by ID (soft delete)
 func (r *soalRepositoryImpl) Delete(id int) error {
-	query := `UPDATE soal SET is_active = false WHERE id = $1`
+	query := `UPDATE soal SET is_active = false, deleted_at = NOW() WHERE id = $1`
 	_, err := r.db.Exec(query, id)
 	return err
 }
@@ -122,7 +122,7 @@ func (r *soalRepositoryImpl) List(idMateri, tingkatan, idMataPelajaran *int, lim
 	var soals []entity.Soal
 
 	// Build WHERE clause
-	whereClause := "WHERE s.is_active = true"
+	whereClause := "WHERE s.is_active = true AND s.deleted_at IS NULL AND m.deleted_at IS NULL"
 	args := []interface{}{}
 	argCount := 0
 
@@ -246,8 +246,9 @@ func (r *soalRepositoryImpl) GetByMateriID(idMateri int) ([]entity.Soal, error) 
 		JOIN materi m ON s.id_materi = m.id
 		JOIN mata_pelajaran mp ON m.id_mata_pelajaran = mp.id
 		JOIN tingkat t ON m.id_tingkat = t.id
-		WHERE s.id_materi = $1 AND s.is_active = true
+		WHERE s.id_materi = $1 AND s.is_active = true AND s.deleted_at IS NULL
 		ORDER BY s.id`
+
 
 	rows, err := r.db.Query(query, idMateri)
 	if err != nil {

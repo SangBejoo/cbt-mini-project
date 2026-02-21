@@ -37,7 +37,7 @@ func (r *materiRepositoryImpl) GetByID(id int) (*entity.Materi, error) {
 		FROM materi m
 		JOIN mata_pelajaran mp ON m.id_mata_pelajaran = mp.id
 		JOIN tingkat t ON m.id_tingkat = t.id
-		WHERE m.id = $1 AND m.is_active = true
+		WHERE m.id = $1 AND m.is_active = true AND m.deleted_at IS NULL
 		`
 	var labelsSQL []byte
 	err := r.db.QueryRow(query, id).Scan(
@@ -66,7 +66,7 @@ func (r *materiRepositoryImpl) Update(materi *entity.Materi) error {
 
 // Delete by ID (soft delete)
 func (r *materiRepositoryImpl) Delete(id int) error {
-	query := `UPDATE materi SET is_active = false WHERE id = $1`
+	query := `UPDATE materi SET is_active = false, deleted_at = NOW() WHERE id = $1`
 	_, err := r.db.Exec(query, id)
 	return err
 }
@@ -77,7 +77,7 @@ func (r *materiRepositoryImpl) List(idMataPelajaran, idTingkat *int, limit, offs
 	var total int
 
 	// Build WHERE clause
-	whereClause := "m.is_active = true"
+	whereClause := "m.is_active = true AND m.deleted_at IS NULL"
 	args := []interface{}{}
 	argCount := 0
 
@@ -157,7 +157,7 @@ func (r *materiRepositoryImpl) GetByMataPelajaranID(idMataPelajaran int) ([]enti
 		FROM materi m
 		JOIN mata_pelajaran mp ON m.id_mata_pelajaran = mp.id
 		JOIN tingkat t ON m.id_tingkat = t.id
-		WHERE m.id_mata_pelajaran = $1 AND m.is_active = true
+		WHERE m.id_mata_pelajaran = $1 AND m.is_active = true AND m.deleted_at IS NULL
 		ORDER BY m.id
 	`
 	rows, err := r.db.Query(query, idMataPelajaran)
@@ -200,7 +200,8 @@ func (r *materiRepositoryImpl) UpsertByLMSID(lmsID int64, subjectID int64, level
 			id_mata_pelajaran = EXCLUDED.id_mata_pelajaran,
 			id_tingkat = EXCLUDED.id_tingkat,
 			lms_class_id = EXCLUDED.lms_class_id,
-			is_active = true
+			is_active = true,
+			deleted_at = NULL
 	`
 	_, err := r.db.Exec(query, lmsID, name, subjectID, levelID, classID)
 	return err
@@ -208,7 +209,7 @@ func (r *materiRepositoryImpl) UpsertByLMSID(lmsID int64, subjectID int64, level
 
 // DeleteByLMSID soft deletes by LMS ID
 func (r *materiRepositoryImpl) DeleteByLMSID(lmsID int64) error {
-	query := `UPDATE materi SET is_active = false WHERE lms_module_id = $1`
+	query := `UPDATE materi SET is_active = false, deleted_at = NOW() WHERE lms_module_id = $1`
 	_, err := r.db.Exec(query, lmsID)
 	return err
 }
@@ -219,7 +220,7 @@ func (r *materiRepositoryImpl) GetByLMSID(lmsID int64) (*entity.Materi, error) {
 	query := `
 		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_book_id, m.lms_teacher_material_id, m.lms_class_id, m.owner_user_id, m.school_id, m.labels
 		FROM materi m
-		WHERE m.lms_module_id = $1 AND m.is_active = true
+		WHERE m.lms_module_id = $1 AND m.is_active = true AND m.deleted_at IS NULL
 	`
 	var labelsSQL []byte
 	err := r.db.QueryRow(query, lmsID).Scan(
