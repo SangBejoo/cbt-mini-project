@@ -8,6 +8,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3
 	github.com/joho/godotenv v1.5.1
+	github.com/sqids/sqids-go v0.4.1
 	go.elastic.co/apm/module/apmgrpc/v2 v2.7.2
 	go.elastic.co/apm/v2 v2.7.2
 	golang.org/x/crypto v0.46.0

@@ -3,6 +3,7 @@ package test_soal
 import (
 	"cbt-test-mini-project/internal/entity"
 	"database/sql"
+	"strconv"
 )
 
 // soalRepositoryImpl implements SoalRepository
@@ -44,7 +45,7 @@ func (r *soalRepositoryImpl) GetByID(id int) (*entity.Soal, error) {
 		JOIN materi m ON s.id_materi = m.id
 		JOIN mata_pelajaran mp ON m.id_mata_pelajaran = mp.id
 		JOIN tingkat t ON m.id_tingkat = t.id
-		WHERE s.id = $1 AND s.deleted_at IS NULL`
+		WHERE s.id = $1`
 
 	var soal entity.Soal
 	var pembahasan *string
@@ -112,7 +113,7 @@ func (r *soalRepositoryImpl) Update(soal *entity.Soal) error {
 
 // Delete soal by ID (soft delete)
 func (r *soalRepositoryImpl) Delete(id int) error {
-	query := `UPDATE soal SET is_active = false, deleted_at = NOW() WHERE id = $1`
+	query := `UPDATE soal SET is_active = false WHERE id = $1`
 	_, err := r.db.Exec(query, id)
 	return err
 }
@@ -122,23 +123,23 @@ func (r *soalRepositoryImpl) List(idMateri, tingkatan, idMataPelajaran *int, lim
 	var soals []entity.Soal
 
 	// Build WHERE clause
-	whereClause := "WHERE s.is_active = true AND s.deleted_at IS NULL AND m.deleted_at IS NULL"
+	whereClause := "WHERE s.is_active = true AND m.is_active = true"
 	args := []interface{}{}
 	argCount := 0
 
 	if idMateri != nil {
 		argCount++
-		whereClause += " AND s.id_materi = $" + string(rune(argCount+'0'))
+		whereClause += " AND s.id_materi = $" + strconv.Itoa(argCount)
 		args = append(args, *idMateri)
 	}
 	if tingkatan != nil {
 		argCount++
-		whereClause += " AND m.id_tingkat = $" + string(rune(argCount+'0'))
+		whereClause += " AND m.id_tingkat = $" + strconv.Itoa(argCount)
 		args = append(args, *tingkatan)
 	}
 	if idMataPelajaran != nil {
 		argCount++
-		whereClause += " AND m.id_mata_pelajaran = $" + string(rune(argCount+'0'))
+		whereClause += " AND m.id_mata_pelajaran = $" + strconv.Itoa(argCount)
 		args = append(args, *idMataPelajaran)
 	}
 
@@ -169,7 +170,7 @@ func (r *soalRepositoryImpl) List(idMateri, tingkatan, idMataPelajaran *int, lim
 		JOIN tingkat t ON m.id_tingkat = t.id
 		` + whereClause + `
 		ORDER BY s.id
-		LIMIT $` + string(rune(argCount+1+'0')) + ` OFFSET $` + string(rune(argCount+2+'0'))
+		LIMIT $` + strconv.Itoa(argCount+1) + ` OFFSET $` + strconv.Itoa(argCount+2)
 
 	args = append(args, limit, offset)
 	rows, err := r.db.Query(listQuery, args...)
@@ -246,7 +247,7 @@ func (r *soalRepositoryImpl) GetByMateriID(idMateri int) ([]entity.Soal, error) 
 		JOIN materi m ON s.id_materi = m.id
 		JOIN mata_pelajaran mp ON m.id_mata_pelajaran = mp.id
 		JOIN tingkat t ON m.id_tingkat = t.id
-		WHERE s.id_materi = $1 AND s.is_active = true AND s.deleted_at IS NULL
+		WHERE s.id_materi = $1 AND s.is_active = true
 		ORDER BY s.id`
 
 

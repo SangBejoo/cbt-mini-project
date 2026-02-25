@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	// Update this import path
 	"cbt-test-mini-project/init/config"
@@ -28,6 +29,8 @@ import (
 	classRepo "cbt-test-mini-project/internal/repository/class"
 	classStudentRepo "cbt-test-mini-project/internal/repository/class_student"
 	testSessionRepo "cbt-test-mini-project/internal/repository/test_session"
+	"cbt-test-mini-project/util/idcodec"
+	"cbt-test-mini-project/util/idobfuscation"
 )
 
 // ShareEmailRequest represents the request payload for sharing results via email
@@ -53,6 +56,16 @@ type ShareEmailRequest struct {
 type ShareEmailResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
+}
+
+type createSimpleNameRequest struct {
+	Nama string `json:"nama"`
+}
+
+type createSimpleNameResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
 }
 
 type SyncOpsHandler struct {
@@ -115,10 +128,25 @@ type SyncResyncResponse struct {
 }
 
 func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repository, publisher *event.Publisher) (*http.Server, error) {
+	customMarshaler := &idobfuscation.CustomJSONMarshaler{
+		JSONPb: runtime.JSONPb{
+			MarshalOptions: protojson.MarshalOptions{
+				UseProtoNames:   true,
+				EmitUnpopulated: true,
+			},
+			UnmarshalOptions: protojson.UnmarshalOptions{
+				DiscardUnknown: true,
+			},
+		},
+	}
+
 	gwMux := runtime.NewServeMux(
+		runtime.WithMarshalerOption(runtime.MIMEWildcard, customMarshaler),
 		runtime.WithIncomingHeaderMatcher(customHeaderMatcher),
 		runtime.WithOutgoingHeaderMatcher(customHeaderMatcher),
 		runtime.WithErrorHandler(customErrorHandler),
+		runtime.WithMiddlewares(idobfuscation.PathParamDecodingMiddleware()),
+		runtime.WithForwardResponseRewriter(idobfuscation.ResponseRewriter()),
 	)
 
 	opts := []grpc.DialOption{
@@ -134,6 +162,8 @@ func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repos
 
 	// Custom endpoints
 	mux.HandleFunc("/v1/sessions/share-email", handleShareEmail)
+	mux.HandleFunc("/v1/admin/subjects", handleCreateSubject(repo.SQLDB))
+	mux.HandleFunc("/v1/admin/levels", handleCreateLevel(repo.SQLDB))
 	mux.HandleFunc("/v1/sync/health", syncOpsHandler.HandleSyncHealth)
 	mux.HandleFunc("/v1/sync/classes", syncOpsHandler.HandleSyncClasses)
 	mux.HandleFunc("/v1/sync/classes/", syncOpsHandler.HandleSyncClassStudents)
@@ -164,6 +194,102 @@ func RunGatewayRestServer(ctx context.Context, cfg config.Main, repo infra.Repos
 	}()
 
 	return srv, nil
+}
+
+func handleCreateSubject(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		var req createSimpleNameRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(createSimpleNameResponse{Success: false, Message: "invalid request body"})
+			return
+		}
+
+		nama := strings.TrimSpace(req.Nama)
+		if nama == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(createSimpleNameResponse{Success: false, Message: "nama is required"})
+			return
+		}
+
+		var id int64
+		err := db.QueryRow(`INSERT INTO mata_pelajaran (nama) VALUES ($1) RETURNING id`, nama).Scan(&id)
+		if err != nil {
+			slog.Error("failed to create subject", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(createSimpleNameResponse{Success: false, Message: "failed to create subject"})
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+		encodedID := idcodec.MustEncode(id)
+		if encodedID == "" {
+			encodedID = strconv.FormatInt(id, 10)
+		}
+		_ = json.NewEncoder(w).Encode(createSimpleNameResponse{
+			Success: true,
+			Message: "subject created",
+			Data: map[string]any{
+				"id":   encodedID,
+				"nama": nama,
+			},
+		})
+	}
+}
+
+func handleCreateLevel(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		var req createSimpleNameRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(createSimpleNameResponse{Success: false, Message: "invalid request body"})
+			return
+		}
+
+		nama := strings.TrimSpace(req.Nama)
+		if nama == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(createSimpleNameResponse{Success: false, Message: "nama is required"})
+			return
+		}
+
+		var id int64
+		err := db.QueryRow(`INSERT INTO tingkat (nama) VALUES ($1) RETURNING id`, nama).Scan(&id)
+		if err != nil {
+			slog.Error("failed to create level", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(createSimpleNameResponse{Success: false, Message: "failed to create level"})
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+		encodedID := idcodec.MustEncode(id)
+		if encodedID == "" {
+			encodedID = strconv.FormatInt(id, 10)
+		}
+		_ = json.NewEncoder(w).Encode(createSimpleNameResponse{
+			Success: true,
+			Message: "level created",
+			Data: map[string]any{
+				"id":   encodedID,
+				"nama": nama,
+			},
+		})
+	}
 }
 
 // handleShareEmail handles email sharing requests
@@ -421,13 +547,16 @@ func sendEmailNotification(req ShareEmailRequest) bool {
 
 // Custom header matcher for gRPC-Gateway
 func customHeaderMatcher(key string) (string, bool) {
-	switch key {
+	lowered := strings.ToLower(key)
+	switch lowered {
 	case "authorization":
-		return key, true
+		return lowered, true
+	case "cookie":
+		return lowered, true
 	case "x-request-id":
-		return key, true
+		return lowered, true
 	default:
-		return key, false
+		return lowered, false
 	}
 }
 

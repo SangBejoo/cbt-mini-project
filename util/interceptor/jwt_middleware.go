@@ -87,18 +87,67 @@ func ExtractTokenFromContext(ctx context.Context) (string, error) {
 		return "", errors.New("missing metadata")
 	}
 
-	authHeader, exists := md["authorization"]
-	if !exists || len(authHeader) == 0 {
-		return "", errors.New("missing authorization header")
+	if token := tokenFromAuthorizationMetadata(md); token != "" {
+		return token, nil
 	}
 
-	// Extract token from "Bearer <token>"
-	parts := strings.SplitN(authHeader[0], " ", 2)
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		return "", errors.New("invalid authorization header format")
+	if token := tokenFromCookieMetadata(md); token != "" {
+		return token, nil
 	}
 
-	return parts[1], nil
+	return "", errors.New("missing authorization header")
+}
+
+
+func tokenFromAuthorizationMetadata(md metadata.MD) string {
+	for _, key := range []string{"authorization", "grpcgateway-authorization", "x-authorization", "x-access-token"} {
+		values := md.Get(key)
+		for _, value := range values {
+			if token := parseBearerToken(value); token != "" {
+				return token
+			}
+
+			trimmed := strings.TrimSpace(value)
+			if trimmed == "" {
+				continue
+			}
+			if strings.Contains(strings.ToLower(trimmed), "bearer ") {
+				continue
+			}
+			return trimmed
+		}
+	}
+	return ""
+}
+
+func tokenFromCookieMetadata(md metadata.MD) string {
+	for _, key := range []string{"grpcgateway-cookie", "cookie"} {
+		cookies := md.Get(key)
+		for _, cookieHeader := range cookies {
+			pairs := strings.Split(cookieHeader, ";")
+			for _, pair := range pairs {
+				segment := strings.TrimSpace(pair)
+				if strings.HasPrefix(segment, "access_token=") {
+					token := strings.TrimPrefix(segment, "access_token=")
+					if token != "" {
+						return token
+					}
+				}
+			}
+		}
+	}
+	return ""
+}
+
+func parseBearerToken(value string) string {
+	parts := strings.SplitN(strings.TrimSpace(value), " ", 2)
+	if len(parts) != 2 {
+		return ""
+	}
+	if strings.ToLower(parts[0]) != "bearer" {
+		return ""
+	}
+	return strings.TrimSpace(parts[1])
 }
 
 func (m *JWTMiddleware) validateAndResolveUser(ctx context.Context, tokenString string) (*base.User, error) {

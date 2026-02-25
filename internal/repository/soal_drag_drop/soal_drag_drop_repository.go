@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
@@ -96,7 +97,7 @@ func (r *repository) GetByID(id int) (*entity.SoalDragDrop, error) {
 		JOIN mata_pelajaran mp ON m.id_mata_pelajaran = mp.id
 		JOIN tingkat mt ON m.id_tingkat = mt.id
 		JOIN tingkat t ON sdd.id_tingkat = t.id
-		WHERE sdd.id = $1 AND sdd.deleted_at IS NULL`
+		WHERE sdd.id = $1`
 
 	var soal entity.SoalDragDrop
 	var pembahasan *string
@@ -294,7 +295,7 @@ func (r *repository) Update(soal *entity.SoalDragDrop, items []entity.DragItem, 
 
 // Delete soft-deletes a drag-drop question by setting is_active to false
 func (r *repository) Delete(id int) error {
-	query := `UPDATE soal_drag_drop SET is_active = false, deleted_at = NOW() WHERE id = $1`
+	query := `UPDATE soal_drag_drop SET is_active = false WHERE id = $1`
 	_, err := r.db.Exec(query, id)
 	return err
 }
@@ -304,18 +305,18 @@ func (r *repository) List(idMateri, idTingkat int, page, pageSize int) ([]entity
 	var soals []entity.SoalDragDrop
 
 	// Build WHERE clause
-	whereClause := "WHERE sdd.is_active = true AND sdd.deleted_at IS NULL AND m.deleted_at IS NULL"
+	whereClause := "WHERE sdd.is_active = true AND m.is_active = true"
 	args := []interface{}{}
 	argCount := 0
 
 	if idMateri > 0 {
 		argCount++
-		whereClause += " AND sdd.id_materi = $" + string(rune(argCount+'0'))
+		whereClause += " AND sdd.id_materi = $" + strconv.Itoa(argCount)
 		args = append(args, idMateri)
 	}
 	if idTingkat > 0 {
 		argCount++
-		whereClause += " AND sdd.id_tingkat = $" + string(rune(argCount+'0'))
+		whereClause += " AND sdd.id_tingkat = $" + strconv.Itoa(argCount)
 		args = append(args, idTingkat)
 	}
 
@@ -347,7 +348,7 @@ func (r *repository) List(idMateri, idTingkat int, page, pageSize int) ([]entity
 		JOIN tingkat t ON sdd.id_tingkat = t.id
 		` + whereClause + `
 		ORDER BY sdd.created_at DESC
-		LIMIT $` + string(rune(argCount+1+'0')) + ` OFFSET $` + string(rune(argCount+2+'0'))
+		LIMIT $` + strconv.Itoa(argCount+1) + ` OFFSET $` + strconv.Itoa(argCount+2)
 
 	args = append(args, pageSize, offset)
 	rows, err := r.db.Query(listQuery, args...)
@@ -430,7 +431,7 @@ func (r *repository) GetActiveByMateri(idMateri int, limit int) ([]entity.SoalDr
 		       m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id
 		FROM soal_drag_drop sdd
 		JOIN materi m ON sdd.id_materi = m.id
-		WHERE sdd.is_active = true AND sdd.deleted_at IS NULL AND sdd.id_materi = $1`
+		WHERE sdd.is_active = true AND sdd.id_materi = $1`
 
 	if limit > 0 {
 		var total int
