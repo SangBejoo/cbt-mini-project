@@ -6,6 +6,7 @@ import (
 	authRepo "cbt-test-mini-project/internal/repository/auth"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 
@@ -180,7 +181,7 @@ func (m *JWTMiddleware) validateAndResolveUser(ctx context.Context, tokenString 
 
 	user, syncErr := m.authRepo.FindOrCreateByLMSID(ctx, lmsUserID, claims.Email, name, int32(role))
 	if syncErr != nil {
-		return nil, errors.New("failed to provision local user from token")
+		return nil, fmt.Errorf("failed to provision local user from token: %w", syncErr)
 	}
 	if !user.IsActive {
 		return nil, errors.New("user is inactive")

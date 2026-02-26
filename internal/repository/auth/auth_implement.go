@@ -314,130 +314,200 @@ func (r *authRepositoryImpl) ListUsers(ctx context.Context, role int32, statusFi
 
 // FindOrCreateByLMSID finds a user by LMS ID or creates one if not found
 func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int64, email, name string, role int32) (*base.User, error) {
-	// First try to find existing user by LMS ID
-	var userEntity entity.User
-	findQuery := `SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE lms_user_id = $1`
-	err := r.db.QueryRowContext(ctx, findQuery, lmsID).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
+	roleStr := protoRoleToDB(base.UserRole(role))
+	resolvedEmail := strings.ToLower(strings.TrimSpace(email))
+	if resolvedEmail == "" {
+		resolvedEmail = fmt.Sprintf("lms_user_%d@cbt.local", lmsID)
+	}
+	resolvedName := strings.TrimSpace(name)
+	if resolvedName == "" {
+		resolvedName = "LMS User"
+	}
 
+	toProto := func(u entity.User) *base.User {
+		return &base.User{
+			Id:        int32(u.ID),
+			Email:     u.Email,
+			Nama:      u.Nama,
+			Role:      dbRoleToProto(u.Role),
+			IsActive:  u.IsActive,
+			CreatedAt: timestamppb.New(u.CreatedAt),
+			UpdatedAt: timestamppb.New(u.UpdatedAt),
+			LmsUserId: lmsUserIDValue(u.LmsUserID),
+		}
+	}
+
+	fetchByEmailQuery := `
+		SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at, lms_user_id
+		FROM users
+		WHERE lower(email) = lower($1)
+		ORDER BY updated_at DESC, id DESC
+		LIMIT 1`
+
+	fetchByLMSIDQuery := `
+		SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at, lms_user_id
+		FROM users
+		WHERE lms_user_id = $1
+		ORDER BY updated_at DESC, id DESC
+		LIMIT 1`
+
+	var userEntity entity.User
+	err := r.db.QueryRowContext(ctx, fetchByEmailQuery, resolvedEmail).Scan(
+		&userEntity.ID,
+		&userEntity.Email,
+		&userEntity.PasswordHash,
+		&userEntity.Nama,
+		&userEntity.Role,
+		&userEntity.IsActive,
+		&userEntity.CreatedAt,
+		&userEntity.UpdatedAt,
+		&userEntity.LmsUserID,
+	)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 
-	if err == sql.ErrNoRows {
-		// Fallback: try to find existing user by email (may have been created without lms_user_id)
-		fallbackQuery := `SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at, COALESCE(lms_user_id, 0) FROM users WHERE email = $1`
-		var existingLmsID int64
-		scanErr := r.db.QueryRowContext(ctx, fallbackQuery, email).Scan(
-			&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash,
-			&userEntity.Nama, &userEntity.Role, &userEntity.IsActive,
-			&userEntity.CreatedAt, &userEntity.UpdatedAt, &existingLmsID,
-		)
-		if scanErr == nil {
-			// Found by email — adopt this user by setting lms_user_id
-			if existingLmsID == 0 {
-				_, adoptErr := r.db.ExecContext(ctx,
-					`UPDATE users SET lms_user_id = $1, updated_at = $2 WHERE id = $3`,
-					lmsID, time.Now(), userEntity.ID,
-				)
-				if adoptErr != nil {
-					return nil, fmt.Errorf("failed to link existing user to LMS ID: %w", adoptErr)
-				}
-			}
-			lmsIDVal := lmsID
-			userEntity.LmsUserID = &lmsIDVal
-			err = nil // clear the ErrNoRows so we fall through to the JIT-update block below
-		}
-	}
-
+	now := time.Now()
 	if err == nil {
-		// User found, JIT-update stale fields from claims.
-		roleStr := protoRoleToDB(base.UserRole(role))
-
-		trimmedEmail := strings.TrimSpace(email)
-		trimmedName := strings.TrimSpace(name)
-		if trimmedEmail == "" {
-			trimmedEmail = userEntity.Email
-		}
-		if trimmedName == "" {
-			trimmedName = userEntity.Nama
-		}
-
-		if userEntity.Email != trimmedEmail || userEntity.Nama != trimmedName || normalizeRoleForDB(userEntity.Role) != roleStr {
+		if userEntity.LmsUserID == nil || *userEntity.LmsUserID != lmsID || userEntity.Nama != resolvedName || normalizeRoleForDB(userEntity.Role) != roleStr || !userEntity.IsActive {
 			_, updateErr := r.db.ExecContext(
 				ctx,
-				`UPDATE users SET email = $1, full_name = $2, role = $3, updated_at = $4 WHERE id = $5`,
-				trimmedEmail,
-				trimmedName,
+				`UPDATE users SET lms_user_id = $1, email = $2, full_name = $3, role = $4, is_active = $5, updated_at = $6 WHERE id = $7`,
+				lmsID,
+				resolvedEmail,
+				resolvedName,
 				roleStr,
-				time.Now(),
+				true,
+				now,
 				userEntity.ID,
 			)
 			if updateErr != nil {
 				return nil, updateErr
 			}
-			userEntity.Email = trimmedEmail
-			userEntity.Nama = trimmedName
+			userEntity.Email = resolvedEmail
+			userEntity.Nama = resolvedName
 			userEntity.Role = roleStr
+			userEntity.IsActive = true
+			userEntity.UpdatedAt = now
+			lmsIDVal := lmsID
+			userEntity.LmsUserID = &lmsIDVal
 		}
 
-		protoRole := dbRoleToProto(userEntity.Role)
-
-		return &base.User{
-			Id:           int32(userEntity.ID),
-			Email:        userEntity.Email,
-			Nama:         userEntity.Nama,
-			Role:         protoRole,
-			IsActive:     userEntity.IsActive,
-			CreatedAt:    timestamppb.New(userEntity.CreatedAt),
-			UpdatedAt:    timestamppb.New(userEntity.UpdatedAt),
-			LmsUserId:    lmsUserIDValue(userEntity.LmsUserID),
-			
-		}, nil
+		return toProto(userEntity), nil
 	}
 
-	// User not found by lms_user_id or email, create new one
-	roleStr := protoRoleToDB(base.UserRole(role))
-
-	// Generate random hash for LMS users (non-admin local password login is disabled)
-	randomPassword := fmt.Sprintf("lms_%d", lmsID)
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(randomPassword), bcrypt.DefaultCost)
-	if err != nil {
+	err = r.db.QueryRowContext(ctx, fetchByLMSIDQuery, lmsID).Scan(
+		&userEntity.ID,
+		&userEntity.Email,
+		&userEntity.PasswordHash,
+		&userEntity.Nama,
+		&userEntity.Role,
+		&userEntity.IsActive,
+		&userEntity.CreatedAt,
+		&userEntity.UpdatedAt,
+		&userEntity.LmsUserID,
+	)
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
+	}
+
+	if err == nil {
+		_, updateErr := r.db.ExecContext(
+			ctx,
+			`UPDATE users SET email = $1, full_name = $2, role = $3, is_active = $4, updated_at = $5 WHERE id = $6`,
+			resolvedEmail,
+			resolvedName,
+			roleStr,
+			true,
+			now,
+			userEntity.ID,
+		)
+		if updateErr != nil {
+			if isUsersEmailUniqueViolation(updateErr) {
+				var canonical entity.User
+				canonicalErr := r.db.QueryRowContext(ctx, fetchByEmailQuery, resolvedEmail).Scan(
+					&canonical.ID,
+					&canonical.Email,
+					&canonical.PasswordHash,
+					&canonical.Nama,
+					&canonical.Role,
+					&canonical.IsActive,
+					&canonical.CreatedAt,
+					&canonical.UpdatedAt,
+					&canonical.LmsUserID,
+				)
+				if canonicalErr == nil {
+					_, relinkErr := r.db.ExecContext(
+						ctx,
+						`UPDATE users SET lms_user_id = $1, full_name = $2, role = $3, is_active = $4, updated_at = $5 WHERE id = $6`,
+						lmsID,
+						resolvedName,
+						roleStr,
+						true,
+						now,
+						canonical.ID,
+					)
+					if relinkErr == nil {
+						lmsIDVal := lmsID
+						canonical.LmsUserID = &lmsIDVal
+						canonical.Nama = resolvedName
+						canonical.Role = roleStr
+						canonical.IsActive = true
+						canonical.UpdatedAt = now
+						return toProto(canonical), nil
+					}
+				}
+			}
+			return nil, updateErr
+		}
+
+		userEntity.Email = resolvedEmail
+		userEntity.Nama = resolvedName
+		userEntity.Role = roleStr
+		userEntity.IsActive = true
+		userEntity.UpdatedAt = now
+		lmsIDVal := lmsID
+		userEntity.LmsUserID = &lmsIDVal
+
+		return toProto(userEntity), nil
+	}
+
+	randomPassword := fmt.Sprintf("lms_%d", lmsID)
+	hashedPassword, hashErr := bcrypt.GenerateFromPassword([]byte(randomPassword), bcrypt.DefaultCost)
+	if hashErr != nil {
+		return nil, hashErr
 	}
 
 	createQuery := `
 		INSERT INTO users (email, password_hash, full_name, role, is_active, lms_user_id, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (email) DO UPDATE SET lms_user_id = EXCLUDED.lms_user_id, full_name = EXCLUDED.full_name, updated_at = EXCLUDED.updated_at
-		RETURNING id`
-	now := time.Now()
-	err = r.db.QueryRowContext(ctx, createQuery, email, string(hashedPassword), name, roleStr, true, lmsID, now, now).Scan(&userEntity.ID)
+		ON CONFLICT (email) DO UPDATE SET lms_user_id = EXCLUDED.lms_user_id, full_name = EXCLUDED.full_name, role = EXCLUDED.role, is_active = EXCLUDED.is_active, updated_at = EXCLUDED.updated_at
+		RETURNING id, created_at, updated_at`
+
+	err = r.db.QueryRowContext(ctx, createQuery, resolvedEmail, string(hashedPassword), resolvedName, roleStr, true, lmsID, now, now).Scan(
+		&userEntity.ID,
+		&userEntity.CreatedAt,
+		&userEntity.UpdatedAt,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	// Set the entity fields for return
-	userEntity.Email = email
-	userEntity.Nama = name
+	userEntity.Email = resolvedEmail
+	userEntity.Nama = resolvedName
 	userEntity.Role = roleStr
 	userEntity.IsActive = true
-	userEntity.CreatedAt = now
-	userEntity.UpdatedAt = now
 	userEntity.LmsUserID = &lmsID
 
-	protoRole := dbRoleToProto(roleStr)
+	return toProto(userEntity), nil
+}
 
-	return &base.User{
-		Id:           int32(userEntity.ID),
-		Email:        email,
-		Nama:         name,
-		Role:         protoRole,
-		IsActive:     true,
-		CreatedAt:    timestamppb.New(now),
-		UpdatedAt:    timestamppb.New(now),
-		LmsUserId:    lmsID,
-		
-	}, nil
+func isUsersEmailUniqueViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	errMsg := strings.ToLower(err.Error())
+	return strings.Contains(errMsg, "users_email_key") || (strings.Contains(errMsg, "duplicate key") && strings.Contains(errMsg, "email"))
 }
 
 // GetLMSUserIDByLocalID retrieves the LMS User ID mapped to a local User ID
