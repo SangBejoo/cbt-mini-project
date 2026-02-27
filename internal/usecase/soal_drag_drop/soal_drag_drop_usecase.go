@@ -71,6 +71,9 @@ func (u *usecase) Create(req *CreateRequest) (*entity.SoalDragDrop, error) {
 	if req.Pertanyaan == "" {
 		return nil, errors.New("pertanyaan is required")
 	}
+	if req.Point <= 0 {
+		req.Point = 1
+	}
 	if len(req.Items) < 2 {
 		return nil, errors.New("at least 2 items are required")
 	}
@@ -98,6 +101,8 @@ func (u *usecase) Create(req *CreateRequest) (*entity.SoalDragDrop, error) {
 		IDMateri:   req.IDMateri,
 		IDTingkat:  req.IDTingkat,
 		Pertanyaan: req.Pertanyaan,
+		Point:      req.Point,
+		Urutan:     req.Urutan,
 		DragType:   req.DragType,
 		Pembahasan: req.Pembahasan,
 		IsActive:   true,
@@ -199,6 +204,9 @@ func (u *usecase) Update(id int, req *UpdateRequest) (*entity.SoalDragDrop, erro
 	if req.Pertanyaan == "" {
 		return nil, errors.New("pertanyaan is required")
 	}
+	if req.Point <= 0 {
+		req.Point = 1
+	}
 	if len(req.Items) < 2 {
 		return nil, errors.New("at least 2 items are required")
 	}
@@ -234,6 +242,8 @@ func (u *usecase) Update(id int, req *UpdateRequest) (*entity.SoalDragDrop, erro
 	existing.IDMateri = req.IDMateri
 	existing.IDTingkat = req.IDTingkat
 	existing.Pertanyaan = req.Pertanyaan
+	existing.Point = req.Point
+	existing.Urutan = req.Urutan
 	existing.DragType = req.DragType
 	existing.Pembahasan = req.Pembahasan
 	existing.IsActive = req.IsActive
@@ -327,6 +337,21 @@ func (u *usecase) Delete(id int) error {
 		return errors.New("question not found")
 	}
 	return u.repo.Delete(id)
+}
+
+func (u *usecase) ReorderSoalDragDrop(idMateri int, urutanByID map[int]int) error {
+	if idMateri < 1 {
+		return errors.New("id_materi must be positive")
+	}
+	if len(urutanByID) == 0 {
+		return errors.New("reorder items cannot be empty")
+	}
+	for _, urutan := range urutanByID {
+		if urutan < 1 {
+			return errors.New("urutan must be greater than zero")
+		}
+	}
+	return u.repo.ReorderByMateri(idMateri, urutanByID)
 }
 
 // List retrieves drag-drop questions with pagination

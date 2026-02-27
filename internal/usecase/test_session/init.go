@@ -6,7 +6,7 @@ import (
 
 // TestSessionUsecase defines the interface for TestSession usecase operations
 type TestSessionUsecase interface {
-	CreateTestSession(userID, tingkatan, idMataPelajaran, durasiMenit, jumlahSoal int, includeTypes []entity.QuestionType) (*entity.TestSession, error)
+	CreateTestSession(userID, tingkatan, idMataPelajaran, durasiMenit, jumlahSoal int, includeTypes []entity.QuestionType, randomize bool) (*entity.TestSession, error)
 	GetTestSession(sessionToken string) (*entity.TestSession, error)
 	GetTestQuestions(sessionToken string, nomorUrut int) (*entity.QuestionForStudent, error)
 	GetAllTestQuestions(sessionToken string) ([]entity.QuestionForStudent, error)

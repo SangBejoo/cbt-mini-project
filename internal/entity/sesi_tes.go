@@ -66,6 +66,8 @@ type TestSessionSoal struct {
 	IDSoalDragDrop *int          `json:"id_soal_drag_drop" gorm:""`
 	SoalDragDrop   *SoalDragDrop `json:"soal_drag_drop,omitempty" gorm:"foreignKey:IDSoalDragDrop"`
 
+	Point float64 `json:"point" gorm:"column:point;type:decimal(10,2);not null;default:1"`
+
 	NomorUrut int `json:"nomor_urut" gorm:"not null;index:idx_session_urut,unique"`
 }
 

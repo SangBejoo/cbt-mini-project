@@ -31,6 +31,7 @@ type Materi struct {
 	OwnerUserID          *int          `json:"owner_user_id" gorm:"column:owner_user_id"`
 	SchoolID             *int64        `json:"school_id" gorm:"column:school_id"`
 	Labels               []string      `json:"labels" gorm:"type:jsonb;default:'[]'"`
+	RandomizeQuestions   bool          `json:"randomize_questions" gorm:"column:randomize_questions;not null;default:true"`
 }
 
 func (Materi) TableName() string { return "materi" }

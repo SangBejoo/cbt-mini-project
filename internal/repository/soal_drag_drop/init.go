@@ -16,6 +16,7 @@ type Repository interface {
 	GetActiveByMateri(idMateri int, limit int) ([]entity.SoalDragDrop, error)
 	GetCorrectAnswersBySoalID(soalID int) ([]entity.DragCorrectAnswer, error)
 	CountByMateri(idMateri int) (int64, error)
+	ReorderByMateri(idMateri int, urutanByID map[int]int) error
 }
 
 type repository struct {

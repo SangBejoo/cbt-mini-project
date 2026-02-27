@@ -28,4 +28,6 @@ type MateriRepository interface {
 	UpsertByLMSID(lmsID int64, subjectID int64, levelID int64, classID int64, name string) error
 	DeleteByLMSID(lmsID int64) error
 	GetByLMSID(lmsID int64) (*entity.Materi, error)
+	GetByLMSBookID(lmsBookID int64) (*entity.Materi, error)
+	GetByLMSTeacherMaterialID(lmsTeacherMaterialID int64) (*entity.Materi, error)
 }

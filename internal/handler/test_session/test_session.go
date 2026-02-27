@@ -88,7 +88,12 @@ func (h *testSessionHandler) CreateTestSession(ctx context.Context, req *base.Cr
 		}
 	}
 
-	session, err := h.usecase.CreateTestSession(int(userID), int(req.IdTingkat), int(req.IdMataPelajaran), durasiMenit, jumlahSoal, includeTypes)
+	randomize := true
+	if req.SelectionMode == base.QuestionSelectionMode_ORDERED {
+		randomize = false
+	}
+
+	session, err := h.usecase.CreateTestSession(int(userID), int(req.IdTingkat), int(req.IdMataPelajaran), durasiMenit, jumlahSoal, includeTypes, randomize)
 	if err != nil {
 		fmt.Printf("=== HANDLER: CreateTestSession FAILED: %v ===\n", err)
 		return nil, status.Error(codes.Internal, err.Error())

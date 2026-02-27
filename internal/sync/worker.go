@@ -468,8 +468,11 @@ func (w *SyncWorker) handleUserUpsert(payload string) error {
 	}
 
 	roleInt := int32(1) // default SISWA
-	if p.Role == "ADMIN" {
+	switch strings.ToUpper(strings.TrimSpace(p.Role)) {
+	case "ADMIN", "SUPERADMIN", "SCHOOL_ADMIN":
 		roleInt = 2
+	case "TEACHER", "GURU":
+		roleInt = 3
 	}
 
 	_, err := w.authRepo.FindOrCreateByLMSID(context.Background(), p.ID, p.Email, p.Name, roleInt)
@@ -670,8 +673,12 @@ func (w *SyncWorker) resolveMateriByModuleReference(moduleID int64, moduleRefTyp
 	normalizedRefType := strings.ToLower(strings.TrimSpace(moduleRefType))
 
 	switch normalizedRefType {
-	case "lms_module_id", "teacher_material_id":
+	case "lms_module_id", "module", "module_id":
 		return w.materiRepo.GetByLMSID(moduleID)
+	case "lms_book_id", "book", "book_id":
+		return w.materiRepo.GetByLMSBookID(moduleID)
+	case "teacher_material_id", "lms_teacher_material_id":
+		return w.materiRepo.GetByLMSTeacherMaterialID(moduleID)
 	case "cbt_materi_id":
 		return w.materiRepo.GetByID(int(moduleID))
 	}

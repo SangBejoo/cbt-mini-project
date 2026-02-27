@@ -19,8 +19,8 @@ func NewSoalRepository(db *sql.DB) SoalRepository {
 // Create a new soal
 func (r *soalRepositoryImpl) Create(soal *entity.Soal) error {
 	query := `
-		INSERT INTO soal (id_materi, lms_asset_id, lms_class_id, id_tingkat, pertanyaan, question_type, opsi_a, opsi_b, opsi_c, opsi_d, jawaban_benar, jawaban_benar_complex, jawaban_essay_key, pembahasan, is_active)
-		VALUES ($1, $2, (SELECT lms_class_id FROM materi WHERE id = $1), $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		INSERT INTO soal (id_materi, lms_asset_id, lms_class_id, id_tingkat, pertanyaan, point, urutan, question_type, opsi_a, opsi_b, opsi_c, opsi_d, jawaban_benar, jawaban_benar_complex, jawaban_essay_key, pembahasan, is_active)
+		VALUES ($1, $2, (SELECT lms_class_id FROM materi WHERE id = $1), $3, $4, $5, COALESCE(NULLIF($6, 0), (SELECT COALESCE(MAX(s2.urutan),0)+1 FROM soal s2 WHERE s2.id_materi = $1)), $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		RETURNING id`
 	var pembahasan *string
 	if soal.Pembahasan != nil {
@@ -30,14 +30,14 @@ func (r *soalRepositoryImpl) Create(soal *entity.Soal) error {
 	if soal.LMSAssetID != nil && *soal.LMSAssetID > 0 {
 		lmsAssetID = *soal.LMSAssetID
 	}
-	return r.db.QueryRow(query, soal.IDMateri, lmsAssetID, soal.IDTingkat, soal.Pertanyaan, soal.QuestionType, soal.OpsiA, soal.OpsiB, soal.OpsiC, soal.OpsiD, string(soal.JawabanBenar), soal.JawabanBenarComplex, soal.JawabanEssayKey, pembahasan, soal.IsActive).Scan(&soal.ID)
+	return r.db.QueryRow(query, soal.IDMateri, lmsAssetID, soal.IDTingkat, soal.Pertanyaan, soal.Point, soal.Urutan, soal.QuestionType, soal.OpsiA, soal.OpsiB, soal.OpsiC, soal.OpsiD, string(soal.JawabanBenar), soal.JawabanBenarComplex, soal.JawabanEssayKey, pembahasan, soal.IsActive).Scan(&soal.ID)
 }
 
 // Get soal by ID with all relations
 func (r *soalRepositoryImpl) GetByID(id int) (*entity.Soal, error) {
 	// Get soal with materi, mata_pelajaran, and tingkat
 	soalQuery := `
-		SELECT s.id, s.id_materi, s.lms_asset_id, s.id_tingkat, s.pertanyaan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.pembahasan, s.is_active,
+		SELECT s.id, s.id_materi, s.lms_asset_id, s.id_tingkat, s.pertanyaan, s.point, s.urutan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.pembahasan, s.is_active,
 		       m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id,
 		       mp.id, mp.nama, mp.is_active, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.is_active, t.lms_level_id
@@ -52,7 +52,7 @@ func (r *soalRepositoryImpl) GetByID(id int) (*entity.Soal, error) {
 	var lmsAssetID sql.NullInt64
 	var jawabanBenarComplex sql.NullString
 	err := r.db.QueryRow(soalQuery, id).Scan(
-		&soal.ID, &soal.IDMateri, &lmsAssetID, &soal.IDTingkat, &soal.Pertanyaan, &soal.QuestionType, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &jawabanBenarComplex, &soal.JawabanEssayKey, &pembahasan, &soal.IsActive,
+		&soal.ID, &soal.IDMateri, &lmsAssetID, &soal.IDTingkat, &soal.Pertanyaan, &soal.Point, &soal.Urutan, &soal.QuestionType, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &jawabanBenarComplex, &soal.JawabanEssayKey, &pembahasan, &soal.IsActive,
 		&soal.Materi.ID, &soal.Materi.IDMataPelajaran, &soal.Materi.IDTingkat, &soal.Materi.Nama, &soal.Materi.IsActive, &soal.Materi.DefaultDurasiMenit, &soal.Materi.DefaultJumlahSoal, &soal.Materi.LmsModuleID, &soal.Materi.LmsClassID,
 		&soal.Materi.MataPelajaran.ID, &soal.Materi.MataPelajaran.Nama, &soal.Materi.MataPelajaran.IsActive, &soal.Materi.MataPelajaran.LmsSubjectID, &soal.Materi.MataPelajaran.LmsSchoolID, &soal.Materi.MataPelajaran.LmsClassID,
 		&soal.Materi.Tingkat.ID, &soal.Materi.Tingkat.Nama, &soal.Materi.Tingkat.IsActive, &soal.Materi.Tingkat.LmsLevelID,
@@ -101,13 +101,13 @@ func (r *soalRepositoryImpl) GetByID(id int) (*entity.Soal, error) {
 func (r *soalRepositoryImpl) Update(soal *entity.Soal) error {
 	query := `
 		UPDATE soal
-		SET id_materi = $1, lms_asset_id = $2, lms_class_id = (SELECT lms_class_id FROM materi WHERE id = $1), id_tingkat = $3, pertanyaan = $4, question_type = $5, opsi_a = $6, opsi_b = $7, opsi_c = $8, opsi_d = $9, jawaban_benar = $10, jawaban_benar_complex = $11, jawaban_essay_key = $12, pembahasan = $13, is_active = $14
-		WHERE id = $15`
+		SET id_materi = $1, lms_asset_id = $2, lms_class_id = (SELECT lms_class_id FROM materi WHERE id = $1), id_tingkat = $3, pertanyaan = $4, point = $5, urutan = COALESCE(NULLIF($6, 0), urutan), question_type = $7, opsi_a = $8, opsi_b = $9, opsi_c = $10, opsi_d = $11, jawaban_benar = $12, jawaban_benar_complex = $13, jawaban_essay_key = $14, pembahasan = $15, is_active = $16
+		WHERE id = $17`
 	var lmsAssetID interface{}
 	if soal.LMSAssetID != nil && *soal.LMSAssetID > 0 {
 		lmsAssetID = *soal.LMSAssetID
 	}
-	_, err := r.db.Exec(query, soal.IDMateri, lmsAssetID, soal.IDTingkat, soal.Pertanyaan, soal.QuestionType, soal.OpsiA, soal.OpsiB, soal.OpsiC, soal.OpsiD, string(soal.JawabanBenar), soal.JawabanBenarComplex, soal.JawabanEssayKey, soal.Pembahasan, soal.IsActive, soal.ID)
+	_, err := r.db.Exec(query, soal.IDMateri, lmsAssetID, soal.IDTingkat, soal.Pertanyaan, soal.Point, soal.Urutan, soal.QuestionType, soal.OpsiA, soal.OpsiB, soal.OpsiC, soal.OpsiD, string(soal.JawabanBenar), soal.JawabanBenarComplex, soal.JawabanEssayKey, soal.Pembahasan, soal.IsActive, soal.ID)
 	return err
 }
 
@@ -160,7 +160,7 @@ func (r *soalRepositoryImpl) List(idMateri, tingkatan, idMataPelajaran *int, lim
 
 	// Get paginated results with all relations
 	listQuery := `
-		SELECT s.id, s.id_materi, s.lms_asset_id, s.id_tingkat, s.pertanyaan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.pembahasan, s.is_active,
+		SELECT s.id, s.id_materi, s.lms_asset_id, s.id_tingkat, s.pertanyaan, s.point, s.urutan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.pembahasan, s.is_active,
 		       m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id,
 		       mp.id, mp.nama, mp.is_active, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.is_active, t.lms_level_id
@@ -169,7 +169,7 @@ func (r *soalRepositoryImpl) List(idMateri, tingkatan, idMataPelajaran *int, lim
 		JOIN mata_pelajaran mp ON m.id_mata_pelajaran = mp.id
 		JOIN tingkat t ON m.id_tingkat = t.id
 		` + whereClause + `
-		ORDER BY s.id
+		ORDER BY s.urutan ASC, s.id ASC
 		LIMIT $` + strconv.Itoa(argCount+1) + ` OFFSET $` + strconv.Itoa(argCount+2)
 
 	args = append(args, limit, offset)
@@ -185,7 +185,7 @@ func (r *soalRepositoryImpl) List(idMateri, tingkatan, idMataPelajaran *int, lim
 		var lmsAssetID sql.NullInt64
 		var jawabanBenarComplex sql.NullString
 		err := rows.Scan(
-			&soal.ID, &soal.IDMateri, &lmsAssetID, &soal.IDTingkat, &soal.Pertanyaan, &soal.QuestionType, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &jawabanBenarComplex, &soal.JawabanEssayKey, &pembahasan, &soal.IsActive,
+			&soal.ID, &soal.IDMateri, &lmsAssetID, &soal.IDTingkat, &soal.Pertanyaan, &soal.Point, &soal.Urutan, &soal.QuestionType, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &jawabanBenarComplex, &soal.JawabanEssayKey, &pembahasan, &soal.IsActive,
 			&soal.Materi.ID, &soal.Materi.IDMataPelajaran, &soal.Materi.IDTingkat, &soal.Materi.Nama, &soal.Materi.IsActive, &soal.Materi.DefaultDurasiMenit, &soal.Materi.DefaultJumlahSoal, &soal.Materi.LmsModuleID, &soal.Materi.LmsClassID,
 			&soal.Materi.MataPelajaran.ID, &soal.Materi.MataPelajaran.Nama, &soal.Materi.MataPelajaran.IsActive, &soal.Materi.MataPelajaran.LmsSubjectID, &soal.Materi.MataPelajaran.LmsSchoolID, &soal.Materi.MataPelajaran.LmsClassID,
 			&soal.Materi.Tingkat.ID, &soal.Materi.Tingkat.Nama, &soal.Materi.Tingkat.IsActive, &soal.Materi.Tingkat.LmsLevelID,
@@ -239,7 +239,7 @@ func (r *soalRepositoryImpl) GetByMateriID(idMateri int) ([]entity.Soal, error) 
 	var soals []entity.Soal
 
 	query := `
-		SELECT s.id, s.id_materi, s.lms_asset_id, s.id_tingkat, s.pertanyaan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.pembahasan, s.is_active,
+		SELECT s.id, s.id_materi, s.lms_asset_id, s.id_tingkat, s.pertanyaan, s.point, s.urutan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.pembahasan, s.is_active,
 		       m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id,
 		       mp.id, mp.nama, mp.is_active, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.is_active, t.lms_level_id
@@ -248,7 +248,7 @@ func (r *soalRepositoryImpl) GetByMateriID(idMateri int) ([]entity.Soal, error) 
 		JOIN mata_pelajaran mp ON m.id_mata_pelajaran = mp.id
 		JOIN tingkat t ON m.id_tingkat = t.id
 		WHERE s.id_materi = $1 AND s.is_active = true
-		ORDER BY s.id`
+		ORDER BY s.urutan ASC, s.id ASC`
 
 
 	rows, err := r.db.Query(query, idMateri)
@@ -263,7 +263,7 @@ func (r *soalRepositoryImpl) GetByMateriID(idMateri int) ([]entity.Soal, error) 
 		var lmsAssetID sql.NullInt64
 		var jawabanBenarComplex sql.NullString
 		err := rows.Scan(
-			&soal.ID, &soal.IDMateri, &lmsAssetID, &soal.IDTingkat, &soal.Pertanyaan, &soal.QuestionType, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &jawabanBenarComplex, &soal.JawabanEssayKey, &pembahasan, &soal.IsActive,
+			&soal.ID, &soal.IDMateri, &lmsAssetID, &soal.IDTingkat, &soal.Pertanyaan, &soal.Point, &soal.Urutan, &soal.QuestionType, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &jawabanBenarComplex, &soal.JawabanEssayKey, &pembahasan, &soal.IsActive,
 			&soal.Materi.ID, &soal.Materi.IDMataPelajaran, &soal.Materi.IDTingkat, &soal.Materi.Nama, &soal.Materi.IsActive, &soal.Materi.DefaultDurasiMenit, &soal.Materi.DefaultJumlahSoal, &soal.Materi.LmsModuleID, &soal.Materi.LmsClassID,
 			&soal.Materi.MataPelajaran.ID, &soal.Materi.MataPelajaran.Nama, &soal.Materi.MataPelajaran.IsActive, &soal.Materi.MataPelajaran.LmsSubjectID, &soal.Materi.MataPelajaran.LmsSchoolID, &soal.Materi.MataPelajaran.LmsClassID,
 			&soal.Materi.Tingkat.ID, &soal.Materi.Tingkat.Nama, &soal.Materi.Tingkat.IsActive, &soal.Materi.Tingkat.LmsLevelID,
@@ -319,6 +319,22 @@ func (r *soalRepositoryImpl) CreateGambar(gambar *entity.SoalGambar) error {
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, created_at`
 	return r.db.QueryRow(query, gambar.IDSoal, gambar.NamaFile, gambar.FilePath, gambar.FileSize, gambar.MimeType, gambar.Urutan, gambar.Keterangan, gambar.CloudId, gambar.PublicId).Scan(&gambar.ID, &gambar.CreatedAt)
+}
+
+func (r *soalRepositoryImpl) ReorderByMateri(idMateri int, urutanByID map[int]int) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for id, urutan := range urutanByID {
+		if _, err := tx.Exec(`UPDATE soal SET urutan = $1 WHERE id = $2 AND id_materi = $3`, urutan, id, idMateri); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 // GetGambarByID gets gambar by ID

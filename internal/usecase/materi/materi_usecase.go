@@ -17,7 +17,7 @@ func NewMateriUsecase(repo materi.MateriRepository) MateriUsecase {
 }
 
 // CreateMateri creates a new materi
-func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, idTingkat int, isActive bool, defaultDurasiMenit, defaultJumlahSoal int, ownerUserID int, schoolID int64, labels []string, lmsModuleID, lmsBookID, lmsTeacherMaterialID *int64) (*entity.Materi, error) {
+func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, idTingkat int, isActive bool, defaultDurasiMenit, defaultJumlahSoal int, ownerUserID int, schoolID int64, labels []string, randomizeQuestions bool, lmsModuleID, lmsBookID, lmsTeacherMaterialID *int64) (*entity.Materi, error) {
 	if nama == "" {
 		return nil, errors.New("nama cannot be empty")
 	}
@@ -61,6 +61,7 @@ func (u *materiUsecaseImpl) CreateMateri(idMataPelajaran int, nama string, idTin
 		OwnerUserID:          &ownerUserID,
 		SchoolID:             &schoolID,
 		Labels:               labels,
+		RandomizeQuestions:   randomizeQuestions,
 		LmsModuleID:          lmsModuleID,
 		LmsBookID:            lmsBookID,
 		LmsTeacherMaterialID: lmsTeacherMaterialID,
@@ -78,7 +79,7 @@ func (u *materiUsecaseImpl) GetMateri(id int) (*entity.Materi, error) {
 }
 
 // UpdateMateri updates existing
-func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, idTingkat int, isActive bool, defaultDurasiMenit, defaultJumlahSoal int, lmsModuleID, lmsBookID, lmsTeacherMaterialID *int64) (*entity.Materi, error) {
+func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, idTingkat int, isActive bool, defaultDurasiMenit, defaultJumlahSoal int, randomizeQuestions bool, lmsModuleID, lmsBookID, lmsTeacherMaterialID *int64) (*entity.Materi, error) {
 	if nama == "" {
 		return nil, errors.New("nama cannot be empty")
 	}
@@ -120,6 +121,7 @@ func (u *materiUsecaseImpl) UpdateMateri(id, idMataPelajaran int, nama string, i
 	m.IsActive = isActive
 	m.DefaultDurasiMenit = defaultDurasiMenit
 	m.DefaultJumlahSoal = defaultJumlahSoal
+	m.RandomizeQuestions = randomizeQuestions
 	m.LmsModuleID = lmsModuleID
 	m.LmsBookID = lmsBookID
 	m.LmsTeacherMaterialID = lmsTeacherMaterialID

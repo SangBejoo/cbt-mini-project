@@ -19,11 +19,11 @@ func NewMateriRepository(db *sql.DB) MateriRepository {
 
 // Create a new materi
 func (r *materiRepositoryImpl) Create(materi *entity.Materi) error {
-	query := `INSERT INTO materi (id_mata_pelajaran, id_tingkat, nama, is_active, default_durasi_menit, default_jumlah_soal, lms_module_id, lms_book_id, lms_teacher_material_id, lms_class_id, owner_user_id, school_id, labels) 
-			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`
+	query := `INSERT INTO materi (id_mata_pelajaran, id_tingkat, nama, is_active, default_durasi_menit, default_jumlah_soal, lms_module_id, lms_book_id, lms_teacher_material_id, lms_class_id, owner_user_id, school_id, labels, randomize_questions) 
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id`
 
 	labelsJSON, _ := json.Marshal(materi.Labels)
-	err := r.db.QueryRow(query, materi.IDMataPelajaran, materi.IDTingkat, materi.Nama, materi.IsActive, materi.DefaultDurasiMenit, materi.DefaultJumlahSoal, materi.LmsModuleID, materi.LmsBookID, materi.LmsTeacherMaterialID, materi.LmsClassID, materi.OwnerUserID, materi.SchoolID, string(labelsJSON)).Scan(&materi.ID)
+	err := r.db.QueryRow(query, materi.IDMataPelajaran, materi.IDTingkat, materi.Nama, materi.IsActive, materi.DefaultDurasiMenit, materi.DefaultJumlahSoal, materi.LmsModuleID, materi.LmsBookID, materi.LmsTeacherMaterialID, materi.LmsClassID, materi.OwnerUserID, materi.SchoolID, string(labelsJSON), materi.RandomizeQuestions).Scan(&materi.ID)
 	return err
 }
 
@@ -31,7 +31,7 @@ func (r *materiRepositoryImpl) Create(materi *entity.Materi) error {
 func (r *materiRepositoryImpl) GetByID(id int) (*entity.Materi, error) {
 	var materi entity.Materi
 	query := `
-		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_book_id, m.lms_teacher_material_id, m.lms_class_id, m.owner_user_id, m.school_id, m.labels,
+		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_book_id, m.lms_teacher_material_id, m.lms_class_id, m.owner_user_id, m.school_id, m.labels, m.randomize_questions,
 		       mp.id, mp.nama, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.lms_level_id
 		FROM materi m
@@ -41,7 +41,7 @@ func (r *materiRepositoryImpl) GetByID(id int) (*entity.Materi, error) {
 		`
 	var labelsSQL []byte
 	err := r.db.QueryRow(query, id).Scan(
-		&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsBookID, &materi.LmsTeacherMaterialID, &materi.LmsClassID, &materi.OwnerUserID, &materi.SchoolID, &labelsSQL,
+		&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsBookID, &materi.LmsTeacherMaterialID, &materi.LmsClassID, &materi.OwnerUserID, &materi.SchoolID, &labelsSQL, &materi.RandomizeQuestions,
 		&materi.MataPelajaran.ID, &materi.MataPelajaran.Nama, &materi.MataPelajaran.LmsSubjectID, &materi.MataPelajaran.LmsSchoolID, &materi.MataPelajaran.LmsClassID,
 		&materi.Tingkat.ID, &materi.Tingkat.Nama, &materi.Tingkat.LmsLevelID,
 	)
@@ -59,8 +59,8 @@ func (r *materiRepositoryImpl) GetByID(id int) (*entity.Materi, error) {
 
 // Update existing
 func (r *materiRepositoryImpl) Update(materi *entity.Materi) error {
-	query := `UPDATE materi SET id_mata_pelajaran = $1, id_tingkat = $2, nama = $3, is_active = $4, default_durasi_menit = $5, default_jumlah_soal = $6, lms_module_id = $7, lms_book_id = $8, lms_teacher_material_id = $9, lms_class_id = $10 WHERE id = $11`
-	_, err := r.db.Exec(query, materi.IDMataPelajaran, materi.IDTingkat, materi.Nama, materi.IsActive, materi.DefaultDurasiMenit, materi.DefaultJumlahSoal, materi.LmsModuleID, materi.LmsBookID, materi.LmsTeacherMaterialID, materi.LmsClassID, materi.ID)
+	query := `UPDATE materi SET id_mata_pelajaran = $1, id_tingkat = $2, nama = $3, is_active = $4, default_durasi_menit = $5, default_jumlah_soal = $6, lms_module_id = $7, lms_book_id = $8, lms_teacher_material_id = $9, lms_class_id = $10, randomize_questions = $11 WHERE id = $12`
+	_, err := r.db.Exec(query, materi.IDMataPelajaran, materi.IDTingkat, materi.Nama, materi.IsActive, materi.DefaultDurasiMenit, materi.DefaultJumlahSoal, materi.LmsModuleID, materi.LmsBookID, materi.LmsTeacherMaterialID, materi.LmsClassID, materi.RandomizeQuestions, materi.ID)
 	return err
 }
 
@@ -106,7 +106,7 @@ func (r *materiRepositoryImpl) List(idMataPelajaran, idTingkat *int, limit, offs
 
 	// List query
 	listQuery := fmt.Sprintf(`
-		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_book_id, m.lms_teacher_material_id, m.lms_class_id, m.owner_user_id, m.school_id, m.labels,
+		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_book_id, m.lms_teacher_material_id, m.lms_class_id, m.owner_user_id, m.school_id, m.labels, m.randomize_questions,
 		       mp.id, mp.nama, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.lms_level_id
 		FROM materi m
@@ -128,7 +128,7 @@ func (r *materiRepositoryImpl) List(idMataPelajaran, idTingkat *int, limit, offs
 		var materi entity.Materi
 		var labelsSQL []byte
 		err := rows.Scan(
-			&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsBookID, &materi.LmsTeacherMaterialID, &materi.LmsClassID, &materi.OwnerUserID, &materi.SchoolID, &labelsSQL,
+			&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsBookID, &materi.LmsTeacherMaterialID, &materi.LmsClassID, &materi.OwnerUserID, &materi.SchoolID, &labelsSQL, &materi.RandomizeQuestions,
 			&materi.MataPelajaran.ID, &materi.MataPelajaran.Nama, &materi.MataPelajaran.LmsSubjectID, &materi.MataPelajaran.LmsSchoolID, &materi.MataPelajaran.LmsClassID,
 			&materi.Tingkat.ID, &materi.Tingkat.Nama, &materi.Tingkat.LmsLevelID,
 		)
@@ -151,7 +151,7 @@ func (r *materiRepositoryImpl) List(idMataPelajaran, idTingkat *int, limit, offs
 func (r *materiRepositoryImpl) GetByMataPelajaranID(idMataPelajaran int) ([]entity.Materi, error) {
 	var materis []entity.Materi
 	query := `
-		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_book_id, m.lms_teacher_material_id, m.lms_class_id, m.owner_user_id, m.school_id, m.labels,
+		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_book_id, m.lms_teacher_material_id, m.lms_class_id, m.owner_user_id, m.school_id, m.labels, m.randomize_questions,
 		       mp.id, mp.nama, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.lms_level_id
 		FROM materi m
@@ -170,7 +170,7 @@ func (r *materiRepositoryImpl) GetByMataPelajaranID(idMataPelajaran int) ([]enti
 		var materi entity.Materi
 		var labelsSQL []byte
 		err := rows.Scan(
-			&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsBookID, &materi.LmsTeacherMaterialID, &materi.LmsClassID, &materi.OwnerUserID, &materi.SchoolID, &labelsSQL,
+			&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsBookID, &materi.LmsTeacherMaterialID, &materi.LmsClassID, &materi.OwnerUserID, &materi.SchoolID, &labelsSQL, &materi.RandomizeQuestions,
 			&materi.MataPelajaran.ID, &materi.MataPelajaran.Nama, &materi.MataPelajaran.LmsSubjectID, &materi.MataPelajaran.LmsSchoolID, &materi.MataPelajaran.LmsClassID,
 			&materi.Tingkat.ID, &materi.Tingkat.Nama, &materi.Tingkat.LmsLevelID,
 		)
@@ -217,13 +217,59 @@ func (r *materiRepositoryImpl) DeleteByLMSID(lmsID int64) error {
 func (r *materiRepositoryImpl) GetByLMSID(lmsID int64) (*entity.Materi, error) {
 	var materi entity.Materi
 	query := `
-		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_book_id, m.lms_teacher_material_id, m.lms_class_id, m.owner_user_id, m.school_id, m.labels
+		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_book_id, m.lms_teacher_material_id, m.lms_class_id, m.owner_user_id, m.school_id, m.labels, m.randomize_questions
 		FROM materi m
 		WHERE m.lms_module_id = $1 AND m.is_active = true
 	`
 	var labelsSQL []byte
 	err := r.db.QueryRow(query, lmsID).Scan(
-		&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsBookID, &materi.LmsTeacherMaterialID, &materi.LmsClassID, &materi.OwnerUserID, &materi.SchoolID, &labelsSQL,
+		&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsBookID, &materi.LmsTeacherMaterialID, &materi.LmsClassID, &materi.OwnerUserID, &materi.SchoolID, &labelsSQL, &materi.RandomizeQuestions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if labelsSQL != nil {
+		var ls []string
+		if err := json.Unmarshal(labelsSQL, &ls); err == nil {
+			materi.Labels = ls
+		}
+	}
+	return &materi, nil
+}
+
+func (r *materiRepositoryImpl) GetByLMSBookID(lmsBookID int64) (*entity.Materi, error) {
+	var materi entity.Materi
+	query := `
+		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_book_id, m.lms_teacher_material_id, m.lms_class_id, m.owner_user_id, m.school_id, m.labels, m.randomize_questions
+		FROM materi m
+		WHERE m.lms_book_id = $1 AND m.is_active = true
+	`
+	var labelsSQL []byte
+	err := r.db.QueryRow(query, lmsBookID).Scan(
+		&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsBookID, &materi.LmsTeacherMaterialID, &materi.LmsClassID, &materi.OwnerUserID, &materi.SchoolID, &labelsSQL, &materi.RandomizeQuestions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if labelsSQL != nil {
+		var ls []string
+		if err := json.Unmarshal(labelsSQL, &ls); err == nil {
+			materi.Labels = ls
+		}
+	}
+	return &materi, nil
+}
+
+func (r *materiRepositoryImpl) GetByLMSTeacherMaterialID(lmsTeacherMaterialID int64) (*entity.Materi, error) {
+	var materi entity.Materi
+	query := `
+		SELECT m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_book_id, m.lms_teacher_material_id, m.lms_class_id, m.owner_user_id, m.school_id, m.labels, m.randomize_questions
+		FROM materi m
+		WHERE m.lms_teacher_material_id = $1 AND m.is_active = true
+	`
+	var labelsSQL []byte
+	err := r.db.QueryRow(query, lmsTeacherMaterialID).Scan(
+		&materi.ID, &materi.IDMataPelajaran, &materi.IDTingkat, &materi.Nama, &materi.IsActive, &materi.DefaultDurasiMenit, &materi.DefaultJumlahSoal, &materi.LmsModuleID, &materi.LmsBookID, &materi.LmsTeacherMaterialID, &materi.LmsClassID, &materi.OwnerUserID, &materi.SchoolID, &labelsSQL, &materi.RandomizeQuestions,
 	)
 	if err != nil {
 		return nil, err

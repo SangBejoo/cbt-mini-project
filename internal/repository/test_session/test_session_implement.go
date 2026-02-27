@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sort"
 	"strings"
 	"time"
 )
@@ -535,8 +536,8 @@ func (r *testSessionRepositoryImpl) StartScheduledSession(token string, startedA
 // Get questions for session
 func (r *testSessionRepositoryImpl) GetSessionQuestions(token string) ([]entity.TestSessionSoal, error) {
 	query := `
-		SELECT tss.id, tss.id_test_session, tss.question_type, tss.id_soal, tss.id_soal_drag_drop, tss.nomor_urut,
-		       s.id, s.pertanyaan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.id_materi,
+		SELECT tss.id, tss.id_test_session, tss.question_type, tss.id_soal, tss.id_soal_drag_drop, tss.point, tss.nomor_urut,
+		       s.id, s.pertanyaan, s.point, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.id_materi,
 		       m.id, m.nama, m.id_mata_pelajaran, m.id_tingkat
 		FROM test_session_soal tss
 		JOIN test_session ts ON tss.id_test_session = ts.id
@@ -559,12 +560,13 @@ func (r *testSessionRepositoryImpl) GetSessionQuestions(token string) ([]entity.
 		// Use nullable types for LEFT JOIN columns
 		var soalID, soalIDMateri sql.NullInt64
 		var soalPertanyaan, soalQuestionType, soalOpsiA, soalOpsiB, soalOpsiC, soalOpsiD, soalJawabanBenar, soalJawabanBenarComplex, soalJawabanEssayKey sql.NullString
+		var soalPoint sql.NullFloat64
 		var materiID, materiIDMataPelajaran, materiIDTingkat sql.NullInt64
 		var materiNama sql.NullString
 
 		err := rows.Scan(
-			&tss.ID, &tss.IDTestSession, &tss.QuestionType, &tss.IDSoal, &tss.IDSoalDragDrop, &tss.NomorUrut,
-			&soalID, &soalPertanyaan, &soalQuestionType, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalJawabanBenarComplex, &soalJawabanEssayKey, &soalIDMateri,
+			&tss.ID, &tss.IDTestSession, &tss.QuestionType, &tss.IDSoal, &tss.IDSoalDragDrop, &tss.Point, &tss.NomorUrut,
+			&soalID, &soalPertanyaan, &soalPoint, &soalQuestionType, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalJawabanBenarComplex, &soalJawabanEssayKey, &soalIDMateri,
 			&materiID, &materiNama, &materiIDMataPelajaran, &materiIDTingkat,
 		)
 		if err != nil {
@@ -575,6 +577,9 @@ func (r *testSessionRepositoryImpl) GetSessionQuestions(token string) ([]entity.
 		if soalID.Valid {
 			soal.ID = int(soalID.Int64)
 			soal.Pertanyaan = soalPertanyaan.String
+			if soalPoint.Valid {
+				soal.Point = soalPoint.Float64
+			}
 			soal.OpsiA = soalOpsiA.String
 			soal.OpsiB = soalOpsiB.String
 			soal.OpsiC = soalOpsiC.String
@@ -612,10 +617,10 @@ func (r *testSessionRepositoryImpl) GetSessionQuestions(token string) ([]entity.
 // Get all questions for session with soal data
 func (r *testSessionRepositoryImpl) GetAllQuestionsForSession(token string) ([]entity.TestSessionSoal, error) {
 	query := `
-		SELECT tss.id, tss.id_test_session, tss.question_type, tss.id_soal, tss.id_soal_drag_drop, tss.nomor_urut,
-		       s.id, s.pertanyaan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.id_materi,
+		SELECT tss.id, tss.id_test_session, tss.question_type, tss.id_soal, tss.id_soal_drag_drop, tss.point, tss.nomor_urut,
+		       s.id, s.pertanyaan, s.point, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.id_materi,
 		       m.id, m.nama, m.id_mata_pelajaran, m.id_tingkat, mp.id, mp.nama, mp.is_active, t.id, t.nama, t.is_active,
-		       sdd.id, sdd.pertanyaan, sdd.id_materi
+		       sdd.id, sdd.pertanyaan, sdd.point, sdd.id_materi
 		FROM test_session_soal tss
 		JOIN test_session ts ON tss.id_test_session = ts.id
 		LEFT JOIN soal s ON tss.id_soal = s.id
@@ -643,6 +648,7 @@ func (r *testSessionRepositoryImpl) GetAllQuestionsForSession(token string) ([]e
 		// Use nullable types for LEFT JOIN columns
 		var soalID, soalIDMateri sql.NullInt64
 		var soalPertanyaan, soalQuestionType, soalOpsiA, soalOpsiB, soalOpsiC, soalOpsiD, soalJawabanBenar, soalJawabanBenarComplex, soalJawabanEssayKey sql.NullString
+		var soalPoint sql.NullFloat64
 		var materiID, materiIDMataPelajaran, materiIDTingkat sql.NullInt64
 		var materiNama sql.NullString
 		var mataPelajaranID sql.NullInt64
@@ -652,13 +658,14 @@ func (r *testSessionRepositoryImpl) GetAllQuestionsForSession(token string) ([]e
 		var tingkatNama sql.NullString
 		var tingkatIsActive sql.NullBool
 		var sddID, sddIDMateri sql.NullInt64
+		var sddPoint sql.NullFloat64
 		var sddPertanyaan sql.NullString
 
 		err := rows.Scan(
-			&tss.ID, &tss.IDTestSession, &tss.QuestionType, &tss.IDSoal, &tss.IDSoalDragDrop, &tss.NomorUrut,
-			&soalID, &soalPertanyaan, &soalQuestionType, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalJawabanBenarComplex, &soalJawabanEssayKey, &soalIDMateri,
+			&tss.ID, &tss.IDTestSession, &tss.QuestionType, &tss.IDSoal, &tss.IDSoalDragDrop, &tss.Point, &tss.NomorUrut,
+			&soalID, &soalPertanyaan, &soalPoint, &soalQuestionType, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalJawabanBenarComplex, &soalJawabanEssayKey, &soalIDMateri,
 			&materiID, &materiNama, &materiIDMataPelajaran, &materiIDTingkat, &mataPelajaranID, &mataPelajaranNama, &mataPelajaranIsActive, &tingkatID, &tingkatNama, &tingkatIsActive,
-			&sddID, &sddPertanyaan, &sddIDMateri,
+			&sddID, &sddPertanyaan, &sddPoint, &sddIDMateri,
 		)
 		if err != nil {
 			return nil, err
@@ -668,6 +675,9 @@ func (r *testSessionRepositoryImpl) GetAllQuestionsForSession(token string) ([]e
 		if soalID.Valid {
 			soal.ID = int(soalID.Int64)
 			soal.Pertanyaan = soalPertanyaan.String
+			if soalPoint.Valid {
+				soal.Point = soalPoint.Float64
+			}
 			soal.OpsiA = soalOpsiA.String
 			soal.OpsiB = soalOpsiB.String
 			soal.OpsiC = soalOpsiC.String
@@ -713,6 +723,9 @@ func (r *testSessionRepositoryImpl) GetAllQuestionsForSession(token string) ([]e
 		if sddID.Valid {
 			soalDragDrop.ID = int(sddID.Int64)
 			soalDragDrop.Pertanyaan = sddPertanyaan.String
+			if sddPoint.Valid {
+				soalDragDrop.Point = sddPoint.Float64
+			}
 			if sddIDMateri.Valid {
 				soalDragDrop.IDMateri = int(sddIDMateri.Int64)
 			}
@@ -727,7 +740,7 @@ func (r *testSessionRepositoryImpl) GetAllQuestionsForSession(token string) ([]e
 // Get single question by order
 func (r *testSessionRepositoryImpl) GetQuestionByOrder(token string, nomorUrut int) (*entity.Soal, error) {
 	query := `
-		SELECT s.id, s.pertanyaan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.id_materi,
+		SELECT s.id, s.pertanyaan, s.point, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.id_materi,
 		       m.id, m.nama, m.id_mata_pelajaran, m.id_tingkat,
 		       mp.id, mp.nama, mp.is_active, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       t.id, t.nama, t.is_active, t.lms_level_id
@@ -746,7 +759,7 @@ func (r *testSessionRepositoryImpl) GetQuestionByOrder(token string, nomorUrut i
 	var jawabanBenarComplex sql.NullString
 	var jawabanEssayKey sql.NullString
 	err := r.db.QueryRow(query, token, nomorUrut).Scan(
-		&soal.ID, &soal.Pertanyaan, &soalQuestionType, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &jawabanBenarComplex, &jawabanEssayKey, &soal.IDMateri,
+		&soal.ID, &soal.Pertanyaan, &soal.Point, &soalQuestionType, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &jawabanBenarComplex, &jawabanEssayKey, &soal.IDMateri,
 		&materi.ID, &materi.Nama, &materi.IDMataPelajaran, &materi.IDTingkat,
 		&mataPelajaran.ID, &mataPelajaran.Nama, &mataPelajaran.IsActive, &mataPelajaran.LmsSubjectID, &mataPelajaran.LmsSchoolID, &mataPelajaran.LmsClassID,
 		&tingkat.ID, &tingkat.Nama, &tingkat.IsActive, &tingkat.LmsLevelID,
@@ -775,15 +788,15 @@ func (r *testSessionRepositoryImpl) SubmitAnswer(token string, nomorUrut int, ja
 	var tss entity.TestSessionSoal
 	var soal entity.Soal
 	query := `
-		SELECT tss.id, tss.id_test_session, tss.question_type, tss.id_soal, tss.id_soal_drag_drop, tss.nomor_urut,
-		       s.id, s.pertanyaan, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.id_materi
+		SELECT tss.id, tss.id_test_session, tss.question_type, tss.id_soal, tss.id_soal_drag_drop, tss.point, tss.nomor_urut,
+		       s.id, s.pertanyaan, s.point, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.id_materi
 		FROM test_session_soal tss
 		JOIN test_session ts ON tss.id_test_session = ts.id
 		JOIN soal s ON tss.id_soal = s.id
 		WHERE ts.session_token = $1 AND tss.nomor_urut = $2`
 	err := r.db.QueryRow(query, token, nomorUrut).Scan(
-		&tss.ID, &tss.IDTestSession, &tss.QuestionType, &tss.IDSoal, &tss.IDSoalDragDrop, &tss.NomorUrut,
-		&soal.ID, &soal.Pertanyaan, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &soal.IDMateri,
+		&tss.ID, &tss.IDTestSession, &tss.QuestionType, &tss.IDSoal, &tss.IDSoalDragDrop, &tss.Point, &tss.NomorUrut,
+		&soal.ID, &soal.Pertanyaan, &soal.Point, &soal.OpsiA, &soal.OpsiB, &soal.OpsiC, &soal.OpsiD, &soal.JawabanBenar, &soal.IDMateri,
 	)
 	if err != nil {
 		return err
@@ -837,8 +850,8 @@ func (r *testSessionRepositoryImpl) GetSessionAnswers(token string) ([]entity.Ja
 	query := `
 		SELECT js.id, js.id_test_session_soal, js.jawaban_dipilih, js.is_correct, js.question_type, js.dijawab_pada, js.jawaban_drag_drop, js.jawaban_essay, js.nilai_essay, js.feedback_teacher,
 		       js.jawaban_dipilih_complex,
-		       tss.id, tss.id_test_session, tss.question_type, tss.id_soal, tss.id_soal_drag_drop, tss.nomor_urut,
-		       s.id, s.pertanyaan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.id_materi
+		       tss.id, tss.id_test_session, tss.question_type, tss.id_soal, tss.id_soal_drag_drop, tss.point, tss.nomor_urut,
+		       s.id, s.pertanyaan, s.point, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.id_materi
 		FROM jawaban_siswa js
 		JOIN test_session_soal tss ON js.id_test_session_soal = tss.id
 		JOIN test_session ts ON tss.id_test_session = ts.id
@@ -859,12 +872,13 @@ func (r *testSessionRepositoryImpl) GetSessionAnswers(token string) ([]entity.Ja
 		// Use nullable types for LEFT JOIN soal columns
 		var soalID, soalIDMateri sql.NullInt64
 		var soalPertanyaan, soalQuestionType, soalOpsiA, soalOpsiB, soalOpsiC, soalOpsiD, soalJawabanBenar, soalJawabanBenarComplex, soalJawabanEssayKey sql.NullString
+		var soalPoint sql.NullFloat64
 		var nilaiEssay sql.NullFloat64
 
 			err := rows.Scan(
 			&js.ID, &js.IDTestSessionSoal, &js.JawabanDipilih, &js.IsCorrect, &js.QuestionType, &js.DijawabPada, &js.JawabanDragDrop, &js.JawabanEssay, &nilaiEssay, &js.FeedbackTeacher, &js.JawabanDipilihComplex,
-			&tss.ID, &tss.IDTestSession, &tss.QuestionType, &tss.IDSoal, &tss.IDSoalDragDrop, &tss.NomorUrut,
-			&soalID, &soalPertanyaan, &soalQuestionType, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalJawabanBenarComplex, &soalJawabanEssayKey, &soalIDMateri,
+			&tss.ID, &tss.IDTestSession, &tss.QuestionType, &tss.IDSoal, &tss.IDSoalDragDrop, &tss.Point, &tss.NomorUrut,
+			&soalID, &soalPertanyaan, &soalPoint, &soalQuestionType, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalJawabanBenarComplex, &soalJawabanEssayKey, &soalIDMateri,
 		)
 		if err != nil {
 			return nil, err
@@ -874,6 +888,9 @@ func (r *testSessionRepositoryImpl) GetSessionAnswers(token string) ([]entity.Ja
 		if soalID.Valid {
 			soal.ID = int(soalID.Int64)
 			soal.Pertanyaan = soalPertanyaan.String
+			if soalPoint.Valid {
+				soal.Point = soalPoint.Float64
+			}
 			soal.OpsiA = soalOpsiA.String
 			soal.OpsiB = soalOpsiB.String
 			soal.OpsiC = soalOpsiC.String
@@ -903,7 +920,7 @@ func (r *testSessionRepositoryImpl) GetSessionAnswers(token string) ([]entity.Ja
 }
 
 // Assign random questions to session
-func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelajaran, tingkatan, jumlahSoal int, includeTypes []entity.QuestionType) error {
+func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelajaran, tingkatan, jumlahSoal int, includeTypes []entity.QuestionType, randomize bool) error {
 	includeSet := map[entity.QuestionType]bool{}
 	for _, questionType := range includeTypes {
 		includeSet[questionType] = true
@@ -917,10 +934,11 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 
 	// Get random soal IDs for the criteria - get questions for the mata_pelajaran and tingkat
 	soalQuery := `
-		SELECT s.id, s.question_type
+		SELECT s.id, s.question_type, COALESCE(s.point, 1), COALESCE(s.urutan, 0)
 		FROM soal s
 		JOIN materi m ON s.id_materi = m.id
-		WHERE m.id_mata_pelajaran = $1 AND m.id_tingkat = $2`
+		WHERE m.id_mata_pelajaran = $1 AND m.id_tingkat = $2
+		ORDER BY COALESCE(s.urutan, 0) ASC, s.id ASC`
 	soalRows, err := r.db.Query(soalQuery, idMataPelajaran, tingkatan)
 	if err != nil {
 		return err
@@ -931,13 +949,29 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 	var allQuestionIDs []struct {
 		ID           int
 		QuestionType entity.QuestionType
+		Point        float64
+		Urutan       int
 	}
 
 	var soalIDs []int
+	soalPointMap := make(map[int]float64)
+	soalUrutanMap := make(map[int]int)
 	for soalRows.Next() {
 		var id int
 		var questionType sql.NullString
-		soalRows.Scan(&id, &questionType)
+		var point sql.NullFloat64
+		var urutan sql.NullInt64
+		soalRows.Scan(&id, &questionType, &point, &urutan)
+		resolvedPoint := 1.0
+		if point.Valid && point.Float64 > 0 {
+			resolvedPoint = point.Float64
+		}
+		soalPointMap[id] = resolvedPoint
+		resolvedUrutan := 0
+		if urutan.Valid {
+			resolvedUrutan = int(urutan.Int64)
+		}
+		soalUrutanMap[id] = resolvedUrutan
 		if strings.EqualFold(questionType.String, string(entity.QuestionTypeEssay)) {
 			if !includeSet[entity.QuestionTypeEssay] {
 				continue
@@ -945,7 +979,9 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 			allQuestionIDs = append(allQuestionIDs, struct {
 				ID           int
 				QuestionType entity.QuestionType
-			}{ID: id, QuestionType: entity.QuestionTypeEssay})
+				Point        float64
+				Urutan       int
+			}{ID: id, QuestionType: entity.QuestionTypeEssay, Point: resolvedPoint, Urutan: resolvedUrutan})
 		} else if strings.EqualFold(questionType.String, string(entity.QuestionTypeMultipleChoicesComplex)) {
 			if !includeSet[entity.QuestionTypeMultipleChoicesComplex] {
 				continue
@@ -953,7 +989,9 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 			allQuestionIDs = append(allQuestionIDs, struct {
 				ID           int
 				QuestionType entity.QuestionType
-			}{ID: id, QuestionType: entity.QuestionTypeMultipleChoicesComplex})
+				Point        float64
+				Urutan       int
+			}{ID: id, QuestionType: entity.QuestionTypeMultipleChoicesComplex, Point: resolvedPoint, Urutan: resolvedUrutan})
 		} else {
 			if !includeSet[entity.QuestionTypeMultipleChoice] {
 				continue
@@ -964,10 +1002,11 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 
 	// Get drag-drop question IDs for the same criteria
 	dragDropQuery := `
-		SELECT sdd.id
+		SELECT sdd.id, COALESCE(sdd.point, 1), COALESCE(sdd.urutan, 0)
 		FROM soal_drag_drop sdd
 		JOIN materi m ON sdd.id_materi = m.id
-		WHERE m.id_mata_pelajaran = $1 AND m.id_tingkat = $2 AND sdd.is_active = $3`
+		WHERE m.id_mata_pelajaran = $1 AND m.id_tingkat = $2 AND sdd.is_active = $3
+		ORDER BY COALESCE(sdd.urutan, 0) ASC, sdd.id ASC`
 	dragDropRows, err := r.db.Query(dragDropQuery, idMataPelajaran, tingkatan, true)
 	if err != nil {
 		return err
@@ -975,9 +1014,23 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 	defer dragDropRows.Close()
 
 	var dragDropIDs []int
+	dragDropPointMap := make(map[int]float64)
+	dragDropUrutanMap := make(map[int]int)
 	for dragDropRows.Next() {
 		var id int
-		dragDropRows.Scan(&id)
+		var point sql.NullFloat64
+		var urutan sql.NullInt64
+		dragDropRows.Scan(&id, &point, &urutan)
+		resolvedPoint := 1.0
+		if point.Valid && point.Float64 > 0 {
+			resolvedPoint = point.Float64
+		}
+		dragDropPointMap[id] = resolvedPoint
+		resolvedUrutan := 0
+		if urutan.Valid {
+			resolvedUrutan = int(urutan.Int64)
+		}
+		dragDropUrutanMap[id] = resolvedUrutan
 		if !includeSet[entity.QuestionTypeDragDrop] {
 			continue
 		}
@@ -989,7 +1042,9 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 		allQuestionIDs = append(allQuestionIDs, struct {
 			ID           int
 			QuestionType entity.QuestionType
-		}{ID: id, QuestionType: entity.QuestionTypeMultipleChoice})
+			Point        float64
+			Urutan       int
+		}{ID: id, QuestionType: entity.QuestionTypeMultipleChoice, Point: soalPointMap[id], Urutan: soalUrutanMap[id]})
 	}
 
 	// Add drag-drop questions
@@ -997,7 +1052,9 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 		allQuestionIDs = append(allQuestionIDs, struct {
 			ID           int
 			QuestionType entity.QuestionType
-		}{ID: id, QuestionType: entity.QuestionTypeDragDrop})
+			Point        float64
+			Urutan       int
+		}{ID: id, QuestionType: entity.QuestionTypeDragDrop, Point: dragDropPointMap[id], Urutan: dragDropUrutanMap[id]})
 	}
 
 	if len(allQuestionIDs) == 0 {
@@ -1010,8 +1067,17 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 		actualJumlahSoal = len(allQuestionIDs)
 	}
 
-	// Shuffle and select
-	rand.Shuffle(len(allQuestionIDs), func(i, j int) { allQuestionIDs[i], allQuestionIDs[j] = allQuestionIDs[j], allQuestionIDs[i] })
+	// Shuffle for random mode, otherwise keep deterministic urutan order
+	if randomize {
+		rand.Shuffle(len(allQuestionIDs), func(i, j int) { allQuestionIDs[i], allQuestionIDs[j] = allQuestionIDs[j], allQuestionIDs[i] })
+	} else {
+		sort.SliceStable(allQuestionIDs, func(i, j int) bool {
+			if allQuestionIDs[i].Urutan == allQuestionIDs[j].Urutan {
+				return allQuestionIDs[i].ID < allQuestionIDs[j].ID
+			}
+			return allQuestionIDs[i].Urutan < allQuestionIDs[j].Urutan
+		})
+	}
 	selectedQuestions := allQuestionIDs[:actualJumlahSoal]
 
 	// Create TestSessionSoal entries
@@ -1020,18 +1086,18 @@ func (r *testSessionRepositoryImpl) AssignRandomQuestions(sessionID, idMataPelaj
 		case entity.QuestionTypeMultipleChoice, entity.QuestionTypeEssay, entity.QuestionTypeMultipleChoicesComplex:
 			soalIDPtr := question.ID // Create a copy for pointer
 			insertQuery := `
-				INSERT INTO test_session_soal (id_test_session, question_type, id_soal, nomor_urut)
-				VALUES ($1, $2, $3, $4)`
-			_, err := r.db.Exec(insertQuery, sessionID, string(question.QuestionType), soalIDPtr, i+1)
+				INSERT INTO test_session_soal (id_test_session, question_type, id_soal, point, nomor_urut)
+				VALUES ($1, $2, $3, $4, $5)`
+			_, err := r.db.Exec(insertQuery, sessionID, string(question.QuestionType), soalIDPtr, question.Point, i+1)
 			if err != nil {
 				return err
 			}
 		case entity.QuestionTypeDragDrop:
 			soalDragDropIDPtr := question.ID // Create a copy for pointer
 			insertQuery := `
-				INSERT INTO test_session_soal (id_test_session, question_type, id_soal_drag_drop, nomor_urut)
-				VALUES ($1, $2, $3, $4)`
-			_, err := r.db.Exec(insertQuery, sessionID, string(entity.QuestionTypeDragDrop), soalDragDropIDPtr, i+1)
+				INSERT INTO test_session_soal (id_test_session, question_type, id_soal_drag_drop, point, nomor_urut)
+				VALUES ($1, $2, $3, $4, $5)`
+			_, err := r.db.Exec(insertQuery, sessionID, string(entity.QuestionTypeDragDrop), soalDragDropIDPtr, question.Point, i+1)
 			if err != nil {
 				return err
 			}
@@ -1055,9 +1121,9 @@ func (r *testSessionRepositoryImpl) CreateUnansweredRecord(sessionSoalID, testSe
 // GetTestSessionSoalByOrder gets TestSessionSoal by token and nomor_urut
 func (r *testSessionRepositoryImpl) GetTestSessionSoalByOrder(token string, nomorUrut int) (*entity.TestSessionSoal, error) {
 	query := `
-		SELECT tss.id, tss.id_test_session, tss.question_type, tss.id_soal, tss.id_soal_drag_drop, tss.nomor_urut,
-		       s.id, s.pertanyaan, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.id_materi,
-		       sdd.id, sdd.pertanyaan, sdd.id_materi
+		SELECT tss.id, tss.id_test_session, tss.question_type, tss.id_soal, tss.id_soal_drag_drop, tss.point, tss.nomor_urut,
+		       s.id, s.pertanyaan, s.point, s.question_type, s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.jawaban_benar, s.jawaban_benar_complex, s.jawaban_essay_key, s.id_materi,
+		       sdd.id, sdd.pertanyaan, sdd.point, sdd.id_materi
 		FROM test_session_soal tss
 		JOIN test_session ts ON tss.id_test_session = ts.id
 		LEFT JOIN soal s ON tss.id_soal = s.id
@@ -1070,13 +1136,15 @@ func (r *testSessionRepositoryImpl) GetTestSessionSoalByOrder(token string, nomo
 	// Use nullable types for LEFT JOIN columns
 	var soalID, soalIDMateri sql.NullInt64
 	var soalPertanyaan, soalQuestionType, soalOpsiA, soalOpsiB, soalOpsiC, soalOpsiD, soalJawabanBenar, soalJawabanBenarComplex, soalJawabanEssayKey sql.NullString
+	var soalPoint sql.NullFloat64
 	var sddID, sddIDMateri sql.NullInt64
+	var sddPoint sql.NullFloat64
 	var sddPertanyaan sql.NullString
 
 	err := r.db.QueryRow(query, token, nomorUrut).Scan(
-		&tss.ID, &tss.IDTestSession, &tss.QuestionType, &tss.IDSoal, &tss.IDSoalDragDrop, &tss.NomorUrut,
-		&soalID, &soalPertanyaan, &soalQuestionType, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalJawabanBenarComplex, &soalJawabanEssayKey, &soalIDMateri,
-		&sddID, &sddPertanyaan, &sddIDMateri,
+		&tss.ID, &tss.IDTestSession, &tss.QuestionType, &tss.IDSoal, &tss.IDSoalDragDrop, &tss.Point, &tss.NomorUrut,
+		&soalID, &soalPertanyaan, &soalPoint, &soalQuestionType, &soalOpsiA, &soalOpsiB, &soalOpsiC, &soalOpsiD, &soalJawabanBenar, &soalJawabanBenarComplex, &soalJawabanEssayKey, &soalIDMateri,
+		&sddID, &sddPertanyaan, &sddPoint, &sddIDMateri,
 	)
 	if err != nil {
 		return nil, err
@@ -1086,6 +1154,9 @@ func (r *testSessionRepositoryImpl) GetTestSessionSoalByOrder(token string, nomo
 	if soalID.Valid {
 		soal.ID = int(soalID.Int64)
 		soal.Pertanyaan = soalPertanyaan.String
+		if soalPoint.Valid {
+			soal.Point = soalPoint.Float64
+		}
 		soal.OpsiA = soalOpsiA.String
 		soal.OpsiB = soalOpsiB.String
 		soal.OpsiC = soalOpsiC.String
@@ -1108,6 +1179,9 @@ func (r *testSessionRepositoryImpl) GetTestSessionSoalByOrder(token string, nomo
 	if sddID.Valid {
 		soalDragDrop.ID = int(sddID.Int64)
 		soalDragDrop.Pertanyaan = sddPertanyaan.String
+		if sddPoint.Valid {
+			soalDragDrop.Point = sddPoint.Float64
+		}
 		if sddIDMateri.Valid {
 			soalDragDrop.IDMateri = int(sddIDMateri.Int64)
 		}
@@ -1270,10 +1344,11 @@ func (r *testSessionRepositoryImpl) GradeEssayAnswer(answerID int, score float64
 		WITH score_calc AS (
 			SELECT ts.id AS session_id,
 				COUNT(tss.id)::int AS total_questions,
+				SUM(COALESCE(tss.point, 1.0)) AS total_weight,
 				SUM(
 					CASE
-						WHEN tss.question_type = 'essay' THEN COALESCE(js.nilai_essay, 0) / 100.0
-						WHEN js.is_correct THEN 1.0
+						WHEN tss.question_type = 'essay' THEN (COALESCE(js.nilai_essay, 0) / 100.0) * COALESCE(tss.point, 1.0)
+						WHEN js.is_correct THEN COALESCE(tss.point, 1.0)
 						ELSE 0.0
 					END
 				) AS total_points,
@@ -1292,7 +1367,7 @@ func (r *testSessionRepositoryImpl) GradeEssayAnswer(answerID int, score float64
 			GROUP BY ts.id
 		)
 		UPDATE test_session ts
-		SET nilai_akhir = CASE WHEN sc.total_questions > 0 THEN (sc.total_points / sc.total_questions) * 100 ELSE 0 END,
+		SET nilai_akhir = CASE WHEN sc.total_weight > 0 THEN (sc.total_points / sc.total_weight) * 100 ELSE 0 END,
 		    jumlah_benar = sc.total_correct,
 		    total_soal = sc.total_questions,
 		    status = CASE WHEN sc.pending_essay > 0 THEN 'grading_in_progress' ELSE 'graded' END

@@ -8,7 +8,7 @@ type User struct {
 	Email        string    `json:"email" gorm:"unique;not null;size:100"`
 	PasswordHash string    `json:"password_hash" gorm:"not null;size:255"`
 	Nama         string    `json:"nama" gorm:"not null;size:100"`
-	Role         string    `json:"role" gorm:"not null;type:enum('siswa','admin');default:'siswa'"`
+	Role         string    `json:"role" gorm:"not null"`
 	IsActive     bool      `json:"is_active" gorm:"not null;default:true"`
 	CreatedAt    time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt    time.Time `json:"updated_at" gorm:"autoUpdateTime"`

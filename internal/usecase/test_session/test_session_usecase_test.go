@@ -109,8 +109,8 @@ func (m *MockTestSessionRepo) GetByToken(token string) (*entity.TestSession, err
 	return args.Get(0).(*entity.TestSession), args.Error(1)
 }
 
-func (m *MockTestSessionRepo) AssignRandomQuestions(sessionID, idMataPelajaran, idTingkat, jumlahSoal int, includeTypes []entity.QuestionType) error {
-	args := m.Called(sessionID, idMataPelajaran, idTingkat, jumlahSoal, includeTypes)
+func (m *MockTestSessionRepo) AssignRandomQuestions(sessionID, idMataPelajaran, idTingkat, jumlahSoal int, includeTypes []entity.QuestionType, randomize bool) error {
+	args := m.Called(sessionID, idMataPelajaran, idTingkat, jumlahSoal, includeTypes, randomize)
 	return args.Error(0)
 }
 

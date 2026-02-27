@@ -104,10 +104,13 @@ func (u *soalUsecaseImpl) saveImages(imageFilesBytes [][]byte) ([]entity.SoalGam
 }
 
 // CreateSoal creates a new soal with multiple images
-func (u *soalUsecaseImpl) CreateSoal(idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD, pembahasan string, questionType entity.QuestionType, jawabanBenar entity.JawabanOption, jawabanBenarComplex []entity.JawabanOption, imageFilesBytes [][]byte) (*entity.Soal, error) {
+func (u *soalUsecaseImpl) CreateSoal(idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD, pembahasan string, point float64, urutan int, questionType entity.QuestionType, jawabanBenar entity.JawabanOption, jawabanBenarComplex []entity.JawabanOption, imageFilesBytes [][]byte) (*entity.Soal, error) {
 	questionType = normalizeQuestionType(questionType, pembahasan)
 	if pertanyaan == "" {
 		return nil, errors.New("pertanyaan must be filled")
+	}
+	if point <= 0 {
+		point = 1
 	}
 	if questionType != entity.QuestionTypeEssay {
 		if opsiA == "" || opsiB == "" || opsiC == "" || opsiD == "" {
@@ -134,6 +137,8 @@ func (u *soalUsecaseImpl) CreateSoal(idMateri, idTingkat int, pertanyaan, opsiA,
 		IDMateri:     idMateri,
 		IDTingkat:    idTingkat,
 		Pertanyaan:   pertanyaan,
+		Point:        point,
+		Urutan:       urutan,
 		QuestionType: questionType,
 		OpsiA:        opsiA,
 		OpsiB:        opsiB,
@@ -173,10 +178,13 @@ func (u *soalUsecaseImpl) GetSoal(id int) (*entity.Soal, error) {
 }
 
 // UpdateSoal updates existing with multiple images
-func (u *soalUsecaseImpl) UpdateSoal(id, idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD, pembahasan string, questionType entity.QuestionType, jawabanBenar entity.JawabanOption, jawabanBenarComplex []entity.JawabanOption, imageFilesBytes [][]byte) (*entity.Soal, error) {
+func (u *soalUsecaseImpl) UpdateSoal(id, idMateri, idTingkat int, pertanyaan, opsiA, opsiB, opsiC, opsiD, pembahasan string, point float64, urutan int, questionType entity.QuestionType, jawabanBenar entity.JawabanOption, jawabanBenarComplex []entity.JawabanOption, imageFilesBytes [][]byte) (*entity.Soal, error) {
 	questionType = normalizeQuestionType(questionType, pembahasan)
 	if pertanyaan == "" {
 		return nil, errors.New("pertanyaan must be filled")
+	}
+	if point <= 0 {
+		point = 1
 	}
 	if questionType != entity.QuestionTypeEssay {
 		if opsiA == "" || opsiB == "" || opsiC == "" || opsiD == "" {
@@ -210,6 +218,8 @@ func (u *soalUsecaseImpl) UpdateSoal(id, idMateri, idTingkat int, pertanyaan, op
 	s.IDMateri = idMateri
 	s.IDTingkat = idTingkat
 	s.Pertanyaan = pertanyaan
+	s.Point = point
+	s.Urutan = urutan
 	s.OpsiA = opsiA
 	s.OpsiB = opsiB
 	s.OpsiC = opsiC
@@ -381,4 +391,19 @@ func (u *soalUsecaseImpl) UpdateImageInSoal(idGambar int, urutan int, keterangan
 // GetQuestionCountsByTopic returns the count of questions per topic
 func (u *soalUsecaseImpl) GetQuestionCountsByTopic() (map[int]int, error) {
 	return u.repo.GetQuestionCountsByTopic()
+}
+
+func (u *soalUsecaseImpl) ReorderSoal(idMateri int, urutanByID map[int]int) error {
+	if idMateri < 1 {
+		return errors.New("id_materi must be positive")
+	}
+	if len(urutanByID) == 0 {
+		return errors.New("reorder items cannot be empty")
+	}
+	for _, urutan := range urutanByID {
+		if urutan < 1 {
+			return errors.New("urutan must be greater than zero")
+		}
+	}
+	return u.repo.ReorderByMateri(idMateri, urutanByID)
 }

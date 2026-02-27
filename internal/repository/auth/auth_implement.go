@@ -28,9 +28,11 @@ func lmsUserIDValue(id *int64) int64 {
 
 func normalizeRoleForDB(role string) string {
 	switch strings.ToLower(strings.TrimSpace(role)) {
-	case "admin":
-		return "admin"
-	case "student", "siswa", "teacher", "superadmin":
+	case "superadmin", "admin":
+		return "superadmin"
+	case "teacher", "guru":
+		return "teacher"
+	case "student", "siswa":
 		return "student"
 	default:
 		return "student"
@@ -38,14 +40,21 @@ func normalizeRoleForDB(role string) string {
 }
 
 func protoRoleToDB(role base.UserRole) string {
-	if role == base.UserRole_ADMIN {
-		return "admin"
+	switch int32(role) {
+	case int32(base.UserRole_ADMIN):
+		return "superadmin"
+	case 3:
+		return "teacher"
+	case 4:
+		return "superadmin"
+	default:
+		return "student"
 	}
-	return "student"
 }
 
 func dbRoleToProto(role string) base.UserRole {
-	if strings.EqualFold(role, "admin") {
+	normalized := normalizeRoleForDB(role)
+	if normalized == "superadmin" {
 		return base.UserRole_ADMIN
 	}
 	return base.UserRole_SISWA

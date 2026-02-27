@@ -28,6 +28,8 @@ type SoalDragDrop struct {
 	IDTingkat      int                  `json:"id_tingkat" gorm:"not null"`
 	Tingkat        Tingkat              `json:"tingkat" gorm:"foreignKey:IDTingkat"`
 	Pertanyaan     string               `json:"pertanyaan" gorm:"type:text;not null"`
+	Point          float64              `json:"point" gorm:"column:point;type:decimal(10,2);not null;default:1"`
+	Urutan         int                  `json:"urutan" gorm:"column:urutan;not null;default:0"`
 	DragType       DragDropType         `json:"drag_type" gorm:"type:enum('ordering','matching');not null"`
 	Pembahasan     *string              `json:"pembahasan,omitempty" gorm:"type:text"`
 	IsActive       bool                 `json:"is_active" gorm:"default:true"`

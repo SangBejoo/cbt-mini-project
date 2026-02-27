@@ -2110,6 +2110,9 @@
         "lmsTeacherMaterialId": {
           "type": "string",
           "format": "int64"
+        },
+        "randomizeQuestions": {
+          "type": "boolean"
         }
       }
     },
@@ -2156,6 +2159,14 @@
         },
         "isActive": {
           "type": "boolean"
+        },
+        "point": {
+          "type": "number",
+          "format": "double"
+        },
+        "urutan": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -2218,6 +2229,14 @@
           "items": {
             "$ref": "#/definitions/baseJawabanOption"
           }
+        },
+        "point": {
+          "type": "number",
+          "format": "double"
+        },
+        "urutan": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -2439,6 +2458,9 @@
         "lmsTeacherMaterialId": {
           "type": "string",
           "format": "int64"
+        },
+        "randomizeQuestions": {
+          "type": "boolean"
         }
       }
     },
@@ -2487,6 +2509,14 @@
           "type": "string",
           "format": "int64",
           "title": "Class scope"
+        },
+        "point": {
+          "type": "number",
+          "format": "double"
+        },
+        "urutan": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -2542,6 +2572,14 @@
           "items": {
             "$ref": "#/definitions/baseJawabanOption"
           }
+        },
+        "point": {
+          "type": "number",
+          "format": "double"
+        },
+        "urutan": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -2576,6 +2614,9 @@
             "$ref": "#/definitions/baseQuestionType"
           },
           "title": "Optional type filter (defaults to all)"
+        },
+        "selectionMode": {
+          "$ref": "#/definitions/baseQuestionSelectionMode"
         }
       }
     },
@@ -3111,6 +3152,9 @@
         "lmsTeacherMaterialId": {
           "type": "string",
           "format": "int64"
+        },
+        "randomizeQuestions": {
+          "type": "boolean"
         }
       }
     },
@@ -3325,6 +3369,15 @@
       },
       "title": "Unified question for mixed test sessions"
     },
+    "baseQuestionSelectionMode": {
+      "type": "string",
+      "enum": [
+        "SELECTION_MODE_INVALID",
+        "RANDOM",
+        "ORDERED"
+      ],
+      "default": "SELECTION_MODE_INVALID"
+    },
     "baseQuestionType": {
       "type": "string",
       "enum": [
@@ -3391,9 +3444,30 @@
         "lmsClassId": {
           "type": "string",
           "format": "int64"
+        },
+        "point": {
+          "type": "number",
+          "format": "double"
+        },
+        "urutan": {
+          "type": "integer",
+          "format": "int32"
         }
       },
       "title": "Full drag-drop question (admin view with answers)"
+    },
+    "baseSoalDragDropOrderItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "urutan": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
     },
     "baseSoalDragDropResponse": {
       "type": "object",
@@ -3453,6 +3527,14 @@
           "items": {
             "$ref": "#/definitions/baseJawabanOption"
           }
+        },
+        "point": {
+          "type": "number",
+          "format": "double"
+        },
+        "urutan": {
+          "type": "integer",
+          "format": "int32"
         }
       },
       "title": "Full soal with answer (for admin/teacher only)"
@@ -3496,6 +3578,19 @@
         }
       },
       "title": "Image metadata for soal"
+    },
+    "baseSoalOrderItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "urutan": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
     },
     "baseSoalResponse": {
       "type": "object",
@@ -3952,9 +4047,12 @@
       "enum": [
         "ROLE_INVALID",
         "SISWA",
-        "ADMIN"
+        "ADMIN",
+        "TEACHER",
+        "SUPERADMIN"
       ],
-      "default": "ROLE_INVALID"
+      "default": "ROLE_INVALID",
+      "title": "- ADMIN: backward compatibility (mapped to SUPERADMIN)"
     },
     "protobufAny": {
       "type": "object",

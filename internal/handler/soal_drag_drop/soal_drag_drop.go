@@ -28,6 +28,8 @@ func (h *grpcHandler) CreateSoalDragDrop(ctx context.Context, req *base.CreateSo
 		IDMateri:   int(req.IdMateri),
 		IDTingkat:  int(req.IdTingkat),
 		Pertanyaan: req.Pertanyaan,
+		Point:      req.Point,
+		Urutan:     int(req.Urutan),
 		DragType:   protoToEntityDragType(req.DragType),
 	}
 
@@ -93,6 +95,8 @@ func (h *grpcHandler) UpdateSoalDragDrop(ctx context.Context, req *base.UpdateSo
 		IDMateri:   int(req.IdMateri),
 		IDTingkat:  int(req.IdTingkat),
 		Pertanyaan: req.Pertanyaan,
+		Point:      req.Point,
+		Urutan:     int(req.Urutan),
 		DragType:   protoToEntityDragType(req.DragType),
 		IsActive:   req.IsActive,
 	}
@@ -192,6 +196,19 @@ func (h *grpcHandler) ListSoalDragDrop(ctx context.Context, req *base.ListSoalDr
 	}, nil
 }
 
+func (h *grpcHandler) ReorderSoalDragDrop(ctx context.Context, req *base.ReorderSoalDragDropRequest) (*base.MessageStatusResponse, error) {
+	urutanByID := make(map[int]int, len(req.Items))
+	for _, item := range req.Items {
+		urutanByID[int(item.Id)] = int(item.Urutan)
+	}
+
+	if err := h.usecase.ReorderSoalDragDrop(int(req.IdMateri), urutanByID); err != nil {
+		return nil, err
+	}
+
+	return &base.MessageStatusResponse{Message: "Soal drag-drop reordered successfully", Status: "success"}, nil
+}
+
 // Helper functions
 
 func (h *grpcHandler) toProtoResponse(soal *entity.SoalDragDrop) (*base.SoalDragDropResponse, error) {
@@ -265,6 +282,8 @@ func (h *grpcHandler) entityToProto(soal *entity.SoalDragDrop) (*base.SoalDragDr
 			},
 		},
 		Pertanyaan:     soal.Pertanyaan,
+		Point:          soal.Point,
+		Urutan:         int32(soal.Urutan),
 		DragType:       entityToProtoDragType(soal.DragType),
 		Items:          protoItems,
 		Slots:          protoSlots,

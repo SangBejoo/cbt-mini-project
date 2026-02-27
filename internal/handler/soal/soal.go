@@ -33,7 +33,7 @@ func (h *soalHandler) CreateSoal(ctx context.Context, req *base.CreateSoalReques
 		imageFilesBytes = req.ImageBytes
 	}
 	
-	s, err := h.usecase.CreateSoal(int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, req.Pembahasan, questionType, jawabanBenar, jawabanBenarComplex, imageFilesBytes)
+	s, err := h.usecase.CreateSoal(int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, req.Pembahasan, req.Point, int(req.Urutan), questionType, jawabanBenar, jawabanBenarComplex, imageFilesBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -78,6 +78,8 @@ func (h *soalHandler) CreateSoal(ctx context.Context, req *base.CreateSoalReques
 				Nama:          s.Materi.Nama,
 			},
 			Pertanyaan:   s.Pertanyaan,
+			Point:        s.Point,
+			Urutan:       int32(s.Urutan),
 			OpsiA:        s.OpsiA,
 			OpsiB:        s.OpsiB,
 			OpsiC:        s.OpsiC,
@@ -113,6 +115,8 @@ func (h *soalHandler) GetSoal(ctx context.Context, req *base.GetSoalRequest) (*b
 				Nama: s.Materi.Nama,
 			},
 			Pertanyaan:    s.Pertanyaan,
+			Point:         s.Point,
+			Urutan:        int32(s.Urutan),
 			OpsiA:         s.OpsiA,
 			OpsiB:         s.OpsiB,
 			OpsiC:         s.OpsiC,
@@ -217,7 +221,7 @@ func (h *soalHandler) UpdateSoal(ctx context.Context, req *base.UpdateSoalReques
 		imageFilesBytes = req.ImageBytes
 	}
 	
-	s, err := h.usecase.UpdateSoal(int(req.Id), int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, req.Pembahasan, questionType, jawabanBenar, jawabanBenarComplex, imageFilesBytes)
+	s, err := h.usecase.UpdateSoal(int(req.Id), int(req.IdMateri), int(req.IdTingkat), req.Pertanyaan, req.OpsiA, req.OpsiB, req.OpsiC, req.OpsiD, req.Pembahasan, req.Point, int(req.Urutan), questionType, jawabanBenar, jawabanBenarComplex, imageFilesBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -242,6 +246,8 @@ func (h *soalHandler) UpdateSoal(ctx context.Context, req *base.UpdateSoalReques
 				Nama:          s.Materi.Nama,
 			},
 			Pertanyaan:   s.Pertanyaan,
+			Point:        s.Point,
+			Urutan:       int32(s.Urutan),
 			OpsiA:        s.OpsiA,
 			OpsiB:        s.OpsiB,
 			OpsiC:        s.OpsiC,
@@ -304,6 +310,8 @@ func (h *soalHandler) ListSoal(ctx context.Context, req *base.ListSoalRequest) (
 				Nama: s.Materi.Nama,
 			},
 			Pertanyaan:    s.Pertanyaan,
+			Point:         s.Point,
+			Urutan:        int32(s.Urutan),
 			OpsiA:         s.OpsiA,
 			OpsiB:         s.OpsiB,
 			OpsiC:         s.OpsiC,
@@ -463,4 +471,17 @@ func toProtoJawabanOptions(options []entity.JawabanOption) []base.JawabanOption 
 		}
 	}
 	return result
+}
+
+func (h *soalHandler) ReorderSoal(ctx context.Context, req *base.ReorderSoalRequest) (*base.MessageStatusResponse, error) {
+	urutanByID := make(map[int]int, len(req.Items))
+	for _, item := range req.Items {
+		urutanByID[int(item.Id)] = int(item.Urutan)
+	}
+
+	if err := h.usecase.ReorderSoal(int(req.IdMateri), urutanByID); err != nil {
+		return nil, err
+	}
+
+	return &base.MessageStatusResponse{Message: "Soal reordered successfully", Status: "success"}, nil
 }

@@ -41,7 +41,7 @@ type TestSessionRepository interface {
 	UpdateSessionStatus(token string, status entity.TestStatus) error
 
 	// Assign random questions to session
-	AssignRandomQuestions(sessionID, idMataPelajaran, tingkatan, jumlahSoal int, includeTypes []entity.QuestionType) error
+	AssignRandomQuestions(sessionID, idMataPelajaran, tingkatan, jumlahSoal int, includeTypes []entity.QuestionType, randomize bool) error
 
 	// List sessions with filters
 	List(tingkatan, idMataPelajaran *int, status *entity.TestStatus, limit, offset int) ([]entity.TestSession, int, error)

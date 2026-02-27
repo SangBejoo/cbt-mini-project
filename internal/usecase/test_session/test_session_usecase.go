@@ -83,18 +83,52 @@ func (u *testSessionUsecaseImpl) CompleteSession(sessionToken string) (*entity.T
 		return nil, err
 	}
 
-	// Calculate score
+	pointByNomorUrut := make(map[int]float64, len(allQuestions))
+	totalPoint := 0.0
+	for _, question := range allQuestions {
+		point := question.Point
+		if point <= 0 {
+			point = 1
+		}
+		pointByNomorUrut[question.NomorUrut] = point
+		totalPoint += point
+	}
+
 	jumlahBenar := 0
+	pointTercapai := 0.0
 	for _, ans := range answers {
-		if ans.IsCorrect {
-			jumlahBenar++
+		point := pointByNomorUrut[ans.TestSessionSoal.NomorUrut]
+		if point <= 0 {
+			point = 1
+		}
+
+		switch ans.QuestionType {
+		case entity.QuestionTypeEssay:
+			if ans.NilaiEssay != nil {
+				scoreFraction := *ans.NilaiEssay / 100
+				if scoreFraction < 0 {
+					scoreFraction = 0
+				}
+				if scoreFraction > 1 {
+					scoreFraction = 1
+				}
+				pointTercapai += scoreFraction * point
+				if *ans.NilaiEssay >= 60 {
+					jumlahBenar++
+				}
+			}
+		default:
+			if ans.IsCorrect {
+				jumlahBenar++
+				pointTercapai += point
+			}
 		}
 	}
 
 	totalSoal := len(allQuestions)
 	var nilaiAkhir float64
-	if totalSoal > 0 {
-		nilaiAkhir = float64(jumlahBenar) / float64(totalSoal) * 100
+	if totalPoint > 0 {
+		nilaiAkhir = (pointTercapai / totalPoint) * 100
 	}
 
 	err = u.repo.CompleteSession(sessionToken, time.Now(), &nilaiAkhir, &jumlahBenar, &totalSoal)
@@ -121,7 +155,7 @@ func (u *testSessionUsecaseImpl) CompleteSession(sessionToken string) (*entity.T
 }
 
 // CreateTestSession creates a new test session with random questions
-func (u *testSessionUsecaseImpl) CreateTestSession(userID, tingkatan, idMataPelajaran, durasiMenit, jumlahSoal int, includeTypes []entity.QuestionType) (*entity.TestSession, error) {
+func (u *testSessionUsecaseImpl) CreateTestSession(userID, tingkatan, idMataPelajaran, durasiMenit, jumlahSoal int, includeTypes []entity.QuestionType, randomize bool) (*entity.TestSession, error) {
 	fmt.Printf("=== USECASE CreateTestSession: userID=%d, tingkatan=%d, idMataPelajaran=%d ===\n", userID, tingkatan, idMataPelajaran)
 
 	if userID < 1 || tingkatan < 1 || idMataPelajaran < 1 || durasiMenit < 1 || jumlahSoal < 1 {
@@ -172,7 +206,7 @@ func (u *testSessionUsecaseImpl) CreateTestSession(userID, tingkatan, idMataPela
 
 	// Select and assign random questions
 	fmt.Printf("=== USECASE: Assigning random questions ===\n")
-	err = u.repo.AssignRandomQuestions(session.ID, idMataPelajaran, tingkatan, jumlahSoal, includeTypes)
+	err = u.repo.AssignRandomQuestions(session.ID, idMataPelajaran, tingkatan, jumlahSoal, includeTypes, randomize)
 	if err != nil {
 		// Cleanup session if question assignment fails
 		u.repo.Delete(session.ID)

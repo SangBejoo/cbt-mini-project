@@ -26,6 +26,28 @@ func NewMateriHandler(usecase materi.MateriUsecase, soalUsecase soal.SoalUsecase
 	return &materiHandler{usecase: usecase, soalUsecase: soalUsecase, mataUsecase: mataUsecase}
 }
 
+func validateOwnershipSource(roleName string, lmsBookID, lmsTeacherMaterialID int64) error {
+	switch roleName {
+	case "superadmin":
+		if lmsBookID <= 0 {
+			return status.Error(codes.InvalidArgument, "superadmin wajib menggunakan lms_book_id")
+		}
+		if lmsTeacherMaterialID > 0 {
+			return status.Error(codes.InvalidArgument, "superadmin tidak boleh menggunakan lms_teacher_material_id")
+		}
+	case "teacher":
+		if lmsTeacherMaterialID <= 0 {
+			return status.Error(codes.InvalidArgument, "guru wajib menggunakan lms_teacher_material_id")
+		}
+		if lmsBookID > 0 {
+			return status.Error(codes.InvalidArgument, "guru tidak boleh menggunakan lms_book_id")
+		}
+	default:
+		return status.Error(codes.PermissionDenied, "hanya superadmin atau guru yang boleh membuat materi CBT")
+	}
+	return nil
+}
+
 // Helper function to convert entity.Materi to proto.Materi
 func (h *materiHandler) convertToProtoMateri(m *entity.Materi, questionCount int) *base.Materi {
 	var labels []string
@@ -67,6 +89,7 @@ func (h *materiHandler) convertToProtoMateri(m *entity.Materi, questionCount int
 		LmsModuleId:          lmsModuleID,
 		LmsBookId:            lmsBookID,
 		LmsTeacherMaterialId: lmsTeacherMaterialID,
+		RandomizeQuestions:   m.RandomizeQuestions,
 	}
 }
 
@@ -78,6 +101,10 @@ func (h *materiHandler) CreateMateri(ctx context.Context, req *base.CreateMateri
 		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 	ownerUserID := int(user.Id)
+	roleName := interceptor.GetRoleNameFromContext(ctx)
+	if err := validateOwnershipSource(roleName, req.LmsBookId, req.LmsTeacherMaterialId); err != nil {
+		return nil, err
+	}
 
 	// Resolve school_id from mata pelajaran if available
 	var schoolID int64
@@ -110,7 +137,7 @@ func (h *materiHandler) CreateMateri(ctx context.Context, req *base.CreateMateri
 		lmsTeacherMaterialID = &v
 	}
 
-	m, err := h.usecase.CreateMateri(int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat), req.IsActive, int(req.DefaultDurasiMenit), int(req.DefaultJumlahSoal), ownerUserID, schoolID, labels, lmsModuleID, lmsBookID, lmsTeacherMaterialID)
+	m, err := h.usecase.CreateMateri(int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat), req.IsActive, int(req.DefaultDurasiMenit), int(req.DefaultJumlahSoal), ownerUserID, schoolID, labels, req.RandomizeQuestions, lmsModuleID, lmsBookID, lmsTeacherMaterialID)
 	if err != nil {
 		return nil, err
 	}
@@ -118,6 +145,92 @@ func (h *materiHandler) CreateMateri(ctx context.Context, req *base.CreateMateri
 	return &base.MateriResponse{
 		Materi: h.convertToProtoMateri(m, 0),
 	}, nil
+}
+
+func (h *materiHandler) CreateMateriSuperadmin(ctx context.Context, req *base.CreateMateriSuperadminRequest) (*base.MateriResponse, error) {
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+	}
+	if interceptor.GetRoleNameFromContext(ctx) != "superadmin" {
+		return nil, status.Error(codes.PermissionDenied, "hanya superadmin yang boleh akses endpoint ini")
+	}
+	if req.LmsBookId <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "lms_book_id wajib diisi")
+	}
+
+	var schoolID int64
+	if req.IdMataPelajaran != 0 {
+		mp, err := h.mataUsecase.GetMataPelajaran(int(req.IdMataPelajaran))
+		if err == nil && mp != nil && mp.LmsSchoolID != nil {
+			schoolID = *mp.LmsSchoolID
+		}
+	}
+
+	lmsBookID := req.LmsBookId
+	m, err := h.usecase.CreateMateri(
+		int(req.IdMataPelajaran),
+		req.Nama,
+		int(req.IdTingkat),
+		req.IsActive,
+		int(req.DefaultDurasiMenit),
+		int(req.DefaultJumlahSoal),
+		int(user.Id),
+		schoolID,
+		req.Labels,
+		req.RandomizeQuestions,
+		nil,
+		&lmsBookID,
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &base.MateriResponse{Materi: h.convertToProtoMateri(m, 0)}, nil
+}
+
+func (h *materiHandler) CreateMateriTeacher(ctx context.Context, req *base.CreateMateriTeacherRequest) (*base.MateriResponse, error) {
+	user, err := interceptor.GetUserFromContext(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+	}
+	if interceptor.GetRoleNameFromContext(ctx) != "teacher" {
+		return nil, status.Error(codes.PermissionDenied, "hanya guru yang boleh akses endpoint ini")
+	}
+	if req.LmsTeacherMaterialId <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "lms_teacher_material_id wajib diisi")
+	}
+
+	var schoolID int64
+	if req.IdMataPelajaran != 0 {
+		mp, err := h.mataUsecase.GetMataPelajaran(int(req.IdMataPelajaran))
+		if err == nil && mp != nil && mp.LmsSchoolID != nil {
+			schoolID = *mp.LmsSchoolID
+		}
+	}
+
+	lmsTeacherMaterialID := req.LmsTeacherMaterialId
+	m, err := h.usecase.CreateMateri(
+		int(req.IdMataPelajaran),
+		req.Nama,
+		int(req.IdTingkat),
+		req.IsActive,
+		int(req.DefaultDurasiMenit),
+		int(req.DefaultJumlahSoal),
+		int(user.Id),
+		schoolID,
+		req.Labels,
+		req.RandomizeQuestions,
+		nil,
+		nil,
+		&lmsTeacherMaterialID,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &base.MateriResponse{Materi: h.convertToProtoMateri(m, 0)}, nil
 }
 
 // GetMateri gets materi by ID
@@ -141,6 +254,32 @@ func (h *materiHandler) GetMateri(ctx context.Context, req *base.GetMateriReques
 
 // UpdateMateri updates materi
 func (h *materiHandler) UpdateMateri(ctx context.Context, req *base.UpdateMateriRequest) (*base.MateriResponse, error) {
+	roleName := interceptor.GetRoleNameFromContext(ctx)
+	existing, err := h.usecase.GetMateri(int(req.Id))
+	if err != nil {
+		return nil, err
+	}
+
+	var effectiveBookID int64
+	if existing.LmsBookID != nil {
+		effectiveBookID = *existing.LmsBookID
+	}
+	if req.LmsBookId > 0 {
+		effectiveBookID = req.LmsBookId
+	}
+
+	var effectiveTeacherMaterialID int64
+	if existing.LmsTeacherMaterialID != nil {
+		effectiveTeacherMaterialID = *existing.LmsTeacherMaterialID
+	}
+	if req.LmsTeacherMaterialId > 0 {
+		effectiveTeacherMaterialID = req.LmsTeacherMaterialId
+	}
+
+	if err := validateOwnershipSource(roleName, effectiveBookID, effectiveTeacherMaterialID); err != nil {
+		return nil, err
+	}
+
 	var lmsModuleID *int64
 	if req.LmsModuleId > 0 {
 		v := req.LmsModuleId
@@ -157,7 +296,7 @@ func (h *materiHandler) UpdateMateri(ctx context.Context, req *base.UpdateMateri
 		lmsTeacherMaterialID = &v
 	}
 
-	m, err := h.usecase.UpdateMateri(int(req.Id), int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat), req.IsActive, int(req.DefaultDurasiMenit), int(req.DefaultJumlahSoal), lmsModuleID, lmsBookID, lmsTeacherMaterialID)
+	m, err := h.usecase.UpdateMateri(int(req.Id), int(req.IdMataPelajaran), req.Nama, int(req.IdTingkat), req.IsActive, int(req.DefaultDurasiMenit), int(req.DefaultJumlahSoal), req.RandomizeQuestions, lmsModuleID, lmsBookID, lmsTeacherMaterialID)
 	if err != nil {
 		return nil, err
 	}

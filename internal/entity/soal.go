@@ -20,6 +20,8 @@ type Soal struct {
 	IDTingkat       int           `json:"id_tingkat" gorm:"not null"`
 	Tingkat         Tingkat       `json:"tingkat" gorm:"foreignKey:IDTingkat"`
 	Pertanyaan      string        `json:"pertanyaan" gorm:"type:text;not null"`
+	Point           float64       `json:"point" gorm:"column:point;type:decimal(10,2);not null;default:1"`
+	Urutan          int           `json:"urutan" gorm:"column:urutan;not null;default:0"`
 	QuestionType    QuestionType  `json:"question_type" gorm:"column:question_type;type:enum('multiple_choice','drag_drop','essay','multiple_choices_complex');default:'multiple_choice'"`
 	OpsiA           string        `json:"opsi_a" gorm:"not null"`
 	OpsiB           string        `json:"opsi_b" gorm:"not null"`

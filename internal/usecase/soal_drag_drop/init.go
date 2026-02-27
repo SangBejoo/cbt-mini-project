@@ -17,6 +17,7 @@ type Usecase interface {
 	GetActiveByMateri(idMateri int, limit int) ([]entity.SoalDragDrop, error)
 	CheckDragDropAnswer(soalID int, userAnswer map[int]int) (bool, error)
 	CountByMateri(idMateri int) (int64, error)
+	ReorderSoalDragDrop(idMateri int, urutanByID map[int]int) error
 }
 
 // CreateRequest for creating a new drag-drop question
@@ -24,6 +25,8 @@ type CreateRequest struct {
 	IDMateri       int
 	IDTingkat      int
 	Pertanyaan     string
+	Point          float64
+	Urutan         int
 	DragType       entity.DragDropType
 	Pembahasan     *string
 	Items          []ItemRequest
@@ -56,6 +59,8 @@ type UpdateRequest struct {
 	IDMateri       int
 	IDTingkat      int
 	Pertanyaan     string
+	Point          float64
+	Urutan         int
 	DragType       entity.DragDropType
 	Pembahasan     *string
 	IsActive       bool

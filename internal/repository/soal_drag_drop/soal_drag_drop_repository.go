@@ -19,10 +19,10 @@ func (r *repository) Create(soal *entity.SoalDragDrop, items []entity.DragItem, 
 
 	// Create the main question
 	soalQuery := `
-		INSERT INTO soal_drag_drop (id_materi, id_tingkat, pertanyaan, drag_type, pembahasan, is_active, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+		INSERT INTO soal_drag_drop (id_materi, id_tingkat, pertanyaan, point, urutan, drag_type, pembahasan, is_active, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, COALESCE(NULLIF($5, 0), (SELECT COALESCE(MAX(s2.urutan),0)+1 FROM soal_drag_drop s2 WHERE s2.id_materi = $1)), $6, $7, $8, NOW(), NOW())
 		RETURNING id`
-	err = tx.QueryRow(soalQuery, soal.IDMateri, soal.IDTingkat, soal.Pertanyaan, soal.DragType, soal.Pembahasan, soal.IsActive).Scan(&soal.ID)
+	err = tx.QueryRow(soalQuery, soal.IDMateri, soal.IDTingkat, soal.Pertanyaan, soal.Point, soal.Urutan, soal.DragType, soal.Pembahasan, soal.IsActive).Scan(&soal.ID)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (r *repository) Create(soal *entity.SoalDragDrop, items []entity.DragItem, 
 func (r *repository) GetByID(id int) (*entity.SoalDragDrop, error) {
 	// Get main soal with relations
 	soalQuery := `
-		SELECT sdd.id, sdd.id_materi, sdd.id_tingkat, sdd.pertanyaan, sdd.drag_type, sdd.pembahasan, sdd.is_active, sdd.created_at, sdd.updated_at,
+		SELECT sdd.id, sdd.id_materi, sdd.id_tingkat, sdd.pertanyaan, sdd.point, sdd.urutan, sdd.drag_type, sdd.pembahasan, sdd.is_active, sdd.created_at, sdd.updated_at,
 		       m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id,
 		       mp.id, mp.nama, mp.is_active, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       mt.id, mt.nama, mt.is_active, mt.lms_level_id,
@@ -102,7 +102,7 @@ func (r *repository) GetByID(id int) (*entity.SoalDragDrop, error) {
 	var soal entity.SoalDragDrop
 	var pembahasan *string
 	err := r.db.QueryRow(soalQuery, id).Scan(
-		&soal.ID, &soal.IDMateri, &soal.IDTingkat, &soal.Pertanyaan, &soal.DragType, &pembahasan, &soal.IsActive, &soal.CreatedAt, &soal.UpdatedAt,
+		&soal.ID, &soal.IDMateri, &soal.IDTingkat, &soal.Pertanyaan, &soal.Point, &soal.Urutan, &soal.DragType, &pembahasan, &soal.IsActive, &soal.CreatedAt, &soal.UpdatedAt,
 		&soal.Materi.ID, &soal.Materi.IDMataPelajaran, &soal.Materi.IDTingkat, &soal.Materi.Nama, &soal.Materi.IsActive, &soal.Materi.DefaultDurasiMenit, &soal.Materi.DefaultJumlahSoal, &soal.Materi.LmsModuleID, &soal.Materi.LmsClassID,
 		&soal.Materi.MataPelajaran.ID, &soal.Materi.MataPelajaran.Nama, &soal.Materi.MataPelajaran.IsActive, &soal.Materi.MataPelajaran.LmsSubjectID, &soal.Materi.MataPelajaran.LmsSchoolID, &soal.Materi.MataPelajaran.LmsClassID,
 		&soal.Materi.Tingkat.ID, &soal.Materi.Tingkat.Nama, &soal.Materi.Tingkat.IsActive, &soal.Materi.Tingkat.LmsLevelID,
@@ -214,9 +214,9 @@ func (r *repository) Update(soal *entity.SoalDragDrop, items []entity.DragItem, 
 	// Update main question
 	updateQuery := `
 		UPDATE soal_drag_drop
-		SET id_materi = $1, id_tingkat = $2, pertanyaan = $3, drag_type = $4, pembahasan = $5, is_active = $6, updated_at = NOW()
-		WHERE id = $7`
-	_, err = tx.Exec(updateQuery, soal.IDMateri, soal.IDTingkat, soal.Pertanyaan, soal.DragType, soal.Pembahasan, soal.IsActive, soal.ID)
+		SET id_materi = $1, id_tingkat = $2, pertanyaan = $3, point = $4, urutan = COALESCE(NULLIF($5, 0), urutan), drag_type = $6, pembahasan = $7, is_active = $8, updated_at = NOW()
+		WHERE id = $9`
+	_, err = tx.Exec(updateQuery, soal.IDMateri, soal.IDTingkat, soal.Pertanyaan, soal.Point, soal.Urutan, soal.DragType, soal.Pembahasan, soal.IsActive, soal.ID)
 	if err != nil {
 		return err
 	}
@@ -336,7 +336,7 @@ func (r *repository) List(idMateri, idTingkat int, page, pageSize int) ([]entity
 	// Get paginated results
 	offset := (page - 1) * pageSize
 	listQuery := `
-		SELECT sdd.id, sdd.id_materi, sdd.id_tingkat, sdd.pertanyaan, sdd.drag_type, sdd.pembahasan, sdd.is_active, sdd.created_at, sdd.updated_at,
+		SELECT sdd.id, sdd.id_materi, sdd.id_tingkat, sdd.pertanyaan, sdd.point, sdd.urutan, sdd.drag_type, sdd.pembahasan, sdd.is_active, sdd.created_at, sdd.updated_at,
 		       m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id,
 		       mp.id, mp.nama, mp.is_active, mp.lms_subject_id, mp.lms_school_id, mp.lms_class_id,
 		       mt.id, mt.nama, mt.is_active, mt.lms_level_id,
@@ -347,7 +347,7 @@ func (r *repository) List(idMateri, idTingkat int, page, pageSize int) ([]entity
 		JOIN tingkat mt ON m.id_tingkat = mt.id
 		JOIN tingkat t ON sdd.id_tingkat = t.id
 		` + whereClause + `
-		ORDER BY sdd.created_at DESC
+		ORDER BY sdd.urutan ASC, sdd.created_at DESC
 		LIMIT $` + strconv.Itoa(argCount+1) + ` OFFSET $` + strconv.Itoa(argCount+2)
 
 	args = append(args, pageSize, offset)
@@ -361,7 +361,7 @@ func (r *repository) List(idMateri, idTingkat int, page, pageSize int) ([]entity
 		var soal entity.SoalDragDrop
 		var pembahasan *string
 		err := rows.Scan(
-			&soal.ID, &soal.IDMateri, &soal.IDTingkat, &soal.Pertanyaan, &soal.DragType, &pembahasan, &soal.IsActive, &soal.CreatedAt, &soal.UpdatedAt,
+			&soal.ID, &soal.IDMateri, &soal.IDTingkat, &soal.Pertanyaan, &soal.Point, &soal.Urutan, &soal.DragType, &pembahasan, &soal.IsActive, &soal.CreatedAt, &soal.UpdatedAt,
 			&soal.Materi.ID, &soal.Materi.IDMataPelajaran, &soal.Materi.IDTingkat, &soal.Materi.Nama, &soal.Materi.IsActive, &soal.Materi.DefaultDurasiMenit, &soal.Materi.DefaultJumlahSoal, &soal.Materi.LmsModuleID, &soal.Materi.LmsClassID,
 			&soal.Materi.MataPelajaran.ID, &soal.Materi.MataPelajaran.Nama, &soal.Materi.MataPelajaran.IsActive, &soal.Materi.MataPelajaran.LmsSubjectID, &soal.Materi.MataPelajaran.LmsSchoolID, &soal.Materi.MataPelajaran.LmsClassID,
 			&soal.Materi.Tingkat.ID, &soal.Materi.Tingkat.Nama, &soal.Materi.Tingkat.IsActive, &soal.Materi.Tingkat.LmsLevelID,
@@ -427,7 +427,7 @@ func (r *repository) GetActiveByMateri(idMateri int, limit int) ([]entity.SoalDr
 	var soals []entity.SoalDragDrop
 
 	query := `
-		SELECT sdd.id, sdd.id_materi, sdd.id_tingkat, sdd.pertanyaan, sdd.drag_type, sdd.pembahasan, sdd.is_active, sdd.created_at, sdd.updated_at,
+		SELECT sdd.id, sdd.id_materi, sdd.id_tingkat, sdd.pertanyaan, sdd.point, sdd.urutan, sdd.drag_type, sdd.pembahasan, sdd.is_active, sdd.created_at, sdd.updated_at,
 		       m.id, m.id_mata_pelajaran, m.id_tingkat, m.nama, m.is_active, m.default_durasi_menit, m.default_jumlah_soal, m.lms_module_id, m.lms_class_id
 		FROM soal_drag_drop sdd
 		JOIN materi m ON sdd.id_materi = m.id
@@ -446,7 +446,7 @@ func (r *repository) GetActiveByMateri(idMateri int, limit int) ([]entity.SoalDr
 			offset = randSource.Intn(total - limit + 1)
 		}
 
-		query += ` ORDER BY sdd.id ASC LIMIT $2 OFFSET $3`
+		query += ` ORDER BY sdd.urutan ASC, sdd.id ASC LIMIT $2 OFFSET $3`
 		rows, err := r.db.Query(query, idMateri, limit, offset)
 		if err != nil {
 			return nil, err
@@ -457,7 +457,7 @@ func (r *repository) GetActiveByMateri(idMateri int, limit int) ([]entity.SoalDr
 			var soal entity.SoalDragDrop
 			var pembahasan *string
 			err := rows.Scan(
-				&soal.ID, &soal.IDMateri, &soal.IDTingkat, &soal.Pertanyaan, &soal.DragType, &pembahasan, &soal.IsActive, &soal.CreatedAt, &soal.UpdatedAt,
+				&soal.ID, &soal.IDMateri, &soal.IDTingkat, &soal.Pertanyaan, &soal.Point, &soal.Urutan, &soal.DragType, &pembahasan, &soal.IsActive, &soal.CreatedAt, &soal.UpdatedAt,
 				&soal.Materi.ID, &soal.Materi.IDMataPelajaran, &soal.Materi.IDTingkat, &soal.Materi.Nama, &soal.Materi.IsActive, &soal.Materi.DefaultDurasiMenit, &soal.Materi.DefaultJumlahSoal, &soal.Materi.LmsModuleID, &soal.Materi.LmsClassID,
 			)
 			if err != nil {
@@ -470,7 +470,7 @@ func (r *repository) GetActiveByMateri(idMateri int, limit int) ([]entity.SoalDr
 			soals = append(soals, soal)
 		}
 	} else {
-		query += ` ORDER BY sdd.id ASC`
+		query += ` ORDER BY sdd.urutan ASC, sdd.id ASC`
 		rows, err := r.db.Query(query, idMateri)
 		if err != nil {
 			return nil, err
@@ -481,7 +481,7 @@ func (r *repository) GetActiveByMateri(idMateri int, limit int) ([]entity.SoalDr
 			var soal entity.SoalDragDrop
 			var pembahasan *string
 			err := rows.Scan(
-				&soal.ID, &soal.IDMateri, &soal.IDTingkat, &soal.Pertanyaan, &soal.DragType, &pembahasan, &soal.IsActive, &soal.CreatedAt, &soal.UpdatedAt,
+				&soal.ID, &soal.IDMateri, &soal.IDTingkat, &soal.Pertanyaan, &soal.Point, &soal.Urutan, &soal.DragType, &pembahasan, &soal.IsActive, &soal.CreatedAt, &soal.UpdatedAt,
 				&soal.Materi.ID, &soal.Materi.IDMataPelajaran, &soal.Materi.IDTingkat, &soal.Materi.Nama, &soal.Materi.IsActive, &soal.Materi.DefaultDurasiMenit, &soal.Materi.DefaultJumlahSoal, &soal.Materi.LmsModuleID, &soal.Materi.LmsClassID,
 			)
 			if err != nil {
@@ -551,4 +551,20 @@ func (r *repository) CountByMateri(idMateri int) (int64, error) {
 	query := `SELECT COUNT(*) FROM soal_drag_drop WHERE is_active = true AND id_materi = $1`
 	err := r.db.QueryRow(query, idMateri).Scan(&count)
 	return count, err
+}
+
+func (r *repository) ReorderByMateri(idMateri int, urutanByID map[int]int) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for id, urutan := range urutanByID {
+		if _, err := tx.Exec(`UPDATE soal_drag_drop SET urutan = $1 WHERE id = $2 AND id_materi = $3`, urutan, id, idMateri); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }

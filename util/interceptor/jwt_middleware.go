@@ -54,14 +54,21 @@ func (m *JWTMiddleware) UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 			return nil, status.Error(codes.Unauthenticated, err.Error())
 		}
 
-		// Validate LMS token and map/provision local user context
-		user, err := m.validateAndResolveUser(ctx, token)
+		// Validate LMS token first to keep role context from source of truth
+		claims, err := m.validateLMSToken(token)
+		if err != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid LMS access token: "+err.Error())
+		}
+
+		// Map/provision local user context
+		user, err := m.resolveUserFromClaims(ctx, claims)
 		if err != nil {
 			return nil, status.Error(codes.Unauthenticated, err.Error())
 		}
 
 		// Add user info to context
 		ctx = AddUserToContext(ctx, user)
+		ctx = AddRoleNameToContext(ctx, normalizeRoleName(claims.RoleName))
 
 		return handler(ctx, req)
 	}
@@ -151,12 +158,7 @@ func parseBearerToken(value string) string {
 	return strings.TrimSpace(parts[1])
 }
 
-func (m *JWTMiddleware) validateAndResolveUser(ctx context.Context, tokenString string) (*base.User, error) {
-	claims, err := m.validateLMSToken(tokenString)
-	if err != nil {
-		return nil, errors.New("invalid LMS access token: " + err.Error())
-	}
-
+func (m *JWTMiddleware) resolveUserFromClaims(ctx context.Context, claims *JWTClaims) (*base.User, error) {
 	lmsUserID := claims.LMSUserID
 	if lmsUserID == 0 {
 		lmsUserID = int64(claims.UserID)
@@ -173,13 +175,15 @@ func (m *JWTMiddleware) validateAndResolveUser(ctx context.Context, tokenString 
 		name = "LMS User"
 	}
 
-	role := base.UserRole_SISWA
-	normalizedRole := strings.ToLower(strings.TrimSpace(claims.RoleName))
-	if normalizedRole == "admin" || normalizedRole == "school_admin" || normalizedRole == "superadmin" {
-		role = base.UserRole_ADMIN
+	roleCode := int32(base.UserRole_SISWA)
+	switch normalizeRoleName(claims.RoleName) {
+	case "superadmin":
+		roleCode = int32(base.UserRole_ADMIN)
+	case "teacher":
+		roleCode = 3
 	}
 
-	user, syncErr := m.authRepo.FindOrCreateByLMSID(ctx, lmsUserID, claims.Email, name, int32(role))
+	user, syncErr := m.authRepo.FindOrCreateByLMSID(ctx, lmsUserID, claims.Email, name, roleCode)
 	if syncErr != nil {
 		return nil, fmt.Errorf("failed to provision local user from token: %w", syncErr)
 	}
@@ -187,6 +191,19 @@ func (m *JWTMiddleware) validateAndResolveUser(ctx context.Context, tokenString 
 		return nil, errors.New("user is inactive")
 	}
 	return user, nil
+}
+
+func normalizeRoleName(role string) string {
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case "admin", "superadmin", "school_admin":
+		return "superadmin"
+	case "teacher", "guru":
+		return "teacher"
+	case "student", "siswa":
+		return "student"
+	default:
+		return "student"
+	}
 }
 
 func (m *JWTMiddleware) validateLMSToken(tokenString string) (*JWTClaims, error) {
@@ -322,6 +339,10 @@ func AddUserToContext(ctx context.Context, user *base.User) context.Context {
 	return context.WithValue(ctx, "user", user)
 }
 
+func AddRoleNameToContext(ctx context.Context, roleName string) context.Context {
+	return context.WithValue(ctx, "role_name", normalizeRoleName(roleName))
+}
+
 // GetUserFromContext extracts user from context
 func GetUserFromContext(ctx context.Context) (*base.User, error) {
 	user, ok := ctx.Value("user").(*base.User)
@@ -329,4 +350,12 @@ func GetUserFromContext(ctx context.Context) (*base.User, error) {
 		return nil, errors.New("user not found in context")
 	}
 	return user, nil
+}
+
+func GetRoleNameFromContext(ctx context.Context) string {
+	roleName, ok := ctx.Value("role_name").(string)
+	if !ok {
+		return "student"
+	}
+	return normalizeRoleName(roleName)
 }

@@ -20,6 +20,7 @@ type SoalRepository interface {
 
 	// List soal with filters
 	List(idMateri, tingkatan, idMataPelajaran *int, limit, offset int) ([]entity.Soal, int, error)
+	ReorderByMateri(idMateri int, urutanByID map[int]int) error
 
 	// Get soal by materi ID
 	GetByMateriID(idMateri int) ([]entity.Soal, error)
