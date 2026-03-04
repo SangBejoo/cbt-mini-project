@@ -36,6 +36,11 @@ func NewPublisher(client *redis.Client) *Publisher {
 
 // Publish sends an event to the Redis stream
 func (p *Publisher) Publish(ctx context.Context, eventType EventType, payload interface{}) error {
+	if p == nil || p.client == nil {
+		log.Printf("[Publisher] Redis disabled, skipping publish for event=%s", eventType)
+		return nil
+	}
+
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal payload: %w", err)
@@ -61,10 +66,10 @@ func (p *Publisher) Publish(ctx context.Context, eventType EventType, payload in
 // PublishExamResult publishes an exam result completed event
 func (p *Publisher) PublishExamResult(ctx context.Context, sessionID int, lmsAssignmentID, lmsUserID, lmsClassID int64, score float64, correctCount, totalCount int) error {
 	payload := contracts.ExamResultPayload{
-		SessionID:       sessionID,
-		LMSAssignmentID: lmsAssignmentID,
-		LMSUserID:       lmsUserID,
-		LMSClassID:      lmsClassID,
+		SessionID:    sessionID,
+		AssignmentID: lmsAssignmentID,
+		UserID:       lmsUserID,
+		ClassID:      lmsClassID,
 		Score:           score,
 		CorrectCount:    correctCount,
 		TotalCount:      totalCount,

@@ -323,10 +323,10 @@ func (r *testSessionRepositoryImpl) CompleteSession(token string, waktuSelesai t
 			}
 		} else if lmsUserID.Valid {
 			payload := contracts.ExamResultPayload{
-				SessionID:       sessionID,
-				LMSAssignmentID: lmsAssignmentID.Int64,
-				LMSUserID:       lmsUserID.Int64,
-				LMSClassID:      lmsClassID.Int64,
+				SessionID:    sessionID,
+				AssignmentID: lmsAssignmentID.Int64,
+				UserID:       lmsUserID.Int64,
+				ClassID:      lmsClassID.Int64,
 				Score:           *nilaiAkhir,
 				CorrectCount:    *jumlahBenar,
 				TotalCount:      *totalSoal,

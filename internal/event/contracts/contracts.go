@@ -18,25 +18,25 @@ const (
 
 // ExamResultPayload is emitted by CBT and consumed by LMS.
 type ExamResultPayload struct {
-	SessionID       int     `json:"session_id"`
-	LMSAssignmentID int64   `json:"lms_assignment_id"`
-	LMSUserID       int64   `json:"lms_user_id"`
-	LMSClassID      int64   `json:"lms_class_id"`
-	Score           float64 `json:"score"`
-	CorrectCount    int     `json:"correct_count"`
-	TotalCount      int     `json:"total_count"`
-	CompletedAt     string  `json:"completed_at"`
+	SessionID    int     `json:"session_id"`
+	AssignmentID int64   `json:"assignment_id"`
+	UserID       int64   `json:"user_id"`
+	ClassID      int64   `json:"class_id"`
+	Score        float64 `json:"score"`
+	CorrectCount int     `json:"correct_count"`
+	TotalCount   int     `json:"total_count"`
+	CompletedAt  string  `json:"completed_at"`
 }
 
 // ExamAssignmentPayload is emitted by LMS and consumed by CBT.
 type ExamAssignmentPayload struct {
-	LMSAssignmentID int64   `json:"lms_assignment_id"`
-	LMSClassID      int64   `json:"lms_class_id"`
-	Title           string  `json:"title"`
-	MaxScore        float64 `json:"max_score"`
-	ModuleID        int64   `json:"module_id"`
-	ModuleRefType   string  `json:"module_ref_type,omitempty"`
-	ScheduledTime   string  `json:"scheduled_time"`
+	AssignmentID int64   `json:"assignment_id"`
+	ClassID      int64   `json:"class_id"`
+	Title        string  `json:"title"`
+	MaxScore     float64 `json:"max_score"`
+	ModuleID     int64   `json:"module_id"`
+	ModuleRefType string `json:"module_ref_type,omitempty"`
+	ScheduledTime string `json:"scheduled_time"`
 }
 
 // ModuleUpsertPayload is emitted by LMS and consumed by CBT.
@@ -58,8 +58,8 @@ type ClassPayload struct {
 
 // ClassStudentPayload is emitted by LMS and consumed by CBT.
 type ClassStudentPayload struct {
-	LMSClassID int64 `json:"lms_class_id"`
-	LMSUserID  int64 `json:"lms_user_id"`
+	ClassID int64 `json:"class_id"`
+	UserID  int64 `json:"user_id"`
 }
 
 // DeletePayload is emitted by LMS for delete sync operations.

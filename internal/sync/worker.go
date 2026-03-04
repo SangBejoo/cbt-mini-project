@@ -507,7 +507,7 @@ func (w *SyncWorker) handleExamAssignmentCreated(payload string) error {
 	}
 
 	if p.ModuleID == 0 {
-		return fmt.Errorf("invalid module_id for assignment_id=%d", p.LMSAssignmentID)
+		return fmt.Errorf("invalid module_id for assignment_id=%d", p.AssignmentID)
 	}
 
 	// 1. Resolve module reference to materi details
@@ -517,9 +517,9 @@ func (w *SyncWorker) handleExamAssignmentCreated(payload string) error {
 	}
 
 	// 2. Get all students in the class
-	studentIDs, err := w.classStudentRepo.GetStudentIDsByClassID(p.LMSClassID)
+	studentIDs, err := w.classStudentRepo.GetStudentIDsByClassID(p.ClassID)
 	if err != nil {
-		return fmt.Errorf("failed to get students for class_id=%d: %w", p.LMSClassID, err)
+		return fmt.Errorf("failed to get students for class_id=%d: %w", p.ClassID, err)
 	}
 
 	// 3. Create test session for each student
@@ -530,8 +530,8 @@ func (w *SyncWorker) handleExamAssignmentCreated(payload string) error {
 	var lastErr error
 	for _, studentID := range studentIDs {
 		created, err := w.testSessionRepo.CreateSessionForLMSUserIfMissing(
-			p.LMSAssignmentID,
-			p.LMSClassID,
+			p.AssignmentID,
+			p.ClassID,
 			studentID,
 			int(materi.IDMataPelajaran),
 			int(materi.IDTingkat),
@@ -541,7 +541,7 @@ func (w *SyncWorker) handleExamAssignmentCreated(payload string) error {
 			entity.TestStatusScheduled,
 		)
 		if err != nil {
-			slog.Error("failed to create test session", "assignment_id", p.LMSAssignmentID, "student_id", studentID, "error", err)
+			slog.Error("failed to create test session", "assignment_id", p.AssignmentID, "student_id", studentID, "error", err)
 			failureCount++
 			lastErr = err
 			continue
@@ -551,9 +551,9 @@ func (w *SyncWorker) handleExamAssignmentCreated(payload string) error {
 		}
 	}
 
-	slog.Info("Synced Exam Assignment", "assignment_id", p.LMSAssignmentID, "class_id", p.LMSClassID, "sessions_created", successCount)
+	slog.Info("Synced Exam Assignment", "assignment_id", p.AssignmentID, "class_id", p.ClassID, "sessions_created", successCount)
 	if failureCount > 0 {
-		return fmt.Errorf("failed creating %d sessions for assignment_id=%d: %w", failureCount, p.LMSAssignmentID, lastErr)
+		return fmt.Errorf("failed creating %d sessions for assignment_id=%d: %w", failureCount, p.AssignmentID, lastErr)
 	}
 
 	return nil
@@ -565,16 +565,16 @@ func (w *SyncWorker) handleExamAssignmentUpdated(payload string) error {
 		return fmt.Errorf("failed to unmarshal exam assignment updated payload: %w", err)
 	}
 
-	if p.LMSAssignmentID == 0 {
-		return fmt.Errorf("missing lms_assignment_id on exam_assignment_updated")
+	if p.AssignmentID == 0 {
+		return fmt.Errorf("missing assignment_id on exam_assignment_updated")
 	}
 
 	if p.ModuleID == 0 {
-		deleted, err := w.testSessionRepo.DeleteSessionsByAssignment(p.LMSAssignmentID)
+		deleted, err := w.testSessionRepo.DeleteSessionsByAssignment(p.AssignmentID)
 		if err != nil {
-			return fmt.Errorf("failed to delete sessions for assignment without CBT module id=%d: %w", p.LMSAssignmentID, err)
+			return fmt.Errorf("failed to delete sessions for assignment without CBT module id=%d: %w", p.AssignmentID, err)
 		}
-		slog.Info("Deleted assignment sessions due to removed CBT component", "assignment_id", p.LMSAssignmentID, "deleted_sessions", deleted)
+		slog.Info("Deleted assignment sessions due to removed CBT component", "assignment_id", p.AssignmentID, "deleted_sessions", deleted)
 		return nil
 	}
 
@@ -585,8 +585,8 @@ func (w *SyncWorker) handleExamAssignmentUpdated(payload string) error {
 
 	scheduledTime := parseScheduledTime(p.ScheduledTime)
 	updatedRows, err := w.testSessionRepo.UpdateScheduledSessionsByAssignment(
-		p.LMSAssignmentID,
-		p.LMSClassID,
+		p.AssignmentID,
+		p.ClassID,
 		int(materiData.IDMataPelajaran),
 		int(materiData.IDTingkat),
 		materiData.DefaultDurasiMenit,
@@ -594,12 +594,12 @@ func (w *SyncWorker) handleExamAssignmentUpdated(payload string) error {
 		scheduledTime,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to update scheduled sessions for assignment_id=%d: %w", p.LMSAssignmentID, err)
+		return fmt.Errorf("failed to update scheduled sessions for assignment_id=%d: %w", p.AssignmentID, err)
 	}
 
-	studentIDs, err := w.classStudentRepo.GetStudentIDsByClassID(p.LMSClassID)
+	studentIDs, err := w.classStudentRepo.GetStudentIDsByClassID(p.ClassID)
 	if err != nil {
-		return fmt.Errorf("failed to get class students for class_id=%d: %w", p.LMSClassID, err)
+		return fmt.Errorf("failed to get class students for class_id=%d: %w", p.ClassID, err)
 	}
 
 	createdCount := 0
@@ -607,8 +607,8 @@ func (w *SyncWorker) handleExamAssignmentUpdated(payload string) error {
 	var lastErr error
 	for _, studentID := range studentIDs {
 		created, createErr := w.testSessionRepo.CreateSessionForLMSUserIfMissing(
-			p.LMSAssignmentID,
-			p.LMSClassID,
+			p.AssignmentID,
+			p.ClassID,
 			studentID,
 			int(materiData.IDMataPelajaran),
 			int(materiData.IDTingkat),
@@ -618,7 +618,7 @@ func (w *SyncWorker) handleExamAssignmentUpdated(payload string) error {
 			entity.TestStatusScheduled,
 		)
 		if createErr != nil {
-			slog.Error("failed to ensure session for assignment update", "assignment_id", p.LMSAssignmentID, "student_id", studentID, "error", createErr)
+			slog.Error("failed to ensure session for assignment update", "assignment_id", p.AssignmentID, "student_id", studentID, "error", createErr)
 			failureCount++
 			lastErr = createErr
 			continue
@@ -628,9 +628,9 @@ func (w *SyncWorker) handleExamAssignmentUpdated(payload string) error {
 		}
 	}
 
-	slog.Info("Synced exam assignment update", "assignment_id", p.LMSAssignmentID, "updated_sessions", updatedRows, "created_sessions", createdCount)
+	slog.Info("Synced exam assignment update", "assignment_id", p.AssignmentID, "updated_sessions", updatedRows, "created_sessions", createdCount)
 	if failureCount > 0 {
-		return fmt.Errorf("failed ensuring %d sessions on assignment update id=%d: %w", failureCount, p.LMSAssignmentID, lastErr)
+		return fmt.Errorf("failed ensuring %d sessions on assignment update id=%d: %w", failureCount, p.AssignmentID, lastErr)
 	}
 
 	return nil
@@ -641,16 +641,16 @@ func (w *SyncWorker) handleExamAssignmentDeleted(payload string) error {
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
 		return fmt.Errorf("failed to unmarshal exam assignment deleted payload: %w", err)
 	}
-	if p.LMSAssignmentID == 0 {
-		return fmt.Errorf("missing lms_assignment_id on exam_assignment_deleted")
+	if p.AssignmentID == 0 {
+		return fmt.Errorf("missing assignment_id on exam_assignment_deleted")
 	}
 
-	deletedRows, err := w.testSessionRepo.DeleteSessionsByAssignment(p.LMSAssignmentID)
+	deletedRows, err := w.testSessionRepo.DeleteSessionsByAssignment(p.AssignmentID)
 	if err != nil {
-		return fmt.Errorf("failed deleting sessions for assignment_id=%d: %w", p.LMSAssignmentID, err)
+		return fmt.Errorf("failed deleting sessions for assignment_id=%d: %w", p.AssignmentID, err)
 	}
 
-	slog.Info("Deleted sessions for assignment", "assignment_id", p.LMSAssignmentID, "deleted_sessions", deletedRows)
+	slog.Info("Deleted sessions for assignment", "assignment_id", p.AssignmentID, "deleted_sessions", deletedRows)
 	return nil
 }
 
@@ -779,15 +779,15 @@ func (w *SyncWorker) handleClassStudentJoined(payload string) error {
 		return fmt.Errorf("failed to unmarshal class_student_joined payload: %w", err)
 	}
 
-	if err := w.classStudentRepo.AddStudent(p.LMSClassID, p.LMSUserID); err != nil {
-		return fmt.Errorf("failed to add student to class class_id=%d user_id=%d: %w", p.LMSClassID, p.LMSUserID, err)
+	if err := w.classStudentRepo.AddStudent(p.ClassID, p.UserID); err != nil {
+		return fmt.Errorf("failed to add student to class class_id=%d user_id=%d: %w", p.ClassID, p.UserID, err)
 	}
 
-	created, err := w.testSessionRepo.BackfillSessionsForJoinedStudent(p.LMSClassID, p.LMSUserID)
+	created, err := w.testSessionRepo.BackfillSessionsForJoinedStudent(p.ClassID, p.UserID)
 	if err != nil {
-		return fmt.Errorf("failed to backfill sessions for joined student class_id=%d user_id=%d: %w", p.LMSClassID, p.LMSUserID, err)
+		return fmt.Errorf("failed to backfill sessions for joined student class_id=%d user_id=%d: %w", p.ClassID, p.UserID, err)
 	}
-	slog.Info("Synced student join to class from LMS", "class_id", p.LMSClassID, "user_id", p.LMSUserID, "sessions_backfilled", created)
+	slog.Info("Synced student join to class from LMS", "class_id", p.ClassID, "user_id", p.UserID, "sessions_backfilled", created)
 	return nil
 }
 
@@ -797,9 +797,9 @@ func (w *SyncWorker) handleClassStudentLeft(payload string) error {
 		return fmt.Errorf("failed to unmarshal class_student_left payload: %w", err)
 	}
 
-	if err := w.classStudentRepo.RemoveStudent(p.LMSClassID, p.LMSUserID); err != nil {
-		return fmt.Errorf("failed to remove student from class class_id=%d user_id=%d: %w", p.LMSClassID, p.LMSUserID, err)
+	if err := w.classStudentRepo.RemoveStudent(p.ClassID, p.UserID); err != nil {
+		return fmt.Errorf("failed to remove student from class class_id=%d user_id=%d: %w", p.ClassID, p.UserID, err)
 	}
-	slog.Info("Synced student leave from class from LMS", "class_id", p.LMSClassID, "user_id", p.LMSUserID)
+	slog.Info("Synced student leave from class from LMS", "class_id", p.ClassID, "user_id", p.UserID)
 	return nil
 }

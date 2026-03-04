@@ -10,17 +10,9 @@ import (
 
 	"cbt-test-mini-project/init/config"
 	"cbt-test-mini-project/init/infra"
-	infraRedis "cbt-test-mini-project/init/infra/redis"
 	"cbt-test-mini-project/init/logger"
 	"cbt-test-mini-project/init/server"
 	"cbt-test-mini-project/internal/event"
-	authRepo "cbt-test-mini-project/internal/repository/auth"
-	classRepo "cbt-test-mini-project/internal/repository/class"
-	classStudentRepo "cbt-test-mini-project/internal/repository/class_student"
-	mataPelajaranRepo "cbt-test-mini-project/internal/repository/mata_pelajaran"
-	materiRepo "cbt-test-mini-project/internal/repository/materi"
-	testSessionRepo "cbt-test-mini-project/internal/repository/test_session"
-	tingkatRepo "cbt-test-mini-project/internal/repository/tingkat"
 	"cbt-test-mini-project/util"
 )
 
@@ -40,58 +32,16 @@ func main() {
 		}
 	}()
 
-	// Initialize Redis for sync worker
-	if cfg.Redis.Addr == "" {
-		slog.Warn("redis is not configured; set REDIS_ADDR or REDIS_HOST+REDIS_PORT to enable sync worker")
-	} else {
-		if err := infraRedis.InitRedis(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB); err != nil {
-			slog.Error("failed to initialize redis", "error", err)
-			// Continue without sync - not fatal for CBT to run standalone
-		} else {
-			slog.Info("✓ Redis connected successfully", "redis_addr", cfg.Redis.Addr)
-		}
-	}
-	defer func() {
-		if err := infraRedis.CloseRedis(); err != nil {
-			slog.Error("failed to close redis", "error", err)
-		}
-	}()
-
 	// Initialize APM monitoring
 	infra.InitAPM(*cfg)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Start CBT Event Consumer to listen for LMS events
-	if infraRedis.RedisClient != nil {
-		// Initialize repositories for event consumer
-		materiRepoImpl := materiRepo.NewMateriRepository(repo.SQLDB)
-		tingkatRepoImpl := tingkatRepo.NewTingkatRepository(repo.SQLDB)
-		subjectRepoImpl := mataPelajaranRepo.NewMataPelajaranRepository(repo.SQLDB)
-		authRepoImpl := authRepo.NewAuthRepository(repo.SQLDB)
-		testSessionRepoImpl := testSessionRepo.NewTestSessionRepository(repo.SQLDB)
-		classRepoImpl := classRepo.NewClassRepository(repo.SQLDB)
-		classStudentRepoImpl := classStudentRepo.NewClassStudentRepository(repo.SQLDB)
-
-		consumer := event.NewConsumer(
-			materiRepoImpl,
-			tingkatRepoImpl,
-			subjectRepoImpl,
-			authRepoImpl,
-			testSessionRepoImpl,
-			classRepoImpl,
-			classStudentRepoImpl,
-		)
-		go consumer.Start(ctx)
-	}
-
 	// Initialize Event Publisher
-	publisher := event.NewPublisher(infraRedis.RedisClient)
-	if infraRedis.RedisClient != nil {
-		outboxWorker := event.NewOutboxWorker(repo.SQLDB, infraRedis.RedisClient)
-		go outboxWorker.Start(ctx)
-	}
+	publisher := event.NewPublisher(nil)
+	outboxWorker := event.NewOutboxWorker(repo.SQLDB)
+	go outboxWorker.Start(ctx)
 
 	grpcServer, err := server.RunGRPCServer(ctx, *cfg, *repo, publisher)
 	if err != nil {

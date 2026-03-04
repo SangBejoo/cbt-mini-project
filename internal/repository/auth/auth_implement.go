@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -57,6 +56,9 @@ func dbRoleToProto(role string) base.UserRole {
 	if normalized == "superadmin" {
 		return base.UserRole_ADMIN
 	}
+	if normalized == "teacher" {
+		return 3
+	}
 	return base.UserRole_SISWA
 }
 
@@ -69,7 +71,7 @@ func NewAuthRepository(db *sql.DB) AuthRepository {
 func (r *authRepositoryImpl) Login(ctx context.Context, email, password string) (*base.User, error) {
 	var userEntity entity.User
 
-	query := `SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE email = $1 AND is_active = $2 AND role = 'admin'`
+	query := `SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE email = $1 AND is_active = $2 AND role = 'superadmin'`
 	err := r.db.QueryRowContext(ctx, query, email, true).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -87,13 +89,12 @@ func (r *authRepositoryImpl) Login(ctx context.Context, email, password string) 
 	role := dbRoleToProto(userEntity.Role)
 
 	user := &base.User{
-		Id:           int32(userEntity.ID),
-		Email:        userEntity.Email,
-		Nama:         userEntity.Nama,
-		Role:         role,
-		IsActive:     userEntity.IsActive,
-		LmsUserId:    lmsUserIDValue(userEntity.LmsUserID),
-		
+		Id:        int32(userEntity.ID),
+		Email:     userEntity.Email,
+		Nama:      userEntity.Nama,
+		Role:      role,
+		IsActive:  userEntity.IsActive,
+		LmsUserId: lmsUserIDValue(userEntity.LmsUserID),
 	}
 
 	return user, nil
@@ -111,13 +112,12 @@ func (r *authRepositoryImpl) GetUserByID(ctx context.Context, id int32) (*base.U
 	role := dbRoleToProto(userEntity.Role)
 
 	user := &base.User{
-		Id:           int32(userEntity.ID),
-		Email:        userEntity.Email,
-		Nama:         userEntity.Nama,
-		Role:         role,
-		IsActive:     userEntity.IsActive,
-		LmsUserId:    lmsUserIDValue(userEntity.LmsUserID),
-		
+		Id:        int32(userEntity.ID),
+		Email:     userEntity.Email,
+		Nama:      userEntity.Nama,
+		Role:      role,
+		IsActive:  userEntity.IsActive,
+		LmsUserId: lmsUserIDValue(userEntity.LmsUserID),
 	}
 
 	return user, nil
@@ -135,13 +135,12 @@ func (r *authRepositoryImpl) GetUserByEmail(ctx context.Context, email string) (
 	role := dbRoleToProto(userEntity.Role)
 
 	user := &base.User{
-		Id:           int32(userEntity.ID),
-		Email:        userEntity.Email,
-		Nama:         userEntity.Nama,
-		Role:         role,
-		IsActive:     userEntity.IsActive,
-		LmsUserId:    lmsUserIDValue(userEntity.LmsUserID),
-		
+		Id:        int32(userEntity.ID),
+		Email:     userEntity.Email,
+		Nama:      userEntity.Nama,
+		Role:      role,
+		IsActive:  userEntity.IsActive,
+		LmsUserId: lmsUserIDValue(userEntity.LmsUserID),
 	}
 
 	return user, nil
@@ -149,83 +148,17 @@ func (r *authRepositoryImpl) GetUserByEmail(ctx context.Context, email string) (
 
 // CreateUser creates a new user
 func (r *authRepositoryImpl) CreateUser(ctx context.Context, user *base.User) (*base.User, error) {
-	// Convert proto to entity
-	roleStr := protoRoleToDB(user.Role)
-
-	userEntity := entity.User{
-		Email:    user.Email,
-		Nama:     user.Nama,
-		Role:     roleStr,
-		IsActive: user.IsActive,
-	}
-
-	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Email), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, err
-	}
-	userEntity.PasswordHash = string(hashedPassword)
-	userEntity.CreatedAt = time.Now()
-	userEntity.UpdatedAt = time.Now()
-
-	query := `INSERT INTO users (email, password_hash, full_name, role, is_active, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
-	err = r.db.QueryRowContext(ctx, query, userEntity.Email, userEntity.PasswordHash, userEntity.Nama, userEntity.Role, userEntity.IsActive, userEntity.CreatedAt, userEntity.UpdatedAt).Scan(&userEntity.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Convert back to proto
-	user.Id = int32(userEntity.ID)
-	
-
-	return user, nil
+	_ = ctx
+	_ = user
+	return nil, errors.New("user creation is managed by LMS service")
 }
 
 // UpdateUser updates a user
 func (r *authRepositoryImpl) UpdateUser(ctx context.Context, id int32, updates map[string]interface{}) (*base.User, error) {
-	// First get current user
-	var userEntity entity.User
-	query := `SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at, lms_user_id FROM users WHERE id = $1`
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&userEntity.ID, &userEntity.Email, &userEntity.PasswordHash, &userEntity.Nama, &userEntity.Role, &userEntity.IsActive, &userEntity.CreatedAt, &userEntity.UpdatedAt, &userEntity.LmsUserID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Apply updates
-	if email, ok := updates["email"].(string); ok {
-		userEntity.Email = email
-	}
-	if nama, ok := updates["nama"].(string); ok {
-		userEntity.Nama = nama
-	}
-	if role, ok := updates["role"].(string); ok {
-		userEntity.Role = normalizeRoleForDB(role)
-	}
-	if isActive, ok := updates["is_active"].(bool); ok {
-		userEntity.IsActive = isActive
-	}
-	userEntity.UpdatedAt = time.Now()
-
-	// Update
-	updateQuery := `UPDATE users SET email = $1, full_name = $2, role = $3, is_active = $4, updated_at = $5 WHERE id = $6`
-	_, err = r.db.ExecContext(ctx, updateQuery, userEntity.Email, userEntity.Nama, userEntity.Role, userEntity.IsActive, userEntity.UpdatedAt, userEntity.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	role := dbRoleToProto(userEntity.Role)
-
-	user := &base.User{
-		Id:           int32(userEntity.ID),
-		Email:        userEntity.Email,
-		Nama:         userEntity.Nama,
-		Role:         role,
-		IsActive:     userEntity.IsActive,
-		LmsUserId:    lmsUserIDValue(userEntity.LmsUserID),
-		
-	}
-
-	return user, nil
+	_ = ctx
+	_ = id
+	_ = updates
+	return nil, errors.New("user updates are managed by LMS service")
 }
 
 // CheckUserHasTestSessions checks if user has any test sessions
@@ -238,9 +171,9 @@ func (r *authRepositoryImpl) CheckUserHasTestSessions(ctx context.Context, id in
 
 // DeleteUser deletes a user (hard delete)
 func (r *authRepositoryImpl) DeleteUser(ctx context.Context, id int32) error {
-	query := `DELETE FROM users WHERE id = $1`
-	_, err := r.db.ExecContext(ctx, query, id)
-	return err
+	_ = ctx
+	_ = id
+	return errors.New("user deletion is managed by LMS service")
 }
 
 // ListUsers lists users with filters
@@ -306,15 +239,14 @@ func (r *authRepositoryImpl) ListUsers(ctx context.Context, role int32, statusFi
 		role := dbRoleToProto(userEntity.Role)
 
 		users[i] = &base.User{
-			Id:           int32(userEntity.ID),
-			Email:        userEntity.Email,
-			Nama:         userEntity.Nama,
-			Role:         role,
-			IsActive:     userEntity.IsActive,
-			CreatedAt:    timestamppb.New(userEntity.CreatedAt),
-			UpdatedAt:    timestamppb.New(userEntity.UpdatedAt),
-			LmsUserId:    lmsUserIDValue(userEntity.LmsUserID),
-			
+			Id:        int32(userEntity.ID),
+			Email:     userEntity.Email,
+			Nama:      userEntity.Nama,
+			Role:      role,
+			IsActive:  userEntity.IsActive,
+			CreatedAt: timestamppb.New(userEntity.CreatedAt),
+			UpdatedAt: timestamppb.New(userEntity.UpdatedAt),
+			LmsUserId: lmsUserIDValue(userEntity.LmsUserID),
 		}
 	}
 
@@ -323,15 +255,9 @@ func (r *authRepositoryImpl) ListUsers(ctx context.Context, role int32, statusFi
 
 // FindOrCreateByLMSID finds a user by LMS ID or creates one if not found
 func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int64, email, name string, role int32) (*base.User, error) {
-	roleStr := protoRoleToDB(base.UserRole(role))
+	_ = role
 	resolvedEmail := strings.ToLower(strings.TrimSpace(email))
-	if resolvedEmail == "" {
-		resolvedEmail = fmt.Sprintf("lms_user_%d@cbt.local", lmsID)
-	}
-	resolvedName := strings.TrimSpace(name)
-	if resolvedName == "" {
-		resolvedName = "LMS User"
-	}
+	_ = strings.TrimSpace(name)
 
 	toProto := func(u entity.User) *base.User {
 		return &base.User{
@@ -376,32 +302,10 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 		return nil, err
 	}
 
-	now := time.Now()
 	if err == nil {
-		if userEntity.LmsUserID == nil || *userEntity.LmsUserID != lmsID || userEntity.Nama != resolvedName || normalizeRoleForDB(userEntity.Role) != roleStr || !userEntity.IsActive {
-			_, updateErr := r.db.ExecContext(
-				ctx,
-				`UPDATE users SET lms_user_id = $1, email = $2, full_name = $3, role = $4, is_active = $5, updated_at = $6 WHERE id = $7`,
-				lmsID,
-				resolvedEmail,
-				resolvedName,
-				roleStr,
-				true,
-				now,
-				userEntity.ID,
-			)
-			if updateErr != nil {
-				return nil, updateErr
-			}
-			userEntity.Email = resolvedEmail
-			userEntity.Nama = resolvedName
-			userEntity.Role = roleStr
-			userEntity.IsActive = true
-			userEntity.UpdatedAt = now
-			lmsIDVal := lmsID
-			userEntity.LmsUserID = &lmsIDVal
+		if !userEntity.IsActive {
+			return nil, fmt.Errorf("lms user %d is inactive", lmsID)
 		}
-
 		return toProto(userEntity), nil
 	}
 
@@ -421,94 +325,16 @@ func (r *authRepositoryImpl) FindOrCreateByLMSID(ctx context.Context, lmsID int6
 	}
 
 	if err == nil {
-		_, updateErr := r.db.ExecContext(
-			ctx,
-			`UPDATE users SET email = $1, full_name = $2, role = $3, is_active = $4, updated_at = $5 WHERE id = $6`,
-			resolvedEmail,
-			resolvedName,
-			roleStr,
-			true,
-			now,
-			userEntity.ID,
-		)
-		if updateErr != nil {
-			if isUsersEmailUniqueViolation(updateErr) {
-				var canonical entity.User
-				canonicalErr := r.db.QueryRowContext(ctx, fetchByEmailQuery, resolvedEmail).Scan(
-					&canonical.ID,
-					&canonical.Email,
-					&canonical.PasswordHash,
-					&canonical.Nama,
-					&canonical.Role,
-					&canonical.IsActive,
-					&canonical.CreatedAt,
-					&canonical.UpdatedAt,
-					&canonical.LmsUserID,
-				)
-				if canonicalErr == nil {
-					_, relinkErr := r.db.ExecContext(
-						ctx,
-						`UPDATE users SET lms_user_id = $1, full_name = $2, role = $3, is_active = $4, updated_at = $5 WHERE id = $6`,
-						lmsID,
-						resolvedName,
-						roleStr,
-						true,
-						now,
-						canonical.ID,
-					)
-					if relinkErr == nil {
-						lmsIDVal := lmsID
-						canonical.LmsUserID = &lmsIDVal
-						canonical.Nama = resolvedName
-						canonical.Role = roleStr
-						canonical.IsActive = true
-						canonical.UpdatedAt = now
-						return toProto(canonical), nil
-					}
-				}
-			}
-			return nil, updateErr
+		if userEntity.ID != int(lmsID) {
+			return nil, fmt.Errorf("token user mismatch: email %s maps to lms id %d", resolvedEmail, userEntity.ID)
 		}
-
-		userEntity.Email = resolvedEmail
-		userEntity.Nama = resolvedName
-		userEntity.Role = roleStr
-		userEntity.IsActive = true
-		userEntity.UpdatedAt = now
-		lmsIDVal := lmsID
-		userEntity.LmsUserID = &lmsIDVal
-
+		if !userEntity.IsActive {
+			return nil, fmt.Errorf("lms user %d is inactive", lmsID)
+		}
 		return toProto(userEntity), nil
 	}
 
-	randomPassword := fmt.Sprintf("lms_%d", lmsID)
-	hashedPassword, hashErr := bcrypt.GenerateFromPassword([]byte(randomPassword), bcrypt.DefaultCost)
-	if hashErr != nil {
-		return nil, hashErr
-	}
-
-	createQuery := `
-		INSERT INTO users (email, password_hash, full_name, role, is_active, lms_user_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (email) DO UPDATE SET lms_user_id = EXCLUDED.lms_user_id, full_name = EXCLUDED.full_name, role = EXCLUDED.role, is_active = EXCLUDED.is_active, updated_at = EXCLUDED.updated_at
-		RETURNING id, created_at, updated_at`
-
-	err = r.db.QueryRowContext(ctx, createQuery, resolvedEmail, string(hashedPassword), resolvedName, roleStr, true, lmsID, now, now).Scan(
-		&userEntity.ID,
-		&userEntity.CreatedAt,
-		&userEntity.UpdatedAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	userEntity.Email = resolvedEmail
-	userEntity.Nama = resolvedName
-	userEntity.Role = roleStr
-	userEntity.IsActive = true
-	userEntity.LmsUserID = &lmsID
-
-	return toProto(userEntity), nil
+	return nil, fmt.Errorf("lms user %d not found in canonical users table", lmsID)
 }
 
 func isUsersEmailUniqueViolation(err error) bool {
@@ -521,15 +347,14 @@ func isUsersEmailUniqueViolation(err error) bool {
 
 // GetLMSUserIDByLocalID retrieves the LMS User ID mapped to a local User ID
 func (r *authRepositoryImpl) GetLMSUserIDByLocalID(ctx context.Context, id int32) (int64, error) {
-	var lmsUserID sql.NullInt64
+	var lmsUserID int64
 	query := `SELECT lms_user_id FROM users WHERE id = $1`
 	err := r.db.QueryRowContext(ctx, query, id).Scan(&lmsUserID)
 	if err != nil {
 		return 0, err
 	}
-	if !lmsUserID.Valid {
+	if lmsUserID == 0 {
 		return 0, fmt.Errorf("user %d has no LMS ID link", id)
 	}
-	return lmsUserID.Int64, nil
+	return lmsUserID, nil
 }
-
